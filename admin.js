@@ -90,11 +90,21 @@ function money(value) {
 }
 
 function imageUrl(row) {
-  return (
-    row?.image_url ||
-    row?.image ||
-    ""
-  );
+  return row?.image_url || row?.image || "";
+}
+
+/* ============================================================
+   NORMALIZAR PRODUCT_IDS
+============================================================ */
+
+function getBundleProductIds(bundle) {
+  const value = jsonValue(bundle?.product_ids, []);
+
+  if (Array.isArray(value)) {
+    return value.map(v => String(v));
+  }
+
+  return [];
 }
 
 /* ============================================================
@@ -191,10 +201,6 @@ async function boot() {
     return;
   }
 
-  /* ========================================================
-     VERIFICAR ADMIN
-  ======================================================== */
-
   const {
     data: profile,
     error: profileError
@@ -224,10 +230,6 @@ async function boot() {
 
     return;
   }
-
-  /* ========================================================
-     CARREGAR DADOS
-  ======================================================== */
 
   const loaded = await load();
 
@@ -377,7 +379,7 @@ function login(message = "") {
 }
 
 /* ============================================================
-   CARREGAR TODOS OS DADOS
+   CARREGAR DADOS
 ============================================================ */
 
 async function load() {
@@ -435,7 +437,7 @@ async function load() {
 
 
   /* ========================================================
-     RANCHO DO MÊS / BUNDLES
+     RANCHO DO MÊS
   ======================================================== */
 
   const bundlesResult =
@@ -488,7 +490,6 @@ async function load() {
         jsonValue(row.value, row.value);
 
     });
-
 
   console.log("Produtos:", products);
   console.log("Categorias:", categories);
@@ -748,10 +749,7 @@ function render() {
         class="bg-white
                rounded-2xl p-5 shadow-sm"
       >
-        <p
-          class="text-sm
-                 text-[#717971]"
-        >
+        <p class="text-sm text-[#717971]">
           Produtos
         </p>
 
@@ -764,11 +762,8 @@ function render() {
         class="bg-white
                rounded-2xl p-5 shadow-sm"
       >
-        <p
-          class="text-sm
-                 text-[#717971]"
-        >
-          Ativos
+        <p class="text-sm text-[#717971]">
+          Produtos ativos
         </p>
 
         <b class="text-2xl">
@@ -784,11 +779,8 @@ function render() {
         class="bg-white
                rounded-2xl p-5 shadow-sm"
       >
-        <p
-          class="text-sm
-                 text-[#717971]"
-        >
-          Rancho do Mês
+        <p class="text-sm text-[#717971]">
+          Ranchos
         </p>
 
         <b class="text-2xl">
@@ -800,10 +792,7 @@ function render() {
         class="bg-white
                rounded-2xl p-5 shadow-sm"
       >
-        <p
-          class="text-sm
-                 text-[#717971]"
-        >
+        <p class="text-sm text-[#717971]">
           Categorias
         </p>
 
@@ -857,14 +846,6 @@ function render() {
           Categorias
         </button>
 
-        <button
-          id="goSettings"
-          class="px-4 py-2
-                 rounded-xl border"
-        >
-          Configurações
-        </button>
-
       </div>
 
     </div>
@@ -878,9 +859,6 @@ function render() {
 
   $("#goCategories").onclick =
     renderCategories;
-
-  $("#goSettings").onclick =
-    renderSettings;
 }
 
 /* ============================================================
@@ -936,9 +914,7 @@ function renderProducts() {
 
       <table class="w-full text-sm">
 
-        <thead
-          class="bg-[#eef5f7]"
-        >
+        <thead class="bg-[#eef5f7]">
 
           <tr>
 
@@ -980,15 +956,12 @@ function renderProducts() {
 
               return `
 
-                <tr
-                  class="border-t"
-                >
+                <tr class="border-t">
 
                   <td class="p-4">
 
                     <div
-                      class="flex items-center
-                             gap-3"
+                      class="flex items-center gap-3"
                     >
 
                       ${
@@ -1022,9 +995,7 @@ function renderProducts() {
 
                         <b>
                           ${esc(
-                            localized(
-                              product.name
-                            )
+                            localized(product.name)
                           )}
                         </b>
 
@@ -1046,16 +1017,12 @@ function renderProducts() {
 
                   <td class="p-4">
                     ${esc(
-                      localized(
-                        category?.name
-                      ) ||
+                      localized(category?.name) ||
                       "Sem categoria"
                     )}
                   </td>
 
-                  <td
-                    class="p-4 font-bold"
-                  >
+                  <td class="p-4 font-bold">
                     ${money(product.price)}
                   </td>
 
@@ -1063,14 +1030,10 @@ function renderProducts() {
                     ${product.stock ?? 0}
                   </td>
 
-                  <td
-                    class="p-4 text-right"
-                  >
+                  <td class="p-4 text-right">
 
                     <button
-                      data-edit-product="${esc(
-                        product.id
-                      )}"
+                      data-edit-product="${esc(product.id)}"
                       class="px-3 py-2
                              rounded-lg
                              bg-[#e8eff1]"
@@ -1097,9 +1060,7 @@ function renderProducts() {
     () => productForm();
 
   document
-    .querySelectorAll(
-      "[data-edit-product]"
-    )
+    .querySelectorAll("[data-edit-product]")
     .forEach(button => {
 
       button.onclick = () => {
@@ -1108,12 +1069,12 @@ function renderProducts() {
           products.find(
             p =>
               String(p.id) ===
-              String(
-                button.dataset.editProduct
-              )
+              String(button.dataset.editProduct)
           );
 
-        productForm(product);
+        if (product) {
+          productForm(product);
+        }
       };
 
     });
@@ -1196,8 +1157,7 @@ function productForm(product = null) {
       >
 
         <div
-          class="grid md:grid-cols-2
-                 gap-4"
+          class="grid md:grid-cols-2 gap-4"
         >
 
           ${field(
@@ -1254,8 +1214,7 @@ function productForm(product = null) {
         </div>
 
         <label
-          class="block text-sm
-                 font-semibold"
+          class="block text-sm font-semibold"
         >
           Categoria
 
@@ -1277,14 +1236,12 @@ function productForm(product = null) {
         </label>
 
         <div
-          class="border-2
-                 border-dashed
+          class="border-2 border-dashed
                  rounded-2xl p-5"
         >
 
           <label
-            class="block text-sm
-                   font-semibold"
+            class="block text-sm font-semibold"
           >
 
             Imagem do produto
@@ -1440,9 +1397,7 @@ function productForm(product = null) {
           return;
         }
 
-        toast(
-          "Produto excluído."
-        );
+        toast("Produto excluído.");
 
         await load();
 
@@ -1465,8 +1420,7 @@ function field(
   return `
 
     <label
-      class="block text-sm
-             font-semibold"
+      class="block text-sm font-semibold"
     >
 
       ${esc(label)}
@@ -1488,10 +1442,7 @@ function field(
    GUARDAR PRODUTO
 ============================================================ */
 
-async function saveProduct(
-  p,
-  isNew
-) {
+async function saveProduct(p, isNew) {
 
   try {
 
@@ -1618,21 +1569,30 @@ function renderBundles() {
 
   shell(`
 
-    <div>
+    <div
+      class="flex flex-col md:flex-row
+             md:items-center
+             justify-between gap-4"
+    >
 
-      <h1
-        class="font-[Montserrat]
-               text-3xl font-bold"
-      >
-        Rancho do Mês
-      </h1>
+      <div>
 
-      <p
-        class="text-sm
-               text-[#717971] mt-2"
-      >
-        Altere a imagem de cada Rancho do Mês.
-      </p>
+        <h1
+          class="font-[Montserrat]
+                 text-3xl font-bold"
+        >
+          Rancho do Mês
+        </h1>
+
+        <p
+          class="text-sm
+                 text-[#717971] mt-2"
+        >
+          Gerir preço, imagem e produtos
+          de cada Rancho.
+        </p>
+
+      </div>
 
     </div>
 
@@ -1646,62 +1606,77 @@ function renderBundles() {
           >
 
             ${
-              bundles
-                .map(bundle => {
+              bundles.map(bundle => {
 
-                  const name =
-                    localized(
-                      bundle.name
+                const name =
+                  localized(bundle.name) ||
+                  bundle.id;
+
+                const image =
+                  imageUrl(bundle);
+
+                const productIds =
+                  getBundleProductIds(bundle);
+
+                const bundleProducts =
+                  products.filter(product =>
+                    productIds.includes(
+                      String(product.id)
                     ) ||
-                    bundle.id;
+                    productIds.includes(
+                      String(product.sku)
+                    )
+                  );
 
-                  const image =
-                    imageUrl(bundle);
+                return `
 
-                  return `
+                  <article
+                    class="bg-white
+                           rounded-2xl
+                           shadow-sm
+                           overflow-hidden"
+                  >
 
-                    <article
-                      class="bg-white
-                             rounded-2xl
-                             shadow-sm
-                             overflow-hidden"
+                    <div
+                      class="h-48
+                             bg-[#eef5f7]
+                             relative"
                     >
 
+                      ${
+                        image
+                          ? `
+                            <img
+                              src="${esc(image)}"
+                              class="w-full h-full
+                                     object-cover"
+                            >
+                          `
+                          : `
+                            <div
+                              class="w-full h-full
+                                     flex items-center
+                                     justify-center
+                                     text-[#717971]"
+                            >
+                              <span
+                                class="material-symbols-outlined
+                                       text-5xl"
+                              >
+                                image
+                              </span>
+                            </div>
+                          `
+                      }
+
+                    </div>
+
+                    <div class="p-5">
+
                       <div
-                        class="h-48
-                               bg-[#eef5f7]
-                               relative"
+                        class="flex items-start
+                               justify-between gap-3"
                       >
-
-                        ${
-                          image
-                            ? `
-                              <img
-                                src="${esc(image)}"
-                                class="w-full h-full
-                                       object-cover"
-                              >
-                            `
-                            : `
-                              <div
-                                class="w-full h-full
-                                       flex items-center
-                                       justify-center
-                                       text-[#717971]"
-                              >
-                                <span
-                                  class="material-symbols-outlined
-                                         text-5xl"
-                                >
-                                  image
-                                </span>
-                              </div>
-                            `
-                        }
-
-                      </div>
-
-                      <div class="p-5">
 
                         <h2
                           class="font-[Montserrat]
@@ -1710,50 +1685,174 @@ function renderBundles() {
                           ${esc(name)}
                         </h2>
 
-                        <p
-                          class="text-sm
-                                 text-[#717971]
-                                 mt-1"
-                        >
-                          ${
-                            esc(
-                              localized(
-                                bundle.description
-                              )
-                            )
-                          }
-                        </p>
-
-                        <p
-                          class="font-bold
-                                 text-[#00361a]
-                                 mt-3"
-                        >
-                          ${money(bundle.price)}
-                        </p>
-
-                        <button
-                          data-edit-bundle="${esc(
-                            bundle.id
-                          )}"
-                          class="mt-4 w-full
-                                 px-4 py-3
-                                 rounded-xl
-                                 bg-[#00361a]
-                                 text-white
-                                 font-bold"
-                        >
-                          Alterar imagem
-                        </button>
+                        ${
+                          bundle.active === false
+                            ? `
+                              <span
+                                class="text-xs
+                                       bg-red-100
+                                       text-red-700
+                                       px-2 py-1
+                                       rounded-full"
+                              >
+                                Inativo
+                              </span>
+                            `
+                            : `
+                              <span
+                                class="text-xs
+                                       bg-green-100
+                                       text-green-700
+                                       px-2 py-1
+                                       rounded-full"
+                              >
+                                Ativo
+                              </span>
+                            `
+                        }
 
                       </div>
 
-                    </article>
+                      <p
+                        class="text-sm
+                               text-[#717971]
+                               mt-1"
+                      >
+                        ${esc(
+                          localized(
+                            bundle.description
+                          )
+                        )}
+                      </p>
 
-                  `;
+                      <p
+                        class="font-bold
+                               text-[#00361a]
+                               text-xl
+                               mt-3"
+                      >
+                        ${money(bundle.price)}
+                      </p>
 
-                })
-                .join("")
+                      <div
+                        class="mt-4
+                               bg-[#f5f7f6]
+                               rounded-xl p-3"
+                      >
+
+                        <p
+                          class="text-xs
+                                 font-bold
+                                 text-[#717971]"
+                        >
+                          PRODUTOS DO RANCHO
+                        </p>
+
+                        <p
+                          class="font-semibold
+                                 mt-1"
+                        >
+                          ${
+                            bundleProducts.length
+                          }
+                          ${
+                            bundleProducts.length === 1
+                              ? "produto"
+                              : "produtos"
+                          }
+                        </p>
+
+                        ${
+                          bundleProducts.length
+                            ? `
+                              <div
+                                class="mt-2
+                                       space-y-1"
+                              >
+
+                                ${
+                                  bundleProducts
+                                    .slice(0, 4)
+                                    .map(product => `
+                                      <div
+                                        class="text-sm
+                                               flex
+                                               justify-between
+                                               gap-2"
+                                      >
+
+                                        <span>
+                                          ${esc(
+                                            localized(
+                                              product.name
+                                            )
+                                          )}
+                                        </span>
+
+                                        <span
+                                          class="font-semibold"
+                                        >
+                                          ${money(
+                                            product.price
+                                          )}
+                                        </span>
+
+                                      </div>
+                                    `)
+                                    .join("")
+                                }
+
+                                ${
+                                  bundleProducts.length > 4
+                                    ? `
+                                      <p
+                                        class="text-xs
+                                               text-[#717971]"
+                                      >
+                                        +
+                                        ${
+                                          bundleProducts.length - 4
+                                        }
+                                        produto(s)
+                                      </p>
+                                    `
+                                    : ""
+                                }
+
+                              </div>
+                            `
+                            : `
+                              <p
+                                class="text-sm
+                                       text-[#717971]
+                                       mt-2"
+                              >
+                                Nenhum produto associado.
+                              </p>
+                            `
+                        }
+
+                      </div>
+
+                      <button
+                        data-edit-bundle="${esc(bundle.id)}"
+                        class="mt-4 w-full
+                               px-4 py-3
+                               rounded-xl
+                               bg-[#00361a]
+                               text-white
+                               font-bold"
+                      >
+                        Gerir Rancho
+                      </button>
+
+                    </div>
+
+                  </article>
+
+                `;
+
+              }).join("")
             }
 
           </div>
@@ -1763,11 +1862,13 @@ function renderBundles() {
             class="mt-6 bg-white
                    rounded-2xl p-6"
           >
+
             <p
               class="text-[#717971]"
             >
               Nenhum Rancho do Mês encontrado.
             </p>
+
           </div>
         `
     }
@@ -1775,9 +1876,7 @@ function renderBundles() {
   `);
 
   document
-    .querySelectorAll(
-      "[data-edit-bundle]"
-    )
+    .querySelectorAll("[data-edit-bundle]")
     .forEach(button => {
 
       button.onclick = () => {
@@ -1786,13 +1885,11 @@ function renderBundles() {
           bundles.find(
             b =>
               String(b.id) ===
-              String(
-                button.dataset.editBundle
-              )
+              String(button.dataset.editBundle)
           );
 
         if (bundle) {
-          bundleImageForm(bundle);
+          bundleForm(bundle);
         }
       };
 
@@ -1800,126 +1897,339 @@ function renderBundles() {
 }
 
 /* ============================================================
-   FORM IMAGEM RANCHO
+   FORM COMPLETO DO RANCHO
 ============================================================ */
 
-function bundleImageForm(bundle) {
+function bundleForm(bundle) {
 
   const currentImage =
     imageUrl(bundle);
 
+  const selectedIds =
+    getBundleProductIds(bundle);
+
   shell(`
 
-    <div class="max-w-2xl">
+    <div class="max-w-5xl">
 
       <button
         id="backBundles"
-        class="text-sm
-               text-[#414942]"
+        class="text-sm text-[#414942]"
       >
-        ← Voltar
+        ← Voltar para Ranchos
       </button>
 
-      <h1
-        class="font-[Montserrat]
-               text-3xl
-               font-bold mt-3"
-      >
-        ${esc(
-          localized(bundle.name)
-        )}
-      </h1>
+      <div class="mt-3">
 
-      <p
-        class="text-sm
-               text-[#717971] mt-2"
-      >
-        Altere a imagem deste Rancho do Mês.
-      </p>
+        <h1
+          class="font-[Montserrat]
+                 text-3xl font-bold"
+        >
+          ${esc(
+            localized(bundle.name)
+          )}
+        </h1>
+
+        <p
+          class="text-sm
+                 text-[#717971] mt-2"
+        >
+          Edite o preço, a imagem e os
+          produtos que fazem parte deste Rancho.
+        </p>
+
+      </div>
 
       <form
-        id="bundleImageForm"
-        class="bg-white
-               rounded-2xl
-               p-6 shadow-sm
-               mt-6"
+        id="bundleForm"
+        class="space-y-6 mt-6"
       >
 
-        ${
-          currentImage
-            ? `
-              <img
-                id="bundlePreview"
-                src="${esc(currentImage)}"
-                class="w-full
-                       max-h-80
-                       object-cover
-                       rounded-2xl
-                       mb-5"
-              >
-            `
-            : `
-              <div
-                id="bundlePreviewBox"
-                class="w-full h-64
-                       rounded-2xl
-                       bg-[#eef5f7]
-                       flex items-center
-                       justify-center
-                       mb-5"
-              >
-                <span
-                  class="material-symbols-outlined
-                         text-6xl
-                         text-[#717971]"
-                >
-                  image
-                </span>
-              </div>
+        <!-- DADOS PRINCIPAIS -->
 
-              <img
-                id="bundlePreview"
-                class="hidden w-full
-                       max-h-80
-                       object-cover
-                       rounded-2xl
-                       mb-5"
-              >
-            `
-        }
-
-        <label
-          class="block text-sm
-                 font-semibold"
+        <section
+          class="bg-white
+                 rounded-2xl
+                 p-6 shadow-sm"
         >
 
-          Nova imagem
+          <h2
+            class="font-[Montserrat]
+                   text-xl font-bold"
+          >
+            Dados do Rancho
+          </h2>
 
-          <input
-            id="bundleImage"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            class="mt-2 block w-full"
+          <div
+            class="grid md:grid-cols-2
+                   gap-4 mt-5"
           >
 
-        </label>
+            ${field(
+              "Nome",
+              "bundle_name",
+              localized(bundle.name)
+            )}
 
-        <button
-          class="mt-5 px-5 py-3
-                 bg-[#00361a]
-                 text-white
-                 rounded-xl
-                 font-bold"
+            ${field(
+              "Preço do Rancho (MZN)",
+              "bundle_price",
+              bundle.price || 0,
+              "number"
+            )}
+
+          </div>
+
+          <label
+            class="block text-sm
+                   font-semibold mt-4"
+          >
+
+            Descrição
+
+            <textarea
+              id="bundle_description"
+              rows="4"
+              class="mt-1 w-full
+                     border rounded-xl p-3"
+            >${esc(
+              localized(bundle.description)
+            )}</textarea>
+
+          </label>
+
+          <div class="flex gap-5 mt-5">
+
+            <label>
+
+              <input
+                id="bundle_active"
+                type="checkbox"
+                ${
+                  bundle.active !== false
+                    ? "checked"
+                    : ""
+                }
+              >
+
+              Ativo
+
+            </label>
+
+          </div>
+
+        </section>
+
+
+        <!-- IMAGEM -->
+
+        <section
+          class="bg-white
+                 rounded-2xl
+                 p-6 shadow-sm"
         >
-          Guardar imagem
-        </button>
+
+          <h2
+            class="font-[Montserrat]
+                   text-xl font-bold"
+          >
+            Imagem do Rancho
+          </h2>
+
+          <div class="mt-5">
+
+            ${
+              currentImage
+                ? `
+                  <img
+                    id="bundlePreview"
+                    src="${esc(currentImage)}"
+                    class="w-full
+                           h-72
+                           object-cover
+                           rounded-2xl"
+                  >
+                `
+                : `
+                  <div
+                    id="bundlePreviewBox"
+                    class="w-full h-72
+                           bg-[#eef5f7]
+                           rounded-2xl
+                           flex items-center
+                           justify-center"
+                  >
+                    <span
+                      class="material-symbols-outlined
+                             text-6xl
+                             text-[#717971]"
+                    >
+                      image
+                    </span>
+                  </div>
+
+                  <img
+                    id="bundlePreview"
+                    class="hidden w-full h-72
+                           object-cover
+                           rounded-2xl"
+                  >
+                `
+            }
+
+          </div>
+
+          <label
+            class="block text-sm
+                   font-semibold mt-5"
+          >
+
+            Nova imagem
+
+            <input
+              id="bundleImage"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              class="mt-2 block w-full"
+            >
+
+          </label>
+
+        </section>
+
+
+        <!-- PRODUTOS -->
+
+        <section
+          class="bg-white
+                 rounded-2xl
+                 p-6 shadow-sm"
+        >
+
+          <div
+            class="flex flex-col
+                   md:flex-row
+                   md:items-center
+                   justify-between gap-3"
+          >
+
+            <div>
+
+              <h2
+                class="font-[Montserrat]
+                       text-xl font-bold"
+              >
+                Produtos que compõem o Rancho
+              </h2>
+
+              <p
+                class="text-sm
+                       text-[#717971] mt-1"
+              >
+                Selecione exatamente os produtos
+                que o cliente deve ver neste Rancho.
+              </p>
+
+            </div>
+
+            <div
+              id="selectedProductsCount"
+              class="px-3 py-2
+                     bg-[#eef5f7]
+                     rounded-xl
+                     text-sm font-bold"
+            >
+              0 produtos selecionados
+            </div>
+
+          </div>
+
+          <div
+            class="mt-5
+                   border
+                   rounded-2xl
+                   overflow-hidden"
+          >
+
+            <div
+              class="p-3
+                     bg-[#f5f7f6]
+                     border-b"
+            >
+
+              <input
+                id="bundleProductSearch"
+                type="search"
+                placeholder="Pesquisar produto..."
+                class="w-full
+                       border rounded-xl
+                       p-3 bg-white"
+              >
+
+            </div>
+
+            <div
+              id="bundleProductsList"
+              class="max-h-[520px]
+                     overflow-y-auto"
+            >
+
+              ${renderBundleProductRows(
+                selectedIds
+              )}
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- GUARDAR -->
+
+        <section
+          class="bg-white
+                 rounded-2xl
+                 p-6 shadow-sm"
+        >
+
+          <div class="flex gap-3">
+
+            <button
+              type="submit"
+              class="px-6 py-3
+                     bg-[#00361a]
+                     text-white
+                     rounded-xl
+                     font-bold"
+            >
+              Guardar Rancho
+            </button>
+
+            <button
+              type="button"
+              id="cancelBundle"
+              class="px-6 py-3
+                     border rounded-xl"
+            >
+              Cancelar
+            </button>
+
+          </div>
+
+        </section>
 
       </form>
 
     </div>
   `);
 
+  updateBundleSelectedCount();
+
   $("#backBundles").onclick =
+    renderBundles;
+
+  $("#cancelBundle").onclick =
     renderBundles;
 
   $("#bundleImage").onchange =
@@ -1945,70 +2255,318 @@ function bundleImageForm(bundle) {
         .add("hidden");
     };
 
-  $("#bundleImageForm").onsubmit =
+  document
+    .querySelectorAll(
+      "[data-bundle-product]"
+    )
+    .forEach(input => {
+
+      input.onchange =
+        updateBundleSelectedCount;
+
+    });
+
+  $("#bundleProductSearch").oninput =
+    () => {
+
+      const query =
+        $("#bundleProductSearch")
+          .value
+          .trim()
+          .toLowerCase();
+
+      document
+        .querySelectorAll(
+          "[data-bundle-product-row]"
+        )
+        .forEach(row => {
+
+          const text =
+            row.dataset.searchText || "";
+
+          row.style.display =
+            text.includes(query)
+              ? ""
+              : "none";
+
+        });
+    };
+
+  $("#bundleForm").onsubmit =
     async e => {
 
       e.preventDefault();
 
-      try {
-
-        const file =
-          $("#bundleImage")
-            .files?.[0];
-
-        if (!file) {
-
-          toast(
-            "Selecione uma imagem."
-          );
-
-          return;
-        }
-
-        toast(
-          "A carregar imagem..."
-        );
-
-        const url =
-          await uploadImage(
-            file,
-            "bundles"
-          );
-
-        const {
-          error
-        } =
-          await supabase
-            .from("bundles")
-            .update({
-              image_url: url,
-              updated_at:
-                new Date().toISOString()
-            })
-            .eq("id", bundle.id);
-
-        if (error) {
-          throw error;
-        }
-
-        toast(
-          "Imagem do Rancho atualizada."
-        );
-
-        await load();
-
-        renderBundles();
-
-      } catch (error) {
-
-        console.error(error);
-
-        toast(
-          "Erro: " +
-          error.message
-        );
-      }
+      await saveBundle(bundle);
     };
+}
+
+/* ============================================================
+   LINHAS DE PRODUTOS DO RANCHO
+============================================================ */
+
+function renderBundleProductRows(selectedIds) {
+
+  if (!products.length) {
+
+    return `
+      <div class="p-6 text-center
+                  text-[#717971]">
+        Nenhum produto encontrado.
+      </div>
+    `;
+  }
+
+  return products
+    .map(product => {
+
+      const id =
+        String(product.id);
+
+      const sku =
+        String(product.sku || "");
+
+      const selected =
+        selectedIds.includes(id) ||
+        (sku && selectedIds.includes(sku));
+
+      const name =
+        localized(product.name) ||
+        product.sku ||
+        product.id;
+
+      const searchText =
+        `${name} ${product.sku || ""} ${product.id}`
+          .toLowerCase();
+
+      return `
+
+        <label
+          data-bundle-product-row
+          data-search-text="${esc(searchText)}"
+          class="flex items-center
+                 gap-4 p-4 border-b
+                 last:border-b-0
+                 cursor-pointer
+                 hover:bg-[#f5f7f6]"
+        >
+
+          <input
+            type="checkbox"
+            data-bundle-product="${esc(id)}"
+            value="${esc(id)}"
+            ${
+              selected
+                ? "checked"
+                : ""
+            }
+            class="w-5 h-5"
+          >
+
+          ${
+            product.image_url
+              ? `
+                <img
+                  src="${esc(product.image_url)}"
+                  class="w-14 h-14
+                         rounded-xl
+                         object-cover"
+                >
+              `
+              : `
+                <div
+                  class="w-14 h-14
+                         rounded-xl
+                         bg-[#eef5f7]
+                         flex items-center
+                         justify-center"
+                >
+                  <span
+                    class="material-symbols-outlined"
+                  >
+                    image
+                  </span>
+                </div>
+              `
+          }
+
+          <div class="flex-1">
+
+            <div
+              class="font-semibold"
+            >
+              ${esc(name)}
+            </div>
+
+            <div
+              class="text-xs
+                     text-[#717971]"
+            >
+              ${
+                product.sku
+                  ? `SKU: ${esc(product.sku)}`
+                  : `ID: ${esc(product.id)}`
+              }
+            </div>
+
+          </div>
+
+          <div
+            class="font-bold
+                   text-[#00361a]"
+          >
+            ${money(product.price)}
+          </div>
+
+        </label>
+
+      `;
+
+    })
+    .join("");
+}
+
+/* ============================================================
+   CONTADOR DE PRODUTOS
+============================================================ */
+
+function updateBundleSelectedCount() {
+
+  const count =
+    document
+      .querySelectorAll(
+        "[data-bundle-product]:checked"
+      )
+      .length;
+
+  const element =
+    $("#selectedProductsCount");
+
+  if (!element) return;
+
+  element.textContent =
+    `${count} ${
+      count === 1
+        ? "produto selecionado"
+        : "produtos selecionados"
+    }`;
+}
+
+/* ============================================================
+   GUARDAR RANCHO
+============================================================ */
+
+async function saveBundle(bundle) {
+
+  try {
+
+    toast("A guardar Rancho...");
+
+    /* ======================================================
+       IMAGEM
+    ====================================================== */
+
+    let image_url =
+      bundle.image_url || null;
+
+    const file =
+      $("#bundleImage")
+        ?.files?.[0];
+
+    if (file) {
+
+      image_url =
+        await uploadImage(
+          file,
+          "bundles"
+        );
+    }
+
+
+    /* ======================================================
+       PRODUTOS SELECIONADOS
+    ====================================================== */
+
+    const selectedProductIds =
+      Array.from(
+        document.querySelectorAll(
+          "[data-bundle-product]:checked"
+        )
+      )
+      .map(input =>
+        String(input.value)
+      );
+
+
+    /* ======================================================
+       DADOS
+    ====================================================== */
+
+    const row = {
+
+      name: {
+        pt:
+          $("#bundle_name").value.trim()
+      },
+
+      description: {
+        pt:
+          $("#bundle_description")
+            .value
+            .trim()
+      },
+
+      price:
+        Number(
+          $("#bundle_price").value || 0
+        ),
+
+      product_ids:
+        selectedProductIds,
+
+      image_url,
+
+      active:
+        $("#bundle_active").checked,
+
+      updated_at:
+        new Date().toISOString()
+    };
+
+
+    /* ======================================================
+       ATUALIZAR
+    ====================================================== */
+
+    const {
+      error
+    } =
+      await supabase
+        .from("bundles")
+        .update(row)
+        .eq("id", bundle.id);
+
+    if (error) {
+      throw error;
+    }
+
+    toast(
+      "Rancho atualizado com sucesso."
+    );
+
+    await load();
+
+    renderBundles();
+
+  } catch (error) {
+
+    console.error(error);
+
+    toast(
+      "Erro ao guardar Rancho: " +
+      error.message
+    );
+  }
 }
 
 /* ============================================================
@@ -2052,9 +2610,7 @@ function renderCategories() {
                 .map(category => {
 
                   const name =
-                    localized(
-                      category.name
-                    );
+                    localized(category.name);
 
                   const image =
                     imageUrl(category);
@@ -2103,16 +2659,12 @@ function renderCategories() {
 
                       <div class="p-4">
 
-                        <h2
-                          class="font-bold"
-                        >
+                        <h2 class="font-bold">
                           ${esc(name)}
                         </h2>
 
                         <button
-                          data-edit-category="${esc(
-                            category.id
-                          )}"
+                          data-edit-category="${esc(category.id)}"
                           class="mt-4 w-full
                                  px-4 py-3
                                  rounded-xl
@@ -2141,9 +2693,7 @@ function renderCategories() {
                    rounded-2xl p-6"
           >
 
-            <p
-              class="text-[#717971]"
-            >
+            <p class="text-[#717971]">
               Nenhuma categoria encontrada.
             </p>
 
@@ -2154,9 +2704,7 @@ function renderCategories() {
   `);
 
   document
-    .querySelectorAll(
-      "[data-edit-category]"
-    )
+    .querySelectorAll("[data-edit-category]")
     .forEach(button => {
 
       button.onclick = () => {
@@ -2165,9 +2713,7 @@ function renderCategories() {
           categories.find(
             c =>
               String(c.id) ===
-              String(
-                button.dataset.editCategory
-              )
+              String(button.dataset.editCategory)
           );
 
         if (category) {
@@ -2193,8 +2739,7 @@ function categoryImageForm(category) {
 
       <button
         id="backCategories"
-        class="text-sm
-               text-[#414942]"
+        class="text-sm text-[#414942]"
       >
         ← Voltar
       </button>
@@ -2438,8 +2983,7 @@ function renderHeroSettings() {
               <img
                 id="heroPreview"
                 src="${esc(heroImage)}"
-                class="w-full
-                       h-80
+                class="w-full h-80
                        object-cover
                        rounded-2xl
                        mb-5"
@@ -2447,6 +2991,7 @@ function renderHeroSettings() {
             `
             : `
               <div
+                id="heroPreviewBox"
                 class="w-full h-80
                        bg-[#eef5f7]
                        rounded-2xl
@@ -2465,8 +3010,7 @@ function renderHeroSettings() {
 
               <img
                 id="heroPreview"
-                class="hidden w-full
-                       h-80
+                class="hidden w-full h-80
                        object-cover
                        rounded-2xl
                        mb-5"
@@ -2525,6 +3069,10 @@ function renderHeroSettings() {
       preview.classList.remove(
         "hidden"
       );
+
+      $("#heroPreviewBox")
+        ?.classList
+        .add("hidden");
     };
 
   $("#heroForm").onsubmit =
@@ -2674,27 +3222,19 @@ async function loadOrders() {
 
           <tr>
 
-            <th
-              class="p-4 text-left"
-            >
+            <th class="p-4 text-left">
               Pedido
             </th>
 
-            <th
-              class="p-4 text-left"
-            >
+            <th class="p-4 text-left">
               Cliente
             </th>
 
-            <th
-              class="p-4 text-left"
-            >
+            <th class="p-4 text-left">
               Total
             </th>
 
-            <th
-              class="p-4 text-left"
-            >
+            <th class="p-4 text-left">
               Estado
             </th>
 
@@ -2708,13 +3248,9 @@ async function loadOrders() {
             (data || [])
               .map(order => `
 
-                <tr
-                  class="border-t"
-                >
+                <tr class="border-t">
 
-                  <td
-                    class="p-4 font-bold"
-                  >
+                  <td class="p-4 font-bold">
                     ${esc(
                       order.order_number ||
                       order.id
@@ -2729,9 +3265,7 @@ async function loadOrders() {
 
                     <br>
 
-                    <span
-                      class="text-xs"
-                    >
+                    <span class="text-xs">
                       ${esc(
                         order.customer_phone
                       )}
@@ -2742,17 +3276,13 @@ async function loadOrders() {
                   <td
                     class="p-4 font-bold"
                   >
-                    ${money(
-                      order.total
-                    )}
+                    ${money(order.total)}
                   </td>
 
                   <td class="p-4">
 
                     <select
-                      data-status="${esc(
-                        order.id
-                      )}"
+                      data-status="${esc(order.id)}"
                       class="border
                              rounded-lg
                              p-2"
@@ -2797,22 +3327,17 @@ async function loadOrders() {
       </table>
 
     </div>
-
   `;
 
   document
-    .querySelectorAll(
-      "[data-status]"
-    )
+    .querySelectorAll("[data-status]")
     .forEach(select => {
 
       const row =
         (data || []).find(
           x =>
             String(x.id) ===
-            String(
-              select.dataset.status
-            )
+            String(select.dataset.status)
         );
 
       if (!row) return;
@@ -2861,6 +3386,12 @@ function renderSettings() {
     settings.default_language ||
     "pt";
 
+  /*
+   * IMPORTANTE:
+   * Rancho do Mês e Categorias NÃO ficam mais aqui.
+   * Cada um possui o seu próprio separador.
+   */
+
   shell(`
 
     <div>
@@ -2876,113 +3407,54 @@ function renderSettings() {
         class="text-sm
                text-[#717971] mt-2"
       >
-        Gerir as configurações do site.
+        Gerir as configurações gerais do site.
       </p>
 
     </div>
 
+
     <div
       class="bg-white
-             rounded-2xl p-6
-             mt-6 max-w-3xl"
+             rounded-2xl
+             p-6
+             mt-6
+             max-w-3xl"
     >
 
       <div
-        class="grid md:grid-cols-2
-               gap-3 mb-6"
+        class="mb-6
+               border-b pb-5"
       >
+
+        <h2
+          class="font-[Montserrat]
+                 text-xl font-bold"
+        >
+          Imagem principal
+        </h2>
+
+        <p
+          class="text-sm
+                 text-[#717971] mt-1"
+        >
+          A imagem grande do topo da página inicial
+          é gerida separadamente.
+        </p>
 
         <button
           id="heroButton"
-          class="p-5
-                 border rounded-2xl
-                 text-left
-                 hover:bg-[#f5f7f6]"
+          class="mt-4
+                 px-4 py-3
+                 rounded-xl
+                 bg-[#00361a]
+                 text-white
+                 font-bold"
         >
-
-          <span
-            class="material-symbols-outlined
-                   text-[#00361a]"
-          >
-            panorama
-          </span>
-
-          <h2
-            class="font-bold mt-2"
-          >
-            Imagem grande do topo
-          </h2>
-
-          <p
-            class="text-sm
-                   text-[#717971]"
-          >
-            Alterar a imagem principal.
-          </p>
-
-        </button>
-
-        <button
-          id="bundlesButton"
-          class="p-5
-                 border rounded-2xl
-                 text-left
-                 hover:bg-[#f5f7f6]"
-        >
-
-          <span
-            class="material-symbols-outlined
-                   text-[#00361a]"
-          >
-            shopping_basket
-          </span>
-
-          <h2
-            class="font-bold mt-2"
-          >
-            Rancho do Mês
-          </h2>
-
-          <p
-            class="text-sm
-                   text-[#717971]"
-          >
-            Alterar imagens dos Ranchos.
-          </p>
-
-        </button>
-
-        <button
-          id="categoriesButton"
-          class="p-5
-                 border rounded-2xl
-                 text-left
-                 hover:bg-[#f5f7f6]"
-        >
-
-          <span
-            class="material-symbols-outlined
-                   text-[#00361a]"
-          >
-            category
-          </span>
-
-          <h2
-            class="font-bold mt-2"
-          >
-            Categorias
-          </h2>
-
-          <p
-            class="text-sm
-                   text-[#717971]"
-          >
-            Alterar imagens das categorias.
-          </p>
-
+          Alterar imagem do topo
         </button>
 
       </div>
+
 
       <form
         id="settingsForm"
@@ -3090,12 +3562,6 @@ function renderSettings() {
 
   $("#heroButton").onclick =
     renderHeroSettings;
-
-  $("#bundlesButton").onclick =
-    renderBundles;
-
-  $("#categoriesButton").onclick =
-    renderCategories;
 
   $("#settingsForm").onsubmit =
     async e => {
