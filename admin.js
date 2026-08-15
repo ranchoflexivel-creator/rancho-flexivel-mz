@@ -24,7 +24,7 @@ let categories = [];
 
 
 /* =========================================================
-   SEGURANÇA / ESCAPE HTML
+   ESCAPE HTML
 ========================================================= */
 
 function esc(value) {
@@ -48,6 +48,7 @@ function esc(value) {
 
 async function boot() {
   try {
+
     if (!supabase) {
       login(
         "Configure o Supabase para ativar a administração real."
@@ -62,7 +63,12 @@ async function boot() {
 
     if (error) {
       console.error("Erro ao obter sessão:", error);
-      login("Erro ao verificar a sessão.");
+
+      login(
+        "Erro ao verificar a sessão: " +
+        error.message
+      );
+
       return;
     }
 
@@ -73,9 +79,8 @@ async function boot() {
       return;
     }
 
-    /*
-      Verifica se o utilizador autenticado é administrador.
-    */
+
+    /* VERIFICAR ADMIN */
 
     const {
       data: profile,
@@ -86,9 +91,11 @@ async function boot() {
       .eq("id", session.user.id)
       .single();
 
+
     if (profileError) {
+
       console.error(
-        "Erro ao verificar conta de administrador:",
+        "Erro ao verificar conta:",
         profileError
       );
 
@@ -100,7 +107,12 @@ async function boot() {
       return;
     }
 
-    if (!profile || String(profile.role).toLowerCase() !== "admin") {
+
+    if (
+      !profile ||
+      String(profile.role).toLowerCase() !== "admin"
+    ) {
+
       await supabase.auth.signOut();
 
       login(
@@ -110,17 +122,19 @@ async function boot() {
       return;
     }
 
-    /*
-      Utilizador autorizado.
-      Carrega produtos e categorias.
-    */
+
+    /* CARREGAR DADOS */
 
     await load();
 
     render();
 
   } catch (error) {
-    console.error("Erro no boot:", error);
+
+    console.error(
+      "Erro ao iniciar administração:",
+      error
+    );
 
     login(
       "Ocorreu um erro ao iniciar a área administrativa."
@@ -134,24 +148,31 @@ async function boot() {
 ========================================================= */
 
 function login(msg = "") {
+
   document.body.innerHTML = `
+
     <main class="min-h-screen flex items-center justify-center p-4">
 
       <section class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
 
         <div class="w-14 h-14 bg-[#00361a] text-white rounded-2xl flex items-center justify-center mx-auto">
+
           <span class="material-symbols-outlined">
             admin_panel_settings
           </span>
+
         </div>
+
 
         <h1 class="font-[Montserrat] text-2xl font-bold text-center mt-5">
           Rancho Flexível
         </h1>
 
+
         <p class="text-center text-sm text-[#414942] mt-2">
           Área administrativa
         </p>
+
 
         ${
           msg
@@ -163,9 +184,14 @@ function login(msg = "") {
             : ""
         }
 
-        <form id="login" class="mt-6 space-y-4">
+
+        <form
+          id="login"
+          class="mt-6 space-y-4"
+        >
 
           <label class="block text-sm font-semibold">
+
             E-mail
 
             <input
@@ -174,9 +200,12 @@ function login(msg = "") {
               required
               class="mt-1 w-full border rounded-xl p-3"
             >
+
           </label>
 
+
           <label class="block text-sm font-semibold">
+
             Senha
 
             <input
@@ -185,7 +214,9 @@ function login(msg = "") {
               required
               class="mt-1 w-full border rounded-xl p-3"
             >
+
           </label>
+
 
           <button
             class="w-full py-3 bg-[#00361a] text-white rounded-xl font-bold"
@@ -194,6 +225,7 @@ function login(msg = "") {
           </button>
 
         </form>
+
 
         <p class="text-xs text-[#717971] mt-5">
           A autenticação é feita pelo Supabase.
@@ -205,15 +237,18 @@ function login(msg = "") {
     </main>
   `;
 
-  const formLogin = $("#login");
 
-  if (!formLogin) return;
+  $("#login").onsubmit = async (e) => {
 
-  formLogin.onsubmit = async (e) => {
     e.preventDefault();
 
-    const email = $("#email").value.trim();
-    const password = $("#password").value;
+
+    const email =
+      $("#email").value.trim();
+
+    const password =
+      $("#password").value;
+
 
     const {
       error
@@ -222,10 +257,12 @@ function login(msg = "") {
       password
     });
 
+
     if (error) {
       login(error.message);
       return;
     }
+
 
     location.reload();
   };
@@ -238,16 +275,17 @@ function login(msg = "") {
 
 async function load() {
 
-  /*
-    PRODUTOS
-  */
+  /* PRODUTOS */
 
-  const productsResult = await supabase
-    .from("products")
-    .select("*")
-    .order("sort_order");
+  const productsResult =
+    await supabase
+      .from("products")
+      .select("*")
+      .order("sort_order");
+
 
   if (productsResult.error) {
+
     console.error(
       "Erro ao carregar produtos:",
       productsResult.error
@@ -257,21 +295,25 @@ async function load() {
       "Erro ao carregar produtos: " +
       productsResult.error.message
     );
+
+  } else {
+
+    products =
+      productsResult.data || [];
   }
 
-  products = productsResult.data || [];
 
+  /* CATEGORIAS */
 
-  /*
-    CATEGORIAS
-  */
+  const categoriesResult =
+    await supabase
+      .from("categories")
+      .select("*")
+      .order("sort_order");
 
-  const categoriesResult = await supabase
-    .from("categories")
-    .select("*")
-    .order("sort_order");
 
   if (categoriesResult.error) {
+
     console.error(
       "Erro ao carregar categorias:",
       categoriesResult.error
@@ -283,11 +325,23 @@ async function load() {
     );
 
     categories = [];
+
   } else {
-    categories = categoriesResult.data || [];
+
+    categories =
+      categoriesResult.data || [];
   }
 
-  console.log("Categorias carregadas:", categories);
+
+  console.log(
+    "Categorias carregadas:",
+    categories
+  );
+
+  console.log(
+    "Quantidade de categorias:",
+    categories.length
+  );
 }
 
 
@@ -298,6 +352,7 @@ async function load() {
 function shell(content) {
 
   document.body.innerHTML = `
+
     <div class="min-h-screen flex">
 
       <aside class="hidden md:flex w-64 bg-[#00361a] text-white p-5 flex-col">
@@ -309,6 +364,7 @@ function shell(content) {
           Rancho Flexível
         </a>
 
+
         <nav class="space-y-1 text-sm">
 
           <button
@@ -318,6 +374,7 @@ function shell(content) {
             Dashboard
           </button>
 
+
           <button
             data-tab="products"
             class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
@@ -325,12 +382,14 @@ function shell(content) {
             Produtos
           </button>
 
+
           <button
             data-tab="orders"
             class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
           >
             Pedidos
           </button>
+
 
           <button
             data-tab="settings"
@@ -341,6 +400,7 @@ function shell(content) {
 
         </nav>
 
+
         <button
           id="logout"
           class="mt-auto text-left px-3 py-3 rounded-lg hover:bg-white/10"
@@ -350,21 +410,31 @@ function shell(content) {
 
       </aside>
 
+
       <main class="flex-1 p-4 lg:p-8">
+
         ${content}
+
       </main>
 
     </div>
   `;
 
-  const logout = $("#logout");
+
+  const logout =
+    $("#logout");
+
 
   if (logout) {
+
     logout.onclick = async () => {
+
       await supabase.auth.signOut();
+
       location.reload();
     };
   }
+
 
   document
     .querySelectorAll("[data-tab]")
@@ -372,18 +442,24 @@ function shell(content) {
 
       button.onclick = () => {
 
-        const tab = button.dataset.tab;
+        const tab =
+          button.dataset.tab;
+
 
         if (tab === "products") {
+
           renderProducts();
 
         } else if (tab === "dashboard") {
+
           render();
 
         } else if (tab === "orders") {
+
           renderOrders();
 
         } else {
+
           renderSettings();
         }
       };
@@ -398,9 +474,11 @@ function shell(content) {
 function render() {
 
   shell(`
+
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
       <div>
+
         <p class="text-sm text-[#717971]">
           Painel administrativo
         </p>
@@ -408,7 +486,9 @@ function render() {
         <h1 class="font-[Montserrat] text-3xl font-bold">
           Dashboard
         </h1>
+
       </div>
+
 
       <a
         href="index.html"
@@ -429,46 +509,51 @@ function render() {
             products.length,
             "inventory_2"
           ],
+
           [
             "Ativos",
             products.filter(
-              (p) => p.active !== false
+              p => p.active !== false
             ).length,
             "check_circle"
           ],
+
           [
             "Stock baixo",
             products.filter(
-              (p) => (p.stock ?? 0) < 5
+              p => (p.stock ?? 0) < 5
             ).length,
             "warning"
           ],
+
           [
             "Conta",
             "Admin",
             "admin_panel_settings"
           ]
         ]
-          .map(
-            (x) => `
-              <div class="bg-white rounded-2xl p-5 shadow-sm">
+        .map(
+          x => `
 
-                <span class="material-symbols-outlined text-[#00361a]">
-                  ${x[2]}
-                </span>
+            <div class="bg-white rounded-2xl p-5 shadow-sm">
 
-                <p class="text-sm text-[#717971] mt-4">
-                  ${x[0]}
-                </p>
+              <span class="material-symbols-outlined text-[#00361a]">
+                ${x[2]}
+              </span>
 
-                <b class="text-2xl">
-                  ${x[1]}
-                </b>
+              <p class="text-sm text-[#717971] mt-4">
+                ${x[0]}
+              </p>
 
-              </div>
-            `
-          )
-          .join("")
+              <b class="text-2xl">
+                ${x[1]}
+              </b>
+
+            </div>
+
+          `
+        )
+        .join("")
       }
 
     </div>
@@ -480,6 +565,7 @@ function render() {
         Gestão rápida
       </h2>
 
+
       <div class="flex flex-wrap gap-3 mt-4">
 
         <button
@@ -489,12 +575,14 @@ function render() {
           Gerir produtos
         </button>
 
+
         <button
           id="goOrders"
           class="px-4 py-2 rounded-xl border"
         >
           Pedidos
         </button>
+
 
         <button
           id="goSettings"
@@ -506,11 +594,18 @@ function render() {
       </div>
 
     </div>
+
   `);
 
-  $("#goProducts").onclick = renderProducts;
-  $("#goOrders").onclick = renderOrders;
-  $("#goSettings").onclick = renderSettings;
+
+  $("#goProducts").onclick =
+    renderProducts;
+
+  $("#goOrders").onclick =
+    renderOrders;
+
+  $("#goSettings").onclick =
+    renderSettings;
 }
 
 
@@ -521,9 +616,11 @@ function render() {
 function renderProducts() {
 
   shell(`
+
     <div class="flex items-center justify-between gap-4">
 
       <div>
+
         <h1 class="font-[Montserrat] text-3xl font-bold">
           Produtos
         </h1>
@@ -531,7 +628,9 @@ function renderProducts() {
         <p class="text-sm text-[#717971]">
           Adicione, edite preços, nomes, stock e imagens.
         </p>
+
       </div>
+
 
       <button
         id="new"
@@ -575,115 +674,134 @@ function renderProducts() {
 
         </thead>
 
+
         <tbody>
 
           ${
             products.length
-              ? products
-                  .map(
-                    (p) => {
 
-                      const category =
-                        categories.find(
-                          (c) =>
-                            String(c.id) ===
-                            String(p.category_id)
-                        );
+              ? products.map(p => {
 
-                      const categoryName =
-                        category?.name?.pt ||
-                        category?.name ||
-                        "—";
+                  const category =
+                    categories.find(
+                      c =>
+                        String(c.id) ===
+                        String(p.category_id)
+                    );
 
-                      return `
-                        <tr class="border-t">
 
-                          <td class="p-4 flex items-center gap-3">
+                  const categoryName =
+                    category?.name?.pt ||
+                    category?.name ||
+                    "—";
 
-                            ${
-                              p.image_url
-                                ? `
-                                  <img
-                                    src="${esc(p.image_url)}"
-                                    class="w-12 h-12 object-cover rounded-lg"
-                                  >
-                                `
-                                : `
-                                  <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-gray-400">
-                                      image
-                                    </span>
-                                  </div>
-                                `
-                            }
 
-                            <div>
+                  return `
 
-                              <b>
-                                ${esc(
-                                  p.name?.pt ||
-                                  p.name ||
-                                  ""
-                                )}
-                              </b>
+                    <tr class="border-t">
 
-                              <div class="text-xs text-[#717971]">
-                                ${esc(p.sku || p.id)}
+                      <td class="p-4 flex items-center gap-3">
+
+                        ${
+                          p.image_url
+
+                            ? `
+                              <img
+                                src="${esc(p.image_url)}"
+                                class="w-12 h-12 object-cover rounded-lg"
+                              >
+                            `
+
+                            : `
+                              <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+
+                                <span class="material-symbols-outlined text-gray-400">
+                                  image
+                                </span>
+
                               </div>
-
-                            </div>
-
-                          </td>
+                            `
+                        }
 
 
-                          <td class="p-4">
-                            ${esc(categoryName)}
-                          </td>
+                        <div>
 
-
-                          <td class="p-4 font-bold">
-                            ${Number(
-                              p.price || 0
-                            ).toLocaleString(
-                              "pt-MZ",
-                              {
-                                minimumFractionDigits: 2
-                              }
+                          <b>
+                            ${esc(
+                              p.name?.pt ||
+                              p.name ||
+                              ""
                             )}
-                            MZN
-                          </td>
+                          </b>
 
 
-                          <td class="p-4">
-                            ${p.stock ?? 0}
-                          </td>
+                          <div class="text-xs text-[#717971]">
+                            ${esc(
+                              p.sku ||
+                              p.id
+                            )}
+                          </div>
+
+                        </div>
+
+                      </td>
 
 
-                          <td class="p-4 text-right">
+                      <td class="p-4">
+                        ${esc(categoryName)}
+                      </td>
 
-                            <button
-                              data-edit="${esc(p.id)}"
-                              class="px-3 py-2 rounded-lg bg-[#e8eff1]"
-                            >
-                              Editar
-                            </button>
 
-                          </td>
+                      <td class="p-4 font-bold">
 
-                        </tr>
-                      `;
-                    }
-                  )
-                  .join("")
+                        ${Number(
+                          p.price || 0
+                        ).toLocaleString(
+                          "pt-MZ",
+                          {
+                            minimumFractionDigits: 2
+                          }
+                        )}
+
+                        MZN
+
+                      </td>
+
+
+                      <td class="p-4">
+                        ${p.stock ?? 0}
+                      </td>
+
+
+                      <td class="p-4 text-right">
+
+                        <button
+                          data-edit="${esc(p.id)}"
+                          class="px-3 py-2 rounded-lg bg-[#e8eff1]"
+                        >
+                          Editar
+                        </button>
+
+                      </td>
+
+                    </tr>
+
+                  `;
+                }).join("")
+
               : `
+
                 <tr>
+
                   <td
                     colspan="5"
                     class="p-8 text-center text-gray-500"
                   >
                     Ainda não existem produtos.
                   </td>
+
                 </tr>
+
               `
           }
 
@@ -692,23 +810,45 @@ function renderProducts() {
       </table>
 
     </div>
+
   `);
 
 
-  $("#new").onclick = () => form();
+  /*
+    IMPORTANTE:
 
+    Recarrega os dados antes de abrir
+    o formulário de novo produto.
+  */
+
+  $("#new").onclick = async () => {
+
+    await load();
+
+    form();
+  };
+
+
+  /*
+    EDITAR PRODUTO
+  */
 
   document
     .querySelectorAll("[data-edit]")
-    .forEach((button) => {
+    .forEach(button => {
 
-      button.onclick = () => {
+      button.onclick = async () => {
 
-        const product = products.find(
-          (p) =>
-            String(p.id) ===
-            String(button.dataset.edit)
-        );
+        await load();
+
+
+        const product =
+          products.find(
+            p =>
+              String(p.id) ===
+              String(button.dataset.edit)
+          );
+
 
         if (product) {
           form(product);
@@ -719,7 +859,7 @@ function renderProducts() {
 
 
 /* =========================================================
-   CAMPO DE TEXTO
+   CAMPO
 ========================================================= */
 
 function field(
@@ -730,6 +870,7 @@ function field(
 ) {
 
   return `
+
     <label class="block text-sm font-semibold">
 
       ${label}
@@ -742,23 +883,28 @@ function field(
       >
 
     </label>
+
   `;
 }
 
 
 /* =========================================================
-   FORMULÁRIO DE PRODUTO
-   SOMENTE PORTUGUÊS
+   FORMULÁRIO
 ========================================================= */
 
 function form(product = null) {
 
-  const isNew = !product;
+  const isNew =
+    !product;
+
 
   product =
     product ||
     {
-      id: "RF-" + Date.now(),
+
+      id:
+        "RF-" +
+        Date.now(),
 
       name: {
         pt: ""
@@ -769,9 +915,13 @@ function form(product = null) {
       },
 
       price: 0,
+
       old_price: "",
+
       stock: 0,
+
       sku: "",
+
       unit: "",
 
       tag: {
@@ -779,46 +929,92 @@ function form(product = null) {
       },
 
       category_id: "",
+
       image_url: null,
 
       active: true,
+
       featured: false
+
     };
 
 
   /*
-    CATEGORIAS
+    CRIAR OPÇÕES DAS CATEGORIAS
 
-    Aqui usamos diretamente o array carregado
-    do Supabase.
+    O Supabase pode devolver:
+    name como objeto JSON:
+      { pt, en, fr, zh, chg }
 
-    As suas 10 categorias deverão aparecer aqui.
+    Por isso usamos name.pt.
   */
 
-  const categoryOptions = categories
-    .map((category) => {
+  let categoryOptions = "";
 
-      const name =
-        category?.name?.pt ||
-        category?.name ||
-        "Categoria sem nome";
 
-      return `
-        <option
-          value="${esc(category.id)}"
-          ${
-            String(category.id) ===
-            String(product.category_id)
-              ? "selected"
-              : ""
+  if (categories.length > 0) {
+
+    categoryOptions =
+      categories
+        .map(category => {
+
+          let categoryName = "";
+
+
+          if (
+            category.name &&
+            typeof category.name === "object"
+          ) {
+
+            categoryName =
+              category.name.pt ||
+              category.name.en ||
+              category.name.fr ||
+              category.name.zh ||
+              category.name.chg ||
+              "Categoria";
+
+          } else {
+
+            categoryName =
+              category.name ||
+              "Categoria";
           }
-        >
-          ${esc(name)}
-        </option>
-      `;
-    })
-    .join("");
 
+
+          return `
+
+            <option
+              value="${esc(category.id)}"
+              ${
+                String(category.id) ===
+                String(product.category_id)
+                  ? "selected"
+                  : ""
+              }
+            >
+              ${esc(categoryName)}
+            </option>
+
+          `;
+        })
+        .join("");
+
+  } else {
+
+    categoryOptions = `
+
+      <option value="">
+        Nenhuma categoria encontrada
+      </option>
+
+    `;
+  }
+
+
+  /*
+    FORMULÁRIO
+  */
 
   shell(`
 
@@ -849,7 +1045,7 @@ function form(product = null) {
       >
 
 
-        <!-- NOME SOMENTE PORTUGUÊS -->
+        <!-- PORTUGUÊS -->
 
         ${field(
           "Nome do produto",
@@ -857,8 +1053,6 @@ function form(product = null) {
           product.name?.pt || ""
         )}
 
-
-        <!-- DESCRIÇÃO SOMENTE PORTUGUÊS -->
 
         <label class="block text-sm font-semibold">
 
@@ -875,7 +1069,7 @@ function form(product = null) {
         </label>
 
 
-        <!-- PREÇO / STOCK -->
+        <!-- DADOS DO PRODUTO -->
 
         <div class="grid md:grid-cols-2 gap-4">
 
@@ -886,12 +1080,14 @@ function form(product = null) {
             "number"
           )}
 
+
           ${field(
             "Preço anterior",
             "old_price",
             product.old_price || "",
             "number"
           )}
+
 
           ${field(
             "Stock",
@@ -900,17 +1096,20 @@ function form(product = null) {
             "number"
           )}
 
+
           ${field(
             "SKU",
             "sku",
             product.sku || ""
           )}
 
+
           ${field(
             "Unidade",
             "unit",
             product.unit || ""
           )}
+
 
           ${field(
             "Tag",
@@ -945,18 +1144,28 @@ function form(product = null) {
 
 
         ${
-          categories.length === 0
+          categories.length > 0
+
             ? `
-              <p class="text-sm text-red-600">
-                Nenhuma categoria foi encontrada.
-                Verifique a tabela categories no Supabase.
-              </p>
-            `
-            : `
+
               <p class="text-xs text-gray-500">
+
                 ${categories.length}
                 categorias disponíveis.
+
               </p>
+
+            `
+
+            : `
+
+              <p class="text-sm text-red-600">
+
+                Nenhuma categoria foi encontrada
+                no Supabase.
+
+              </p>
+
             `
         }
 
@@ -981,7 +1190,9 @@ function form(product = null) {
 
           <img
             id="preview"
-            src="${esc(product.image_url || "")}"
+            src="${esc(
+              product.image_url || ""
+            )}"
             class="mt-4 w-40 h-40 object-cover rounded-xl ${
               product.image_url
                 ? ""
@@ -992,7 +1203,7 @@ function form(product = null) {
         </div>
 
 
-        <!-- ATIVO / DESTAQUE -->
+        <!-- ESTADO -->
 
         <div class="flex gap-5">
 
@@ -1046,7 +1257,9 @@ function form(product = null) {
 
           ${
             !isNew
+
               ? `
+
                 <button
                   type="button"
                   id="delete"
@@ -1054,7 +1267,9 @@ function form(product = null) {
                 >
                   Excluir
                 </button>
+
               `
+
               : ""
           }
 
@@ -1069,76 +1284,90 @@ function form(product = null) {
 
   /* VOLTAR */
 
-  $("#back").onclick = renderProducts;
+  $("#back").onclick =
+    renderProducts;
 
 
-  /* PREVISUALIZAÇÃO DA IMAGEM */
+  /* PREVIEW */
 
-  $("#image").onchange = (e) => {
+  $("#image").onchange =
+    e => {
 
-    const file = e.target.files[0];
+      const file =
+        e.target.files[0];
 
-    if (!file) return;
 
-    $("#preview").src =
-      URL.createObjectURL(file);
+      if (!file) return;
 
-    $("#preview").classList.remove("hidden");
-  };
+
+      $("#preview").src =
+        URL.createObjectURL(file);
+
+
+      $("#preview")
+        .classList
+        .remove("hidden");
+    };
 
 
   /* GUARDAR */
 
-  $("#productForm").onsubmit = async (e) => {
+  $("#productForm").onsubmit =
+    async e => {
 
-    e.preventDefault();
+      e.preventDefault();
 
-    await saveProduct(product, isNew);
-  };
+      await saveProduct(
+        product,
+        isNew
+      );
+    };
 
 
   /* EXCLUIR */
 
   if (!isNew) {
 
-    $("#delete").onclick = async () => {
+    $("#delete").onclick =
+      async () => {
 
-      if (
-        !confirm(
-          "Tem certeza que deseja excluir este produto?"
-        )
-      ) {
-        return;
-      }
+        if (
+          !confirm(
+            "Tem certeza que deseja excluir este produto?"
+          )
+        ) {
+          return;
+        }
 
-      const {
-        error
-      } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", product.id);
 
-      if (error) {
-
-        console.error(
-          "Erro ao excluir produto:",
+        const {
           error
-        );
+        } = await supabase
+          .from("products")
+          .delete()
+          .eq("id", product.id);
+
+
+        if (error) {
+
+          toast(
+            "Erro ao excluir: " +
+            error.message
+          );
+
+          return;
+        }
+
 
         toast(
-          "Erro ao excluir: " +
-          error.message
+          "Produto excluído."
         );
 
-        return;
-      }
 
-      toast("Produto excluído.");
+        await load();
 
-      await load();
-
-      renderProducts();
-    };
+        renderProducts();
+      };
   }
 }
 
@@ -1154,90 +1383,111 @@ async function saveProduct(
 
   try {
 
-    const portugueseName =
-      $("#name_pt").value.trim();
+    const namePT =
+      $("#name_pt")
+        .value
+        .trim();
 
-    const portugueseDescription =
-      $("#desc_pt").value.trim();
 
-    if (!portugueseName) {
+    const descriptionPT =
+      $("#desc_pt")
+        .value
+        .trim();
+
+
+    if (!namePT) {
+
       toast(
         "Digite o nome do produto."
       );
+
       return;
     }
 
 
     const categoryId =
-      $("#category_id").value;
+      $("#category_id")
+        .value;
+
 
     if (!categoryId) {
+
       toast(
         "Selecione uma categoria."
       );
+
       return;
     }
 
 
     /*
-      IMPORTANTE:
+      O ADMIN SÓ PREENCHE PORTUGUÊS.
 
-      O banco continua recebendo o formato:
-
-      {
-        pt: "...",
-        en: "...",
-        zh: "...",
-        fr: "...",
-        chg: "..."
-      }
-
-      Mas o administrador só precisa
-      preencher Português.
-
-      As outras línguas recebem automaticamente
-      o português.
+      O restante é preenchido
+      automaticamente.
     */
 
     const name = {
-      pt: portugueseName,
-      en: portugueseName,
-      zh: portugueseName,
-      fr: portugueseName,
-      chg: portugueseName
+
+      pt: namePT,
+
+      en: namePT,
+
+      zh: namePT,
+
+      fr: namePT,
+
+      chg: namePT
+
     };
 
 
     const description = {
-      pt: portugueseDescription,
-      en: portugueseDescription,
-      zh: portugueseDescription,
-      fr: portugueseDescription,
-      chg: portugueseDescription
+
+      pt: descriptionPT,
+
+      en: descriptionPT,
+
+      zh: descriptionPT,
+
+      fr: descriptionPT,
+
+      chg: descriptionPT
+
     };
 
 
-    const tagValue =
-      $("#tag_pt").value.trim();
+    const tagPT =
+      $("#tag_pt")
+        .value
+        .trim();
+
 
     const tag = {
-      pt: tagValue,
-      en: tagValue,
-      zh: tagValue,
-      fr: tagValue,
-      chg: tagValue
+
+      pt: tagPT,
+
+      en: tagPT,
+
+      zh: tagPT,
+
+      fr: tagPT,
+
+      chg: tagPT
+
     };
 
 
-    /*
-      IMAGEM
-    */
+    /* IMAGEM */
 
     let image_url =
-      product.image_url || null;
+      product.image_url ||
+      null;
+
 
     const file =
-      $("#image").files[0];
+      $("#image")
+        .files[0];
 
 
     if (file) {
@@ -1247,6 +1497,7 @@ async function saveProduct(
           .split(".")
           .pop()
           .toLowerCase();
+
 
       const path =
         `products/${crypto.randomUUID()}.${ext}`;
@@ -1292,23 +1543,24 @@ async function saveProduct(
     }
 
 
-    /*
-      DADOS DO PRODUTO
-    */
+    /* DADOS */
 
     const row = {
 
-      id: product.id,
+      id:
+        product.id,
 
       name,
 
       description,
 
-      category_id: categoryId,
+      category_id:
+        categoryId,
 
-      price: Number(
-        $("#price").value || 0
-      ),
+      price:
+        Number(
+          $("#price").value || 0
+        ),
 
       old_price:
         Number(
@@ -1321,29 +1573,34 @@ async function saveProduct(
         ),
 
       sku:
-        $("#sku").value.trim(),
+        $("#sku")
+          .value
+          .trim(),
 
       unit:
-        $("#unit").value.trim(),
+        $("#unit")
+          .value
+          .trim(),
 
       tag,
 
       image_url,
 
       active:
-        $("#active").checked,
+        $("#active")
+          .checked,
 
       featured:
-        $("#featured").checked,
+        $("#featured")
+          .checked,
 
       updated_at:
-        new Date().toISOString()
+        new Date()
+          .toISOString()
     };
 
 
-    /*
-      INSERT OU UPDATE
-    */
+    /* INSERT / UPDATE */
 
     let result;
 
@@ -1361,7 +1618,10 @@ async function saveProduct(
         await supabase
           .from("products")
           .update(row)
-          .eq("id", product.id);
+          .eq(
+            "id",
+            product.id
+          );
     }
 
 
@@ -1396,7 +1656,7 @@ async function saveProduct(
   } catch (error) {
 
     console.error(
-      "Erro inesperado ao guardar produto:",
+      "Erro inesperado:",
       error
     );
 
@@ -1414,6 +1674,7 @@ async function saveProduct(
 function renderOrders() {
 
   shell(`
+
     <h1 class="font-[Montserrat] text-3xl font-bold">
       Pedidos
     </h1>
@@ -1422,7 +1683,9 @@ function renderOrders() {
       id="orders"
       class="mt-6"
     ></div>
+
   `);
+
 
   loadOrders();
 }
@@ -1446,7 +1709,8 @@ async function loadOrders() {
 
   if (error) {
 
-    $("#orders").textContent =
+    $("#orders")
+      .textContent =
       error.message;
 
     return;
@@ -1489,31 +1753,46 @@ async function loadOrders() {
           ${
             (data || [])
               .map(
-                (order) => `
+                order => `
+
                   <tr class="border-t">
 
                     <td class="p-4 font-bold">
-                      ${esc(order.order_number)}
+                      ${esc(
+                        order.order_number
+                      )}
                     </td>
+
 
                     <td class="p-4">
 
-                      ${esc(order.customer_name)}
+                      ${esc(
+                        order.customer_name
+                      )}
 
                       <br>
 
                       <span class="text-xs">
-                        ${esc(order.customer_phone)}
+                        ${esc(
+                          order.customer_phone
+                        )}
                       </span>
 
                     </td>
 
+
                     <td class="p-4 font-bold">
+
                       ${Number(
                         order.total || 0
-                      ).toLocaleString("pt-MZ")}
+                      ).toLocaleString(
+                        "pt-MZ"
+                      )}
+
                       MZN
+
                     </td>
+
 
                     <td class="p-4">
 
@@ -1551,6 +1830,7 @@ async function loadOrders() {
                     </td>
 
                   </tr>
+
                 `
               )
               .join("")
@@ -1574,9 +1854,11 @@ async function loadOrders() {
 
     const row =
       data.find(
-        (item) =>
+        item =>
           String(item.id) ===
-          String(select.dataset.status)
+          String(
+            select.dataset.status
+          )
       );
 
 
@@ -1595,11 +1877,17 @@ async function loadOrders() {
         } = await supabase
           .from("orders")
           .update({
-            status: select.value,
+            status:
+              select.value,
+
             updated_at:
-              new Date().toISOString()
+              new Date()
+                .toISOString()
           })
-          .eq("id", row.id);
+          .eq(
+            "id",
+            row.id
+          );
 
 
         toast(
@@ -1628,10 +1916,8 @@ function renderSettings() {
     <div class="bg-white rounded-2xl p-6 mt-6 max-w-3xl">
 
       <p class="text-sm text-[#414942]">
-
         As configurações gerais são armazenadas
         no Supabase.
-
       </p>
 
 
@@ -1645,6 +1931,7 @@ function renderSettings() {
           "wa",
           "+258840000000"
         )}
+
 
         ${field(
           "E-mail",
@@ -1701,12 +1988,13 @@ function renderSettings() {
 
 
   $("#settings").onsubmit =
-    async (e) => {
+    async e => {
 
       e.preventDefault();
 
 
       const settings = [
+
         [
           "whatsapp",
           $("#wa").value
@@ -1721,6 +2009,7 @@ function renderSettings() {
           "default_language",
           $("#defaultLang").value
         ]
+
       ];
 
 
