@@ -1897,8 +1897,6 @@ function bundleForm(bundle) {
         class="space-y-6 mt-6"
       >
 
-        <!-- INFORMAÇÕES -->
-
         <section
           class="bg-white
                  rounded-2xl
@@ -1977,8 +1975,6 @@ function bundleForm(bundle) {
           </div>
 
         </section>
-
-        <!-- IMAGEM -->
 
         <section
           class="bg-white
@@ -2067,8 +2063,6 @@ function bundleForm(bundle) {
 
         </section>
 
-        <!-- PRODUTOS -->
-
         <section
           class="bg-white
                  rounded-2xl
@@ -2115,9 +2109,7 @@ function bundleForm(bundle) {
 
           </div>
 
-          <div
-            class="mt-5"
-          >
+          <div class="mt-5">
 
             <input
               id="bundleProductSearch"
@@ -2250,8 +2242,6 @@ function bundleForm(bundle) {
 
         </section>
 
-        <!-- GUARDAR -->
-
         <section
           class="bg-white
                  rounded-2xl
@@ -2293,19 +2283,11 @@ function bundleForm(bundle) {
     </div>
   `);
 
-  /* ========================================================
-     VOLTAR
-  ======================================================== */
-
   $("#backBundles").onclick =
     renderBundles;
 
   $("#cancelBundle").onclick =
     renderBundles;
-
-  /* ========================================================
-     PREVIEW DA IMAGEM
-  ======================================================== */
 
   $("#bundleImage").onchange =
     e => {
@@ -2329,10 +2311,6 @@ function bundleForm(bundle) {
         ?.classList
         .add("hidden");
     };
-
-  /* ========================================================
-     PESQUISA DE PRODUTOS
-  ======================================================== */
 
   $("#bundleProductSearch").oninput =
     e => {
@@ -2358,10 +2336,6 @@ function bundleForm(bundle) {
               : "none";
         });
     };
-
-  /* ========================================================
-     CONTADOR
-  ======================================================== */
 
   function updateBundleProductCount() {
 
@@ -2390,10 +2364,6 @@ function bundleForm(bundle) {
         updateBundleProductCount;
     });
 
-  /* ========================================================
-     GUARDAR RANCHO
-  ======================================================== */
-
   $("#bundleForm").onsubmit =
     async e => {
 
@@ -2404,10 +2374,6 @@ function bundleForm(bundle) {
         toast(
           "A guardar Rancho..."
         );
-
-        /* ==================================================
-           IMAGEM
-        ================================================== */
 
         let image_url =
           currentImage || null;
@@ -2425,10 +2391,6 @@ function bundleForm(bundle) {
             );
         }
 
-        /* ==================================================
-           PRODUTOS SELECIONADOS
-        ================================================== */
-
         const productIds =
           Array.from(
             document.querySelectorAll(
@@ -2439,10 +2401,6 @@ function bundleForm(bundle) {
             checkbox =>
               checkbox.value
           );
-
-        /* ==================================================
-           DADOS
-        ================================================== */
 
         const row = {
 
@@ -2643,6 +2601,7 @@ function renderCategories() {
           </div>
         `
         : `
+
           <div
             class="mt-6 bg-white
                    rounded-2xl p-6"
@@ -2887,6 +2846,359 @@ function categoryImageForm(category) {
 }
 
 /* ============================================================
+   COMPONENTE DE CONFIGURAÇÃO DE IMAGEM
+============================================================ */
+
+function imageSettingCard({
+  id,
+  icon,
+  title,
+  description,
+  image,
+  buttonText = "Alterar imagem"
+}) {
+
+  return `
+
+    <button
+      id="${esc(id)}"
+      class="w-full
+             p-5
+             border rounded-2xl
+             text-left
+             hover:bg-[#f5f7f6]
+             transition"
+    >
+
+      <div
+        class="flex items-start
+               gap-4"
+      >
+
+        <div
+          class="w-12 h-12
+                 rounded-xl
+                 bg-[#eef5f7]
+                 flex items-center
+                 justify-center
+                 shrink-0"
+        >
+
+          <span
+            class="material-symbols-outlined
+                   text-[#00361a]"
+          >
+            ${esc(icon)}
+          </span>
+
+        </div>
+
+        <div class="min-w-0 flex-1">
+
+          <h2
+            class="font-bold"
+          >
+            ${esc(title)}
+          </h2>
+
+          <p
+            class="text-sm
+                   text-[#717971]
+                   mt-1"
+          >
+            ${esc(description)}
+          </p>
+
+          ${
+            image
+              ? `
+                <div
+                  class="mt-4
+                         rounded-xl
+                         overflow-hidden
+                         border"
+                >
+
+                  <img
+                    src="${esc(image)}"
+                    class="w-full
+                           h-32
+                           object-cover"
+                    alt=""
+                  >
+
+                </div>
+              `
+              : `
+                <div
+                  class="mt-4
+                         h-24
+                         rounded-xl
+                         bg-[#f5f7f6]
+                         border
+                         flex items-center
+                         justify-center"
+                >
+
+                  <span
+                    class="text-xs
+                           text-[#717971]"
+                  >
+                    Nenhuma imagem definida
+                  </span>
+
+                </div>
+              `
+          }
+
+          <div
+            class="mt-3
+                   text-sm
+                   font-bold
+                   text-[#00361a]"
+          >
+            ${esc(buttonText)} →
+          </div>
+
+        </div>
+
+      </div>
+
+    </button>
+
+  `;
+}
+
+/* ============================================================
+   IMAGEM DO CABEÇALHO
+============================================================ */
+
+function renderHeaderSettings() {
+
+  const headerImage =
+    settings.header_image || "";
+
+  shell(`
+
+    <div class="max-w-3xl">
+
+      <button
+        id="backSettings"
+        class="text-sm
+               text-[#414942]"
+      >
+        ← Voltar
+      </button>
+
+      <h1
+        class="font-[Montserrat]
+               text-3xl
+               font-bold mt-3"
+      >
+        Imagem do cabeçalho
+      </h1>
+
+      <p
+        class="text-sm
+               text-[#717971] mt-2"
+      >
+        Esta imagem será utilizada
+        no cabeçalho do site.
+      </p>
+
+      <form
+        id="headerForm"
+        class="bg-white
+               rounded-2xl
+               p-6 shadow-sm
+               mt-6"
+      >
+
+        ${
+          headerImage
+            ? `
+              <img
+                id="headerPreview"
+                src="${esc(headerImage)}"
+                class="w-full
+                       h-64
+                       object-cover
+                       rounded-2xl
+                       mb-5"
+                alt="Cabeçalho atual"
+              >
+            `
+            : `
+              <div
+                id="headerPreviewBox"
+                class="w-full
+                       h-64
+                       bg-[#eef5f7]
+                       rounded-2xl
+                       flex items-center
+                       justify-center
+                       mb-5"
+              >
+
+                <span
+                  class="material-symbols-outlined
+                         text-6xl
+                         text-[#717971]"
+                >
+                  image
+                </span>
+
+              </div>
+
+              <img
+                id="headerPreview"
+                class="hidden w-full
+                       h-64
+                       object-cover
+                       rounded-2xl
+                       mb-5"
+                alt="Pré-visualização"
+              >
+            `
+        }
+
+        <label
+          class="block text-sm
+                 font-semibold"
+        >
+
+          Nova imagem do cabeçalho
+
+          <input
+            id="headerImage"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            class="mt-2 block w-full"
+          >
+
+        </label>
+
+        <p
+          class="text-xs
+                 text-[#717971]
+                 mt-2"
+        >
+          Formatos aceites: JPG, PNG ou WEBP.
+        </p>
+
+        <button
+          type="submit"
+          class="mt-5 px-5 py-3
+                 bg-[#00361a]
+                 text-white
+                 rounded-xl
+                 font-bold"
+        >
+          Guardar imagem do cabeçalho
+        </button>
+
+      </form>
+
+    </div>
+  `);
+
+  $("#backSettings").onclick =
+    renderSettings;
+
+  $("#headerImage").onchange =
+    e => {
+
+      const file =
+        e.target.files[0];
+
+      if (!file) return;
+
+      const preview =
+        $("#headerPreview");
+
+      preview.src =
+        URL.createObjectURL(file);
+
+      preview.classList.remove(
+        "hidden"
+      );
+
+      $("#headerPreviewBox")
+        ?.classList
+        .add("hidden");
+    };
+
+  $("#headerForm").onsubmit =
+    async e => {
+
+      e.preventDefault();
+
+      try {
+
+        const file =
+          $("#headerImage")
+            .files?.[0];
+
+        if (!file) {
+
+          toast(
+            "Selecione uma imagem."
+          );
+
+          return;
+        }
+
+        toast(
+          "A carregar imagem do cabeçalho..."
+        );
+
+        const url =
+          await uploadImage(
+            file,
+            "header"
+          );
+
+        const { error } =
+          await supabase
+            .from("site_settings")
+            .upsert({
+              key: "header_image",
+              value: url,
+              updated_at:
+                new Date().toISOString()
+            });
+
+        if (error) {
+          throw error;
+        }
+
+        settings.header_image =
+          url;
+
+        toast(
+          "Imagem do cabeçalho atualizada."
+        );
+
+        await load();
+
+        renderHeaderSettings();
+
+      } catch (error) {
+
+        console.error(
+          "Erro ao atualizar cabeçalho:",
+          error
+        );
+
+        toast(
+          "Erro: " +
+          error.message
+        );
+      }
+    };
+}
+
+/* ============================================================
    IMAGEM GRANDE DO TOPO
 ============================================================ */
 
@@ -2941,10 +3253,12 @@ function renderHeroSettings() {
                        object-cover
                        rounded-2xl
                        mb-5"
+                alt="Imagem grande do topo"
               >
             `
             : `
               <div
+                id="heroPreviewBox"
                 class="w-full h-80
                        bg-[#eef5f7]
                        rounded-2xl
@@ -2952,6 +3266,7 @@ function renderHeroSettings() {
                        justify-center
                        mb-5"
               >
+
                 <span
                   class="material-symbols-outlined
                          text-6xl
@@ -2959,6 +3274,7 @@ function renderHeroSettings() {
                 >
                   image
                 </span>
+
               </div>
 
               <img
@@ -2968,6 +3284,7 @@ function renderHeroSettings() {
                        object-cover
                        rounded-2xl
                        mb-5"
+                alt="Pré-visualização"
               >
             `
         }
@@ -2989,6 +3306,7 @@ function renderHeroSettings() {
         </label>
 
         <button
+          type="submit"
           class="mt-5 px-5 py-3
                  bg-[#00361a]
                  text-white
@@ -3023,6 +3341,10 @@ function renderHeroSettings() {
       preview.classList.remove(
         "hidden"
       );
+
+      $("#heroPreviewBox")
+        ?.classList
+        .add("hidden");
     };
 
   $("#heroForm").onsubmit =
@@ -3083,6 +3405,235 @@ function renderHeroSettings() {
       } catch (error) {
 
         console.error(error);
+
+        toast(
+          "Erro: " +
+          error.message
+        );
+      }
+    };
+}
+
+/* ============================================================
+   IMAGEM DO RODAPÉ
+============================================================ */
+
+function renderFooterSettings() {
+
+  const footerImage =
+    settings.footer_image || "";
+
+  shell(`
+
+    <div class="max-w-3xl">
+
+      <button
+        id="backSettings"
+        class="text-sm
+               text-[#414942]"
+      >
+        ← Voltar
+      </button>
+
+      <h1
+        class="font-[Montserrat]
+               text-3xl
+               font-bold mt-3"
+      >
+        Imagem do rodapé
+      </h1>
+
+      <p
+        class="text-sm
+               text-[#717971] mt-2"
+      >
+        Esta imagem será utilizada
+        no rodapé do site.
+      </p>
+
+      <form
+        id="footerForm"
+        class="bg-white
+               rounded-2xl
+               p-6 shadow-sm
+               mt-6"
+      >
+
+        ${
+          footerImage
+            ? `
+              <img
+                id="footerPreview"
+                src="${esc(footerImage)}"
+                class="w-full
+                       h-64
+                       object-cover
+                       rounded-2xl
+                       mb-5"
+                alt="Rodapé atual"
+              >
+            `
+            : `
+              <div
+                id="footerPreviewBox"
+                class="w-full
+                       h-64
+                       bg-[#eef5f7]
+                       rounded-2xl
+                       flex items-center
+                       justify-center
+                       mb-5"
+              >
+
+                <span
+                  class="material-symbols-outlined
+                         text-6xl
+                         text-[#717971]"
+                >
+                  image
+                </span>
+
+              </div>
+
+              <img
+                id="footerPreview"
+                class="hidden w-full
+                       h-64
+                       object-cover
+                       rounded-2xl
+                       mb-5"
+                alt="Pré-visualização"
+              >
+            `
+        }
+
+        <label
+          class="block text-sm
+                 font-semibold"
+        >
+
+          Nova imagem do rodapé
+
+          <input
+            id="footerImage"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            class="mt-2 block w-full"
+          >
+
+        </label>
+
+        <p
+          class="text-xs
+                 text-[#717971]
+                 mt-2"
+        >
+          Formatos aceites: JPG, PNG ou WEBP.
+        </p>
+
+        <button
+          type="submit"
+          class="mt-5 px-5 py-3
+                 bg-[#00361a]
+                 text-white
+                 rounded-xl
+                 font-bold"
+        >
+          Guardar imagem do rodapé
+        </button>
+
+      </form>
+
+    </div>
+  `);
+
+  $("#backSettings").onclick =
+    renderSettings;
+
+  $("#footerImage").onchange =
+    e => {
+
+      const file =
+        e.target.files[0];
+
+      if (!file) return;
+
+      const preview =
+        $("#footerPreview");
+
+      preview.src =
+        URL.createObjectURL(file);
+
+      preview.classList.remove(
+        "hidden"
+      );
+
+      $("#footerPreviewBox")
+        ?.classList
+        .add("hidden");
+    };
+
+  $("#footerForm").onsubmit =
+    async e => {
+
+      e.preventDefault();
+
+      try {
+
+        const file =
+          $("#footerImage")
+            .files?.[0];
+
+        if (!file) {
+
+          toast(
+            "Selecione uma imagem."
+          );
+
+          return;
+        }
+
+        toast(
+          "A carregar imagem do rodapé..."
+        );
+
+        const url =
+          await uploadImage(
+            file,
+            "footer"
+          );
+
+        const { error } =
+          await supabase
+            .from("site_settings")
+            .upsert({
+              key: "footer_image",
+              value: url,
+              updated_at:
+                new Date().toISOString()
+            });
+
+        if (error) {
+          throw error;
+        }
+
+        settings.footer_image =
+          url;
+
+        toast(
+          "Imagem do rodapé atualizada."
+        );
+
+        await load();
+
+        renderFooterSettings();
+
+      } catch (error) {
+
+        console.error(
+          "Erro ao atualizar rodapé:",
+          error
+        );
 
         toast(
           "Erro: " +
@@ -3339,12 +3890,14 @@ function renderSettings() {
     settings.default_language ||
     "pt";
 
-  /*
-   * IMPORTANTE:
-   * Rancho do Mês NÃO aparece mais aqui.
-   * A gestão dos Ranchos fica exclusivamente
-   * na secção "Rancho do Mês".
-   */
+  const headerImage =
+    settings.header_image || "";
+
+  const heroImage =
+    settings.hero_image || "";
+
+  const footerImage =
+    settings.footer_image || "";
 
   shell(`
 
@@ -3366,64 +3919,91 @@ function renderSettings() {
 
     </div>
 
+    <!-- =====================================================
+         IMAGENS DO SITE
+    ====================================================== -->
+
     <div
       class="bg-white
              rounded-2xl p-6
              mt-6 max-w-3xl"
     >
 
-      <div
-        class="mb-6"
-      >
+      <div>
 
-        <button
-          id="heroButton"
-          class="w-full
-                 p-5
-                 border rounded-2xl
-                 text-left
-                 hover:bg-[#f5f7f6]"
+        <h2
+          class="font-[Montserrat]
+                 text-xl font-bold"
         >
+          Imagens do site
+        </h2>
 
-          <div
-            class="flex items-start
-                   gap-4"
-          >
-
-            <span
-              class="material-symbols-outlined
-                     text-[#00361a]"
-            >
-              panorama
-            </span>
-
-            <div>
-
-              <h2
-                class="font-bold"
-              >
-                Imagem grande do topo
-              </h2>
-
-              <p
-                class="text-sm
-                       text-[#717971]"
-              >
-                Alterar a imagem principal
-                da página inicial.
-              </p>
-
-            </div>
-
-          </div>
-
-        </button>
+        <p
+          class="text-sm
+                 text-[#717971]
+                 mt-1"
+        >
+          Altere as imagens principais
+          diretamente pelo painel administrativo.
+        </p>
 
       </div>
 
+      <div
+        class="grid gap-4 mt-5"
+      >
+
+        ${imageSettingCard({
+          id: "headerButton",
+          icon: "web_asset",
+          title: "Imagem do cabeçalho",
+          description:
+            "Alterar a imagem utilizada no cabeçalho do site.",
+          image: headerImage
+        })}
+
+        ${imageSettingCard({
+          id: "heroButton",
+          icon: "panorama",
+          title: "Imagem grande do topo",
+          description:
+            "Alterar a imagem principal da página inicial.",
+          image: heroImage
+        })}
+
+        ${imageSettingCard({
+          id: "footerButton",
+          icon: "web_asset",
+          title: "Imagem do rodapé",
+          description:
+            "Alterar a imagem utilizada no rodapé do site.",
+          image: footerImage
+        })}
+
+      </div>
+
+    </div>
+
+    <!-- =====================================================
+         CONFIGURAÇÕES GERAIS
+    ====================================================== -->
+
+    <div
+      class="bg-white
+             rounded-2xl p-6
+             mt-6 max-w-3xl"
+    >
+
+      <h2
+        class="font-[Montserrat]
+               text-xl font-bold"
+      >
+        Configurações gerais
+      </h2>
+
       <form
         id="settingsForm"
-        class="space-y-4"
+        class="space-y-4 mt-5"
       >
 
         ${field(
@@ -3525,8 +4105,23 @@ function renderSettings() {
     </div>
   `);
 
+  /* ========================================================
+     BOTÕES DAS IMAGENS
+  ======================================================== */
+
+  $("#headerButton").onclick =
+    renderHeaderSettings;
+
   $("#heroButton").onclick =
     renderHeroSettings;
+
+  $("#footerButton").onclick =
+    renderFooterSettings;
+
+
+  /* ========================================================
+     GUARDAR CONFIGURAÇÕES GERAIS
+  ======================================================== */
 
   $("#settingsForm").onsubmit =
     async e => {
