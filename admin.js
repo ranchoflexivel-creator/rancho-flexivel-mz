@@ -93,15 +93,11 @@ function imageUrl(row) {
   return row?.image_url || row?.image || "";
 }
 
-/* ============================================================
-   NORMALIZAR PRODUCT_IDS
-============================================================ */
-
-function getBundleProductIds(bundle) {
+function bundleProductIds(bundle) {
   const value = jsonValue(bundle?.product_ids, []);
 
   if (Array.isArray(value)) {
-    return value.map(v => String(v));
+    return value.map(String);
   }
 
   return [];
@@ -138,27 +134,24 @@ async function uploadImage(file, folder = "admin") {
   const path =
     `${folder}/${crypto.randomUUID()}.${extension}`;
 
-  const {
-    error
-  } = await supabase
-    .storage
-    .from("site-images")
-    .upload(
-      path,
-      file,
-      {
-        upsert: false,
-        contentType: file.type
-      }
-    );
+  const { error } =
+    await supabase
+      .storage
+      .from("site-images")
+      .upload(
+        path,
+        file,
+        {
+          upsert: false,
+          contentType: file.type
+        }
+      );
 
   if (error) {
     throw error;
   }
 
-  const {
-    data
-  } =
+  const { data } =
     supabase
       .storage
       .from("site-images")
@@ -361,9 +354,7 @@ function login(message = "") {
     const email = $("#email").value.trim();
     const password = $("#password").value;
 
-    const {
-      error
-    } =
+    const { error } =
       await supabase.auth.signInWithPassword({
         email,
         password
@@ -379,7 +370,7 @@ function login(message = "") {
 }
 
 /* ============================================================
-   CARREGAR DADOS
+   CARREGAR TODOS OS DADOS
 ============================================================ */
 
 async function load() {
@@ -490,6 +481,7 @@ async function load() {
         jsonValue(row.value, row.value);
 
     });
+
 
   console.log("Produtos:", products);
   console.log("Categorias:", categories);
@@ -691,9 +683,7 @@ function shell(content) {
         else {
           render();
         }
-
       };
-
     });
 }
 
@@ -763,7 +753,7 @@ function render() {
                rounded-2xl p-5 shadow-sm"
       >
         <p class="text-sm text-[#717971]">
-          Produtos ativos
+          Ativos
         </p>
 
         <b class="text-2xl">
@@ -780,7 +770,7 @@ function render() {
                rounded-2xl p-5 shadow-sm"
       >
         <p class="text-sm text-[#717971]">
-          Ranchos
+          Rancho do Mês
         </p>
 
         <b class="text-2xl">
@@ -846,19 +836,23 @@ function render() {
           Categorias
         </button>
 
+        <button
+          id="goSettings"
+          class="px-4 py-2
+                 rounded-xl border"
+        >
+          Configurações
+        </button>
+
       </div>
 
     </div>
   `);
 
-  $("#goProducts").onclick =
-    renderProducts;
-
-  $("#goBundles").onclick =
-    renderBundles;
-
-  $("#goCategories").onclick =
-    renderCategories;
+  $("#goProducts").onclick = renderProducts;
+  $("#goBundles").onclick = renderBundles;
+  $("#goCategories").onclick = renderCategories;
+  $("#goSettings").onclick = renderSettings;
 }
 
 /* ============================================================
@@ -961,7 +955,8 @@ function renderProducts() {
                   <td class="p-4">
 
                     <div
-                      class="flex items-center gap-3"
+                      class="flex items-center
+                             gap-3"
                     >
 
                       ${
@@ -1045,7 +1040,6 @@ function renderProducts() {
 
                 </tr>
               `;
-
             }).join("")
           }
 
@@ -1076,7 +1070,6 @@ function renderProducts() {
           productForm(product);
         }
       };
-
     });
 }
 
@@ -1119,9 +1112,7 @@ function productForm(product = null) {
               : ""
           }
         >
-          ${esc(
-            localized(category.name)
-          )}
+          ${esc(localized(category.name))}
         </option>
 
       `)
@@ -1157,7 +1148,8 @@ function productForm(product = null) {
       >
 
         <div
-          class="grid md:grid-cols-2 gap-4"
+          class="grid md:grid-cols-2
+                 gap-4"
         >
 
           ${field(
@@ -1214,7 +1206,8 @@ function productForm(product = null) {
         </div>
 
         <label
-          class="block text-sm font-semibold"
+          class="block text-sm
+                 font-semibold"
         >
           Categoria
 
@@ -1236,12 +1229,14 @@ function productForm(product = null) {
         </label>
 
         <div
-          class="border-2 border-dashed
+          class="border-2
+                 border-dashed
                  rounded-2xl p-5"
         >
 
           <label
-            class="block text-sm font-semibold"
+            class="block text-sm
+                   font-semibold"
           >
 
             Imagem do produto
@@ -1260,11 +1255,7 @@ function productForm(product = null) {
             src="${esc(p.image_url || "")}"
             class="mt-4 w-40 h-40
                    object-cover rounded-xl
-                   ${
-                     p.image_url
-                       ? ""
-                       : "hidden"
-                   }"
+                   ${p.image_url ? "" : "hidden"}"
           >
 
         </div>
@@ -1276,11 +1267,7 @@ function productForm(product = null) {
             <input
               id="active"
               type="checkbox"
-              ${
-                p.active !== false
-                  ? "checked"
-                  : ""
-              }
+              ${p.active !== false ? "checked" : ""}
             >
 
             Ativo
@@ -1292,11 +1279,7 @@ function productForm(product = null) {
             <input
               id="featured"
               type="checkbox"
-              ${
-                p.featured
-                  ? "checked"
-                  : ""
-              }
+              ${p.featured ? "checked" : ""}
             >
 
             Destaque
@@ -1341,35 +1324,28 @@ function productForm(product = null) {
     </div>
   `);
 
-  $("#backProducts").onclick =
-    renderProducts;
+  $("#backProducts").onclick = renderProducts;
 
-  $("#productImage").onchange =
-    e => {
+  $("#productImage").onchange = e => {
 
-      const file =
-        e.target.files[0];
+    const file = e.target.files[0];
 
-      if (!file) return;
+    if (!file) return;
 
-      $("#productPreview").src =
-        URL.createObjectURL(file);
+    $("#productPreview").src =
+      URL.createObjectURL(file);
 
-      $("#productPreview")
-        .classList
-        .remove("hidden");
-    };
+    $("#productPreview")
+      .classList
+      .remove("hidden");
+  };
 
-  $("#productForm").onsubmit =
-    async e => {
+  $("#productForm").onsubmit = async e => {
 
-      e.preventDefault();
+    e.preventDefault();
 
-      await saveProduct(
-        p,
-        isNew
-      );
-    };
+    await saveProduct(p, isNew);
+  };
 
   if (!isNew) {
 
@@ -1384,9 +1360,7 @@ function productForm(product = null) {
           return;
         }
 
-        const {
-          error
-        } =
+        const { error } =
           await supabase
             .from("products")
             .delete()
@@ -1420,7 +1394,8 @@ function field(
   return `
 
     <label
-      class="block text-sm font-semibold"
+      class="block text-sm
+             font-semibold"
     >
 
       ${esc(label)}
@@ -1450,8 +1425,7 @@ async function saveProduct(p, isNew) {
       p.image_url || null;
 
     const file =
-      $("#productImage")
-        ?.files?.[0];
+      $("#productImage")?.files?.[0];
 
     if (file) {
 
@@ -1467,33 +1441,24 @@ async function saveProduct(p, isNew) {
       id: p.id,
 
       name: {
-        pt:
-          $("#name_pt").value
+        pt: $("#name_pt").value
       },
 
       description: {
-        pt:
-          $("#desc_pt").value
+        pt: $("#desc_pt").value
       },
 
       category_id:
-        $("#category_id").value ||
-        null,
+        $("#category_id").value || null,
 
       price:
-        Number(
-          $("#price").value || 0
-        ),
+        Number($("#price").value || 0),
 
       old_price:
-        Number(
-          $("#old_price").value || 0
-        ) || null,
+        Number($("#old_price").value || 0) || null,
 
       stock:
-        Number(
-          $("#stock").value || 0
-        ),
+        Number($("#stock").value || 0),
 
       sku:
         $("#sku").value.trim(),
@@ -1502,8 +1467,7 @@ async function saveProduct(p, isNew) {
         $("#unit").value.trim(),
 
       tag: {
-        pt:
-          $("#tag_pt").value
+        pt: $("#tag_pt").value
       },
 
       image_url,
@@ -1588,10 +1552,18 @@ function renderBundles() {
           class="text-sm
                  text-[#717971] mt-2"
         >
-          Gerir preço, imagem e produtos
-          de cada Rancho.
+          Gerir imagem, preço e produtos
+          de cada Rancho do Mês.
         </p>
 
+      </div>
+
+      <div
+        class="text-sm
+               text-[#717971]"
+      >
+        ${bundles.length}
+        Rancho(s)
       </div>
 
     </div>
@@ -1599,6 +1571,7 @@ function renderBundles() {
     ${
       bundles.length
         ? `
+
           <div
             class="grid sm:grid-cols-2
                    xl:grid-cols-3
@@ -1606,77 +1579,93 @@ function renderBundles() {
           >
 
             ${
-              bundles.map(bundle => {
+              bundles
+                .map(bundle => {
 
-                const name =
-                  localized(bundle.name) ||
-                  bundle.id;
+                  const name =
+                    localized(bundle.name) ||
+                    bundle.id;
 
-                const image =
-                  imageUrl(bundle);
+                  const description =
+                    localized(bundle.description);
 
-                const productIds =
-                  getBundleProductIds(bundle);
+                  const image =
+                    imageUrl(bundle);
 
-                const bundleProducts =
-                  products.filter(product =>
-                    productIds.includes(
-                      String(product.id)
-                    ) ||
-                    productIds.includes(
-                      String(product.sku)
-                    )
-                  );
+                  const ids =
+                    bundleProductIds(bundle);
 
-                return `
+                  const selectedProducts =
+                    products.filter(
+                      p =>
+                        ids.includes(
+                          String(p.id)
+                        )
+                    );
 
-                  <article
-                    class="bg-white
-                           rounded-2xl
-                           shadow-sm
-                           overflow-hidden"
-                  >
+                  return `
 
-                    <div
-                      class="h-48
-                             bg-[#eef5f7]
-                             relative"
+                    <article
+                      class="bg-white
+                             rounded-2xl
+                             shadow-sm
+                             overflow-hidden"
                     >
 
-                      ${
-                        image
-                          ? `
-                            <img
-                              src="${esc(image)}"
-                              class="w-full h-full
-                                     object-cover"
-                            >
-                          `
-                          : `
-                            <div
-                              class="w-full h-full
-                                     flex items-center
-                                     justify-center
-                                     text-[#717971]"
-                            >
-                              <span
-                                class="material-symbols-outlined
-                                       text-5xl"
-                              >
-                                image
-                              </span>
-                            </div>
-                          `
-                      }
-
-                    </div>
-
-                    <div class="p-5">
-
                       <div
-                        class="flex items-start
-                               justify-between gap-3"
+                        class="h-48
+                               bg-[#eef5f7]
+                               relative"
                       >
+
+                        ${
+                          image
+                            ? `
+                              <img
+                                src="${esc(image)}"
+                                class="w-full h-full
+                                       object-cover"
+                              >
+                            `
+                            : `
+                              <div
+                                class="w-full h-full
+                                       flex items-center
+                                       justify-center
+                                       text-[#717971]"
+                              >
+                                <span
+                                  class="material-symbols-outlined
+                                         text-5xl"
+                                >
+                                  image
+                                </span>
+                              </div>
+                            `
+                        }
+
+                        <span
+                          class="
+                            absolute top-3 right-3
+                            px-3 py-1 rounded-full
+                            text-xs font-bold
+                            ${
+                              bundle.active === false
+                                ? "bg-red-100 text-red-700"
+                                : "bg-green-100 text-green-700"
+                            }
+                          "
+                        >
+                          ${
+                            bundle.active === false
+                              ? "Inativo"
+                              : "Ativo"
+                          }
+                        </span>
+
+                      </div>
+
+                      <div class="p-5">
 
                         <h2
                           class="font-[Montserrat]
@@ -1686,178 +1675,116 @@ function renderBundles() {
                         </h2>
 
                         ${
-                          bundle.active === false
+                          description
                             ? `
-                              <span
-                                class="text-xs
-                                       bg-red-100
-                                       text-red-700
-                                       px-2 py-1
-                                       rounded-full"
-                              >
-                                Inativo
-                              </span>
-                            `
-                            : `
-                              <span
-                                class="text-xs
-                                       bg-green-100
-                                       text-green-700
-                                       px-2 py-1
-                                       rounded-full"
-                              >
-                                Ativo
-                              </span>
-                            `
-                        }
-
-                      </div>
-
-                      <p
-                        class="text-sm
-                               text-[#717971]
-                               mt-1"
-                      >
-                        ${esc(
-                          localized(
-                            bundle.description
-                          )
-                        )}
-                      </p>
-
-                      <p
-                        class="font-bold
-                               text-[#00361a]
-                               text-xl
-                               mt-3"
-                      >
-                        ${money(bundle.price)}
-                      </p>
-
-                      <div
-                        class="mt-4
-                               bg-[#f5f7f6]
-                               rounded-xl p-3"
-                      >
-
-                        <p
-                          class="text-xs
-                                 font-bold
-                                 text-[#717971]"
-                        >
-                          PRODUTOS DO RANCHO
-                        </p>
-
-                        <p
-                          class="font-semibold
-                                 mt-1"
-                        >
-                          ${
-                            bundleProducts.length
-                          }
-                          ${
-                            bundleProducts.length === 1
-                              ? "produto"
-                              : "produtos"
-                          }
-                        </p>
-
-                        ${
-                          bundleProducts.length
-                            ? `
-                              <div
-                                class="mt-2
-                                       space-y-1"
-                              >
-
-                                ${
-                                  bundleProducts
-                                    .slice(0, 4)
-                                    .map(product => `
-                                      <div
-                                        class="text-sm
-                                               flex
-                                               justify-between
-                                               gap-2"
-                                      >
-
-                                        <span>
-                                          ${esc(
-                                            localized(
-                                              product.name
-                                            )
-                                          )}
-                                        </span>
-
-                                        <span
-                                          class="font-semibold"
-                                        >
-                                          ${money(
-                                            product.price
-                                          )}
-                                        </span>
-
-                                      </div>
-                                    `)
-                                    .join("")
-                                }
-
-                                ${
-                                  bundleProducts.length > 4
-                                    ? `
-                                      <p
-                                        class="text-xs
-                                               text-[#717971]"
-                                      >
-                                        +
-                                        ${
-                                          bundleProducts.length - 4
-                                        }
-                                        produto(s)
-                                      </p>
-                                    `
-                                    : ""
-                                }
-
-                              </div>
-                            `
-                            : `
                               <p
                                 class="text-sm
                                        text-[#717971]
-                                       mt-2"
+                                       mt-1"
                               >
-                                Nenhum produto associado.
+                                ${esc(description)}
                               </p>
                             `
+                            : ""
                         }
+
+                        <p
+                          class="font-bold
+                                 text-[#00361a]
+                                 text-lg
+                                 mt-3"
+                        >
+                          ${money(bundle.price)}
+                        </p>
+
+                        <div
+                          class="mt-4
+                                 border-t pt-4"
+                        >
+
+                          <p
+                            class="text-sm
+                                   font-bold"
+                          >
+                            Produtos incluídos
+                          </p>
+
+                          ${
+                            selectedProducts.length
+                              ? `
+                                <ul
+                                  class="mt-2
+                                         space-y-1
+                                         text-sm"
+                                >
+
+                                  ${
+                                    selectedProducts
+                                      .map(p => `
+                                        <li
+                                          class="flex
+                                                 items-center
+                                                 gap-2"
+                                        >
+                                          <span
+                                            class="material-symbols-outlined
+                                                   text-base
+                                                   text-[#00361a]"
+                                          >
+                                            check_circle
+                                          </span>
+
+                                          <span>
+                                            ${esc(
+                                              localized(
+                                                p.name
+                                              )
+                                            )}
+                                          </span>
+                                        </li>
+                                      `)
+                                      .join("")
+                                  }
+
+                                </ul>
+                              `
+                              : `
+                                <p
+                                  class="text-sm
+                                         text-[#717971]
+                                         mt-2"
+                                >
+                                  Nenhum produto selecionado.
+                                </p>
+                              `
+                          }
+
+                        </div>
+
+                        <button
+                          data-edit-bundle="${esc(bundle.id)}"
+                          class="mt-5 w-full
+                                 px-4 py-3
+                                 rounded-xl
+                                 bg-[#00361a]
+                                 text-white
+                                 font-bold"
+                        >
+                          Editar Rancho
+                        </button>
 
                       </div>
 
-                      <button
-                        data-edit-bundle="${esc(bundle.id)}"
-                        class="mt-4 w-full
-                               px-4 py-3
-                               rounded-xl
-                               bg-[#00361a]
-                               text-white
-                               font-bold"
-                      >
-                        Gerir Rancho
-                      </button>
-
-                    </div>
-
-                  </article>
-
-                `;
-
-              }).join("")
+                    </article>
+                  `;
+                })
+                .join("")
             }
 
           </div>
         `
         : `
+
           <div
             class="mt-6 bg-white
                    rounded-2xl p-6"
@@ -1892,7 +1819,6 @@ function renderBundles() {
           bundleForm(bundle);
         }
       };
-
     });
 }
 
@@ -1905,8 +1831,17 @@ function bundleForm(bundle) {
   const currentImage =
     imageUrl(bundle);
 
-  const selectedIds =
-    getBundleProductIds(bundle);
+  const currentProductIds =
+    bundleProductIds(bundle);
+
+  const name =
+    localized(bundle.name);
+
+  const description =
+    localized(bundle.description);
+
+  const badge =
+    localized(bundle.badge);
 
   shell(`
 
@@ -1914,29 +1849,46 @@ function bundleForm(bundle) {
 
       <button
         id="backBundles"
-        class="text-sm text-[#414942]"
+        class="text-sm
+               text-[#414942]"
       >
-        ← Voltar para Ranchos
+        ← Voltar
       </button>
 
-      <div class="mt-3">
+      <div
+        class="flex flex-col md:flex-row
+               md:items-end
+               justify-between gap-4"
+      >
 
-        <h1
-          class="font-[Montserrat]
-                 text-3xl font-bold"
-        >
-          ${esc(
-            localized(bundle.name)
-          )}
-        </h1>
+        <div>
 
-        <p
+          <h1
+            class="font-[Montserrat]
+                   text-3xl
+                   font-bold mt-3"
+          >
+            Editar Rancho do Mês
+          </h1>
+
+          <p
+            class="text-sm
+                   text-[#717971] mt-2"
+          >
+            ${esc(name || bundle.id)}
+          </p>
+
+        </div>
+
+        <div
           class="text-sm
-                 text-[#717971] mt-2"
+                 text-[#717971]"
         >
-          Edite o preço, a imagem e os
-          produtos que fazem parte deste Rancho.
-        </p>
+          ID:
+          <strong>
+            ${esc(bundle.id)}
+          </strong>
+        </div>
 
       </div>
 
@@ -1945,7 +1897,7 @@ function bundleForm(bundle) {
         class="space-y-6 mt-6"
       >
 
-        <!-- DADOS PRINCIPAIS -->
+        <!-- INFORMAÇÕES -->
 
         <section
           class="bg-white
@@ -1957,7 +1909,7 @@ function bundleForm(bundle) {
             class="font-[Montserrat]
                    text-xl font-bold"
           >
-            Dados do Rancho
+            Informações do Rancho
           </h2>
 
           <div
@@ -1968,11 +1920,11 @@ function bundleForm(bundle) {
             ${field(
               "Nome",
               "bundle_name",
-              localized(bundle.name)
+              name
             )}
 
             ${field(
-              "Preço do Rancho (MZN)",
+              "Preço (MZN)",
               "bundle_price",
               bundle.price || 0,
               "number"
@@ -1980,27 +1932,33 @@ function bundleForm(bundle) {
 
           </div>
 
-          <label
-            class="block text-sm
-                   font-semibold mt-4"
-          >
+          <div class="mt-4">
 
-            Descrição
+            ${field(
+              "Descrição",
+              "bundle_description",
+              description
+            )}
 
-            <textarea
-              id="bundle_description"
-              rows="4"
-              class="mt-1 w-full
-                     border rounded-xl p-3"
-            >${esc(
-              localized(bundle.description)
-            )}</textarea>
+          </div>
 
-          </label>
+          <div class="mt-4">
 
-          <div class="flex gap-5 mt-5">
+            ${field(
+              "Badge",
+              "bundle_badge",
+              badge
+            )}
 
-            <label>
+          </div>
+
+          <div class="mt-5">
+
+            <label
+              class="flex items-center
+                     gap-3 text-sm
+                     font-semibold"
+            >
 
               <input
                 id="bundle_active"
@@ -2012,14 +1970,13 @@ function bundleForm(bundle) {
                 }
               >
 
-              Ativo
+              Rancho ativo
 
             </label>
 
           </div>
 
         </section>
-
 
         <!-- IMAGEM -->
 
@@ -2036,6 +1993,15 @@ function bundleForm(bundle) {
             Imagem do Rancho
           </h2>
 
+          <p
+            class="text-sm
+                   text-[#717971]
+                   mt-1"
+          >
+            Esta é a imagem apresentada
+            para este Rancho.
+          </p>
+
           <div class="mt-5">
 
             ${
@@ -2045,7 +2011,8 @@ function bundleForm(bundle) {
                     id="bundlePreview"
                     src="${esc(currentImage)}"
                     class="w-full
-                           h-72
+                           max-w-3xl
+                           h-80
                            object-cover
                            rounded-2xl"
                   >
@@ -2053,7 +2020,9 @@ function bundleForm(bundle) {
                 : `
                   <div
                     id="bundlePreviewBox"
-                    class="w-full h-72
+                    class="w-full
+                           max-w-3xl
+                           h-80
                            bg-[#eef5f7]
                            rounded-2xl
                            flex items-center
@@ -2070,7 +2039,8 @@ function bundleForm(bundle) {
 
                   <img
                     id="bundlePreview"
-                    class="hidden w-full h-72
+                    class="hidden w-full
+                           max-w-3xl h-80
                            object-cover
                            rounded-2xl"
                   >
@@ -2096,7 +2066,6 @@ function bundleForm(bundle) {
           </label>
 
         </section>
-
 
         <!-- PRODUTOS -->
 
@@ -2124,66 +2093,162 @@ function bundleForm(bundle) {
 
               <p
                 class="text-sm
-                       text-[#717971] mt-1"
+                       text-[#717971]
+                       mt-1"
               >
-                Selecione exatamente os produtos
-                que o cliente deve ver neste Rancho.
+                Selecione os produtos que
+                o cliente verá dentro deste Rancho.
               </p>
 
             </div>
 
-            <div
-              id="selectedProductsCount"
-              class="px-3 py-2
+            <span
+              id="bundleProductCount"
+              class="px-3 py-1
+                     rounded-full
                      bg-[#eef5f7]
-                     rounded-xl
                      text-sm font-bold"
             >
-              0 produtos selecionados
-            </div>
+              ${currentProductIds.length}
+              selecionado(s)
+            </span>
 
           </div>
 
           <div
-            class="mt-5
-                   border
-                   rounded-2xl
-                   overflow-hidden"
+            class="mt-5"
           >
 
-            <div
-              class="p-3
-                     bg-[#f5f7f6]
-                     border-b"
+            <input
+              id="bundleProductSearch"
+              type="search"
+              placeholder="Pesquisar produto..."
+              class="w-full border
+                     rounded-xl p-3"
             >
 
-              <input
-                id="bundleProductSearch"
-                type="search"
-                placeholder="Pesquisar produto..."
-                class="w-full
-                       border rounded-xl
-                       p-3 bg-white"
-              >
+          </div>
 
-            </div>
+          <div
+            id="bundleProductsList"
+            class="mt-4
+                   grid md:grid-cols-2
+                   gap-3"
+          >
 
-            <div
-              id="bundleProductsList"
-              class="max-h-[520px]
-                     overflow-y-auto"
-            >
+            ${
+              products.length
+                ? products
+                    .map(product => {
 
-              ${renderBundleProductRows(
-                selectedIds
-              )}
+                      const productId =
+                        String(product.id);
 
-            </div>
+                      const selected =
+                        currentProductIds
+                          .includes(productId);
+
+                      return `
+
+                        <label
+                          data-bundle-product-row
+                          data-product-name="${esc(
+                            localized(product.name)
+                          ).toLowerCase()}"
+                          class="
+                            flex items-center
+                            gap-3 p-3
+                            border rounded-xl
+                            cursor-pointer
+                            hover:bg-[#f5f7f6]
+                          "
+                        >
+
+                          <input
+                            type="checkbox"
+                            name="bundle_products"
+                            value="${esc(product.id)}"
+                            ${
+                              selected
+                                ? "checked"
+                                : ""
+                            }
+                            class="bundle-product-checkbox"
+                          >
+
+                          ${
+                            product.image_url
+                              ? `
+                                <img
+                                  src="${esc(product.image_url)}"
+                                  class="w-12 h-12
+                                         rounded-lg
+                                         object-cover"
+                                >
+                              `
+                              : `
+                                <div
+                                  class="w-12 h-12
+                                         rounded-lg
+                                         bg-[#eef5f7]
+                                         flex items-center
+                                         justify-center"
+                                >
+                                  <span
+                                    class="material-symbols-outlined"
+                                  >
+                                    image
+                                  </span>
+                                </div>
+                              `
+                          }
+
+                          <div
+                            class="min-w-0 flex-1"
+                          >
+
+                            <div
+                              class="font-semibold"
+                            >
+                              ${esc(
+                                localized(
+                                  product.name
+                                )
+                              )}
+                            </div>
+
+                            <div
+                              class="text-xs
+                                     text-[#717971]"
+                            >
+                              ${esc(
+                                product.sku ||
+                                product.id
+                              )}
+                              ·
+                              ${money(product.price)}
+                            </div>
+
+                          </div>
+
+                        </label>
+
+                      `;
+                    })
+                    .join("")
+                : `
+                  <p
+                    class="text-sm
+                           text-[#717971]"
+                  >
+                    Nenhum produto encontrado.
+                  </p>
+                `
+            }
 
           </div>
 
         </section>
-
 
         <!-- GUARDAR -->
 
@@ -2193,7 +2258,11 @@ function bundleForm(bundle) {
                  p-6 shadow-sm"
         >
 
-          <div class="flex gap-3">
+          <div
+            class="flex flex-col
+                   sm:flex-row
+                   gap-3"
+          >
 
             <button
               type="submit"
@@ -2224,7 +2293,9 @@ function bundleForm(bundle) {
     </div>
   `);
 
-  updateBundleSelectedCount();
+  /* ========================================================
+     VOLTAR
+  ======================================================== */
 
   $("#backBundles").onclick =
     renderBundles;
@@ -2232,13 +2303,19 @@ function bundleForm(bundle) {
   $("#cancelBundle").onclick =
     renderBundles;
 
+  /* ========================================================
+     PREVIEW DA IMAGEM
+  ======================================================== */
+
   $("#bundleImage").onchange =
     e => {
 
       const file =
         e.target.files[0];
 
-      if (!file) return;
+      if (!file) {
+        return;
+      }
 
       const preview =
         $("#bundlePreview");
@@ -2246,32 +2323,22 @@ function bundleForm(bundle) {
       preview.src =
         URL.createObjectURL(file);
 
-      preview.classList.remove(
-        "hidden"
-      );
+      preview.classList.remove("hidden");
 
       $("#bundlePreviewBox")
         ?.classList
         .add("hidden");
     };
 
-  document
-    .querySelectorAll(
-      "[data-bundle-product]"
-    )
-    .forEach(input => {
-
-      input.onchange =
-        updateBundleSelectedCount;
-
-    });
+  /* ========================================================
+     PESQUISA DE PRODUTOS
+  ======================================================== */
 
   $("#bundleProductSearch").oninput =
-    () => {
+    e => {
 
-      const query =
-        $("#bundleProductSearch")
-          .value
+      const search =
+        e.target.value
           .trim()
           .toLowerCase();
 
@@ -2281,292 +2348,181 @@ function bundleForm(bundle) {
         )
         .forEach(row => {
 
-          const text =
-            row.dataset.searchText || "";
+          const name =
+            row.dataset.productName || "";
 
           row.style.display =
-            text.includes(query)
+            !search ||
+            name.includes(search)
               ? ""
               : "none";
-
         });
     };
+
+  /* ========================================================
+     CONTADOR
+  ======================================================== */
+
+  function updateBundleProductCount() {
+
+    const count =
+      document.querySelectorAll(
+        ".bundle-product-checkbox:checked"
+      ).length;
+
+    const element =
+      $("#bundleProductCount");
+
+    if (element) {
+
+      element.textContent =
+        `${count} selecionado(s)`;
+    }
+  }
+
+  document
+    .querySelectorAll(
+      ".bundle-product-checkbox"
+    )
+    .forEach(checkbox => {
+
+      checkbox.onchange =
+        updateBundleProductCount;
+    });
+
+  /* ========================================================
+     GUARDAR RANCHO
+  ======================================================== */
 
   $("#bundleForm").onsubmit =
     async e => {
 
       e.preventDefault();
 
-      await saveBundle(bundle);
-    };
-}
+      try {
 
-/* ============================================================
-   LINHAS DE PRODUTOS DO RANCHO
-============================================================ */
-
-function renderBundleProductRows(selectedIds) {
-
-  if (!products.length) {
-
-    return `
-      <div class="p-6 text-center
-                  text-[#717971]">
-        Nenhum produto encontrado.
-      </div>
-    `;
-  }
-
-  return products
-    .map(product => {
-
-      const id =
-        String(product.id);
-
-      const sku =
-        String(product.sku || "");
-
-      const selected =
-        selectedIds.includes(id) ||
-        (sku && selectedIds.includes(sku));
-
-      const name =
-        localized(product.name) ||
-        product.sku ||
-        product.id;
-
-      const searchText =
-        `${name} ${product.sku || ""} ${product.id}`
-          .toLowerCase();
-
-      return `
-
-        <label
-          data-bundle-product-row
-          data-search-text="${esc(searchText)}"
-          class="flex items-center
-                 gap-4 p-4 border-b
-                 last:border-b-0
-                 cursor-pointer
-                 hover:bg-[#f5f7f6]"
-        >
-
-          <input
-            type="checkbox"
-            data-bundle-product="${esc(id)}"
-            value="${esc(id)}"
-            ${
-              selected
-                ? "checked"
-                : ""
-            }
-            class="w-5 h-5"
-          >
-
-          ${
-            product.image_url
-              ? `
-                <img
-                  src="${esc(product.image_url)}"
-                  class="w-14 h-14
-                         rounded-xl
-                         object-cover"
-                >
-              `
-              : `
-                <div
-                  class="w-14 h-14
-                         rounded-xl
-                         bg-[#eef5f7]
-                         flex items-center
-                         justify-center"
-                >
-                  <span
-                    class="material-symbols-outlined"
-                  >
-                    image
-                  </span>
-                </div>
-              `
-          }
-
-          <div class="flex-1">
-
-            <div
-              class="font-semibold"
-            >
-              ${esc(name)}
-            </div>
-
-            <div
-              class="text-xs
-                     text-[#717971]"
-            >
-              ${
-                product.sku
-                  ? `SKU: ${esc(product.sku)}`
-                  : `ID: ${esc(product.id)}`
-              }
-            </div>
-
-          </div>
-
-          <div
-            class="font-bold
-                   text-[#00361a]"
-          >
-            ${money(product.price)}
-          </div>
-
-        </label>
-
-      `;
-
-    })
-    .join("");
-}
-
-/* ============================================================
-   CONTADOR DE PRODUTOS
-============================================================ */
-
-function updateBundleSelectedCount() {
-
-  const count =
-    document
-      .querySelectorAll(
-        "[data-bundle-product]:checked"
-      )
-      .length;
-
-  const element =
-    $("#selectedProductsCount");
-
-  if (!element) return;
-
-  element.textContent =
-    `${count} ${
-      count === 1
-        ? "produto selecionado"
-        : "produtos selecionados"
-    }`;
-}
-
-/* ============================================================
-   GUARDAR RANCHO
-============================================================ */
-
-async function saveBundle(bundle) {
-
-  try {
-
-    toast("A guardar Rancho...");
-
-    /* ======================================================
-       IMAGEM
-    ====================================================== */
-
-    let image_url =
-      bundle.image_url || null;
-
-    const file =
-      $("#bundleImage")
-        ?.files?.[0];
-
-    if (file) {
-
-      image_url =
-        await uploadImage(
-          file,
-          "bundles"
+        toast(
+          "A guardar Rancho..."
         );
-    }
 
+        /* ==================================================
+           IMAGEM
+        ================================================== */
 
-    /* ======================================================
-       PRODUTOS SELECIONADOS
-    ====================================================== */
+        let image_url =
+          currentImage || null;
 
-    const selectedProductIds =
-      Array.from(
-        document.querySelectorAll(
-          "[data-bundle-product]:checked"
-        )
-      )
-      .map(input =>
-        String(input.value)
-      );
+        const file =
+          $("#bundleImage")
+            ?.files?.[0];
 
+        if (file) {
 
-    /* ======================================================
-       DADOS
-    ====================================================== */
+          image_url =
+            await uploadImage(
+              file,
+              "bundles"
+            );
+        }
 
-    const row = {
+        /* ==================================================
+           PRODUTOS SELECIONADOS
+        ================================================== */
 
-      name: {
-        pt:
-          $("#bundle_name").value.trim()
-      },
+        const productIds =
+          Array.from(
+            document.querySelectorAll(
+              ".bundle-product-checkbox:checked"
+            )
+          )
+          .map(
+            checkbox =>
+              checkbox.value
+          );
 
-      description: {
-        pt:
-          $("#bundle_description")
-            .value
-            .trim()
-      },
+        /* ==================================================
+           DADOS
+        ================================================== */
 
-      price:
-        Number(
-          $("#bundle_price").value || 0
-        ),
+        const row = {
 
-      product_ids:
-        selectedProductIds,
+          name: {
+            pt:
+              $("#bundle_name")
+                .value
+                .trim()
+          },
 
-      image_url,
+          description: {
+            pt:
+              $("#bundle_description")
+                .value
+                .trim()
+          },
 
-      active:
-        $("#bundle_active").checked,
+          price:
+            Number(
+              $("#bundle_price")
+                .value || 0
+            ),
 
-      updated_at:
-        new Date().toISOString()
+          product_ids:
+            productIds,
+
+          image_url,
+
+          badge:
+            $("#bundle_badge")
+              .value
+              .trim()
+              ? {
+                  pt:
+                    $("#bundle_badge")
+                      .value
+                      .trim()
+                }
+              : {},
+
+          active:
+            $("#bundle_active")
+              .checked,
+
+          updated_at:
+            new Date()
+              .toISOString()
+        };
+
+        const { error } =
+          await supabase
+            .from("bundles")
+            .update(row)
+            .eq("id", bundle.id);
+
+        if (error) {
+          throw error;
+        }
+
+        toast(
+          "Rancho atualizado com sucesso."
+        );
+
+        await load();
+
+        renderBundles();
+
+      } catch (error) {
+
+        console.error(
+          "Erro ao guardar Rancho:",
+          error
+        );
+
+        toast(
+          "Erro ao guardar Rancho: " +
+          error.message
+        );
+      }
     };
-
-
-    /* ======================================================
-       ATUALIZAR
-    ====================================================== */
-
-    const {
-      error
-    } =
-      await supabase
-        .from("bundles")
-        .update(row)
-        .eq("id", bundle.id);
-
-    if (error) {
-      throw error;
-    }
-
-    toast(
-      "Rancho atualizado com sucesso."
-    );
-
-    await load();
-
-    renderBundles();
-
-  } catch (error) {
-
-    console.error(error);
-
-    toast(
-      "Erro ao guardar Rancho: " +
-      error.message
-    );
-  }
 }
 
 /* ============================================================
@@ -2680,7 +2636,6 @@ function renderCategories() {
                     </article>
 
                   `;
-
                 })
                 .join("")
             }
@@ -2693,7 +2648,9 @@ function renderCategories() {
                    rounded-2xl p-6"
           >
 
-            <p class="text-[#717971]">
+            <p
+              class="text-[#717971]"
+            >
               Nenhuma categoria encontrada.
             </p>
 
@@ -2720,7 +2677,6 @@ function renderCategories() {
           categoryImageForm(category);
         }
       };
-
     });
 }
 
@@ -2739,7 +2695,8 @@ function categoryImageForm(category) {
 
       <button
         id="backCategories"
-        class="text-sm text-[#414942]"
+        class="text-sm
+               text-[#414942]"
       >
         ← Voltar
       </button>
@@ -2749,9 +2706,7 @@ function categoryImageForm(category) {
                text-3xl
                font-bold mt-3"
       >
-        ${esc(
-          localized(category.name)
-        )}
+        ${esc(localized(category.name))}
       </h1>
 
       <p
@@ -2897,9 +2852,7 @@ function categoryImageForm(category) {
             "categories"
           );
 
-        const {
-          error
-        } =
+        const { error } =
           await supabase
             .from("categories")
             .update({
@@ -2983,7 +2936,8 @@ function renderHeroSettings() {
               <img
                 id="heroPreview"
                 src="${esc(heroImage)}"
-                class="w-full h-80
+                class="w-full
+                       h-80
                        object-cover
                        rounded-2xl
                        mb-5"
@@ -2991,7 +2945,6 @@ function renderHeroSettings() {
             `
             : `
               <div
-                id="heroPreviewBox"
                 class="w-full h-80
                        bg-[#eef5f7]
                        rounded-2xl
@@ -3010,7 +2963,8 @@ function renderHeroSettings() {
 
               <img
                 id="heroPreview"
-                class="hidden w-full h-80
+                class="hidden w-full
+                       h-80
                        object-cover
                        rounded-2xl
                        mb-5"
@@ -3069,10 +3023,6 @@ function renderHeroSettings() {
       preview.classList.remove(
         "hidden"
       );
-
-      $("#heroPreviewBox")
-        ?.classList
-        .add("hidden");
     };
 
   $("#heroForm").onsubmit =
@@ -3105,9 +3055,7 @@ function renderHeroSettings() {
             "hero"
           );
 
-        const {
-          error
-        } =
+        const { error } =
           await supabase
             .from("site_settings")
             .upsert({
@@ -3248,9 +3196,13 @@ async function loadOrders() {
             (data || [])
               .map(order => `
 
-                <tr class="border-t">
+                <tr
+                  class="border-t"
+                >
 
-                  <td class="p-4 font-bold">
+                  <td
+                    class="p-4 font-bold"
+                  >
                     ${esc(
                       order.order_number ||
                       order.id
@@ -3265,7 +3217,9 @@ async function loadOrders() {
 
                     <br>
 
-                    <span class="text-xs">
+                    <span
+                      class="text-xs"
+                    >
                       ${esc(
                         order.customer_phone
                       )}
@@ -3327,6 +3281,7 @@ async function loadOrders() {
       </table>
 
     </div>
+
   `;
 
   document
@@ -3348,9 +3303,7 @@ async function loadOrders() {
       select.onchange =
         async () => {
 
-          const {
-            error
-          } =
+          const { error } =
             await supabase
               .from("orders")
               .update({
@@ -3388,8 +3341,9 @@ function renderSettings() {
 
   /*
    * IMPORTANTE:
-   * Rancho do Mês e Categorias NÃO ficam mais aqui.
-   * Cada um possui o seu próprio separador.
+   * Rancho do Mês NÃO aparece mais aqui.
+   * A gestão dos Ranchos fica exclusivamente
+   * na secção "Rancho do Mês".
    */
 
   shell(`
@@ -3412,49 +3366,60 @@ function renderSettings() {
 
     </div>
 
-
     <div
       class="bg-white
-             rounded-2xl
-             p-6
-             mt-6
-             max-w-3xl"
+             rounded-2xl p-6
+             mt-6 max-w-3xl"
     >
 
       <div
-        class="mb-6
-               border-b pb-5"
+        class="mb-6"
       >
-
-        <h2
-          class="font-[Montserrat]
-                 text-xl font-bold"
-        >
-          Imagem principal
-        </h2>
-
-        <p
-          class="text-sm
-                 text-[#717971] mt-1"
-        >
-          A imagem grande do topo da página inicial
-          é gerida separadamente.
-        </p>
 
         <button
           id="heroButton"
-          class="mt-4
-                 px-4 py-3
-                 rounded-xl
-                 bg-[#00361a]
-                 text-white
-                 font-bold"
+          class="w-full
+                 p-5
+                 border rounded-2xl
+                 text-left
+                 hover:bg-[#f5f7f6]"
         >
-          Alterar imagem do topo
+
+          <div
+            class="flex items-start
+                   gap-4"
+          >
+
+            <span
+              class="material-symbols-outlined
+                     text-[#00361a]"
+            >
+              panorama
+            </span>
+
+            <div>
+
+              <h2
+                class="font-bold"
+              >
+                Imagem grande do topo
+              </h2>
+
+              <p
+                class="text-sm
+                       text-[#717971]"
+              >
+                Alterar a imagem principal
+                da página inicial.
+              </p>
+
+            </div>
+
+          </div>
+
         </button>
 
       </div>
-
 
       <form
         id="settingsForm"
@@ -3594,9 +3559,7 @@ function renderSettings() {
           of values
         ) {
 
-          const {
-            error
-          } =
+          const { error } =
             await supabase
               .from("site_settings")
               .upsert({
