@@ -6,10 +6,11 @@ let session = null;
 let products = [];
 let categories = [];
 let bundles = [];
+let settings = {};
 
-/* =========================
+/* ============================================================
    UTILITÁRIOS
-========================= */
+============================================================ */
 
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (m) => ({
@@ -28,7 +29,7 @@ function toast(message) {
     t = document.createElement("div");
     t.id = "toast";
     t.className =
-      "fixed bottom-5 right-5 z-50 bg-[#00361a] text-white px-5 py-3 rounded-xl shadow-lg";
+      "fixed bottom-5 right-5 z-[100] bg-[#00361a] text-white px-5 py-3 rounded-xl shadow-lg";
     document.body.appendChild(t);
   }
 
@@ -46,21 +47,79 @@ function current(v) {
   return (
     v?.pt ||
     v?.en ||
+    v?.fr ||
+    v?.zh ||
+    v?.chg ||
     Object.values(v || {})[0] ||
     ""
   );
 }
 
-function money(value) {
+function formatMoney(value) {
   return Number(value || 0).toLocaleString("pt-MZ", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }) + " MZN";
 }
 
-/* =========================
+/* ============================================================
+   UPLOAD DE IMAGENS
+============================================================ */
+
+async function uploadImage(file, folder = "site") {
+
+  if (!file) return null;
+
+  const allowed = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ];
+
+  if (!allowed.includes(file.type)) {
+    toast("Formato de imagem não permitido. Use JPG, PNG ou WebP.");
+    return null;
+  }
+
+  if (file.size > 8 * 1024 * 1024) {
+    toast("A imagem deve ter no máximo 8 MB.");
+    return null;
+  }
+
+  const ext =
+    file.name.split(".").pop().toLowerCase() || "jpg";
+
+  const path =
+    `${folder}/${crypto.randomUUID()}.${ext}`;
+
+  const {
+    error: uploadError
+  } = await supabase
+    .storage
+    .from("site-images")
+    .upload(path, file, {
+      upsert: false,
+      contentType: file.type
+    });
+
+  if (uploadError) {
+    toast("Erro no upload: " + uploadError.message);
+    return null;
+  }
+
+  const {
+    data
+  } = supabase
+    .storage
+    .from("site-images")
+    .getPublicUrl(path);
+
+  return data?.publicUrl || null;
+}
+
+/* ============================================================
    INICIALIZAÇÃO
-========================= */
+============================================================ */
 
 async function boot() {
 
@@ -86,9 +145,7 @@ async function boot() {
     return;
   }
 
-  /* =========================
-     VERIFICAR ADMIN
-  ========================= */
+  /* VERIFICAR ADMIN */
 
   const {
     data: profile,
@@ -118,22 +175,16 @@ async function boot() {
     return;
   }
 
-  /* =========================
-     CARREGAR DADOS
-  ========================= */
-
   const loaded = await load();
 
-  if (!loaded) {
-    return;
-  }
+  if (!loaded) return;
 
   render();
 }
 
-/* =========================
+/* ============================================================
    LOGIN
-========================= */
+============================================================ */
 
 function login(msg = "") {
 
@@ -219,11 +270,12 @@ function login(msg = "") {
     const email = $("#email").value;
     const password = $("#password").value;
 
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+    const {
+      error
+    } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
     if (error) {
       login(error.message);
@@ -234,27 +286,24 @@ function login(msg = "") {
   };
 }
 
-/* =========================
+/* ============================================================
    CARREGAR DADOS
-========================= */
+============================================================ */
 
 async function load() {
 
-  /* =========================
-     PRODUTOS
-  ========================= */
+  /* PRODUTOS */
 
-  const productsResult =
-    await supabase
-      .from("products")
-      .select("*")
-      .order("sort_order", {
-        ascending: true
-      });
+  const productsResult = await supabase
+    .from("products")
+    .select("*")
+    .order("sort_order", {
+      ascending: true
+    });
 
   if (productsResult.error) {
 
-    showLoadError(
+    showError(
       "Erro ao carregar produtos",
       productsResult.error.message
     );
@@ -265,21 +314,18 @@ async function load() {
   products = productsResult.data || [];
 
 
-  /* =========================
-     CATEGORIAS
-  ========================= */
+  /* CATEGORIAS */
 
-  const categoriesResult =
-    await supabase
-      .from("categories")
-      .select("*")
-      .order("sort_order", {
-        ascending: true
-      });
+  const categoriesResult = await supabase
+    .from("categories")
+    .select("*")
+    .order("sort_order", {
+      ascending: true
+    });
 
   if (categoriesResult.error) {
 
-    showLoadError(
+    showError(
       "Erro ao carregar categorias",
       categoriesResult.error.message
     );
@@ -290,41 +336,74 @@ async function load() {
   categories = categoriesResult.data || [];
 
 
-  /* =========================
-     RANCHO DO MÊS
-  ========================= */
+  /* RANCHO DO MÊS / BUNDLES */
 
-  const bundlesResult =
-    await supabase
-      .from("bundles")
-      .select("*")
-      .order("sort_order", {
-        ascending: true
-      });
+  const bundlesResult = await supabase
+    .from("bundles")
+    .select("*")
+    .order("sort_order", {
+      ascending: true
+    });
 
   if (bundlesResult.error) {
 
-    showLoadError(
-      "Erro ao carregar Rancho do Mês",
-      bundlesResult.error.message
+    console.error(
+      "Erro ao carregar bundles:",
+      bundlesResult.error
     );
 
-    return false;
+    bundles = [];
+
+  } else {
+
+    bundles = bundlesResult.data || [];
+
   }
 
-  bundles = bundlesResult.data || [];
+
+  /* CONFIGURAÇÕES */
+
+  const settingsResult = await supabase
+    .from("site_settings")
+    .select("*");
+
+  if (settingsResult.error) {
+
+    console.error(
+      "Erro ao carregar configurações:",
+      settingsResult.error
+    );
+
+    settings = {};
+
+  } else {
+
+    settings = Object.fromEntries(
+      (settingsResult.data || []).map(row => [
+        row.key,
+        row.value
+      ])
+    );
+
+  }
 
 
-  console.log("Categorias carregadas:", categories);
-  console.log("Rancho do Mês carregado:", bundles);
+  console.log("Produtos:", products);
+  console.log("Categorias:", categories);
+  console.log("Rancho do Mês:", bundles);
+  console.log("Configurações:", settings);
 
   return true;
 }
 
-function showLoadError(title, message) {
+/* ============================================================
+   ERRO
+============================================================ */
+
+function showError(title, message) {
 
   document.body.innerHTML = `
-    <main class="min-h-screen flex items-center justify-center p-6">
+    <main class="min-h-screen flex items-center justify-center p-6 bg-[#f5f7f6]">
 
       <div class="max-w-xl bg-white rounded-2xl shadow p-6">
 
@@ -342,9 +421,9 @@ function showLoadError(title, message) {
   `;
 }
 
-/* =========================
+/* ============================================================
    ESTRUTURA DO PAINEL
-========================= */
+============================================================ */
 
 function shell(content) {
 
@@ -368,32 +447,28 @@ function shell(content) {
 
           <button
             data-tab="dashboard"
-            class="w-full text-left px-3 py-3
-                   rounded-lg hover:bg-white/10"
+            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
           >
             Dashboard
           </button>
 
           <button
             data-tab="products"
-            class="w-full text-left px-3 py-3
-                   rounded-lg hover:bg-white/10"
+            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
           >
             Produtos
           </button>
 
           <button
             data-tab="orders"
-            class="w-full text-left px-3 py-3
-                   rounded-lg hover:bg-white/10"
+            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
           >
             Pedidos
           </button>
 
           <button
             data-tab="settings"
-            class="w-full text-left px-3 py-3
-                   rounded-lg hover:bg-white/10"
+            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
           >
             Configurações
           </button>
@@ -402,8 +477,7 @@ function shell(content) {
 
         <button
           id="logout"
-          class="mt-auto text-left px-3 py-3
-                 rounded-lg hover:bg-white/10"
+          class="mt-auto text-left px-3 py-3 rounded-lg hover:bg-white/10"
         >
           Terminar sessão
         </button>
@@ -415,7 +489,6 @@ function shell(content) {
       </main>
 
     </div>
-
   `;
 
   $("#logout").onclick = async () => {
@@ -427,7 +500,7 @@ function shell(content) {
 
   document
     .querySelectorAll("[data-tab]")
-    .forEach((button) => {
+    .forEach(button => {
 
       button.onclick = () => {
 
@@ -454,9 +527,9 @@ function shell(content) {
     });
 }
 
-/* =========================
+/* ============================================================
    DASHBOARD
-========================= */
+============================================================ */
 
 function render() {
 
@@ -486,65 +559,30 @@ function render() {
 
     </div>
 
-    <div
-      class="grid sm:grid-cols-2 lg:grid-cols-4
-             gap-4 mt-7"
-    >
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-7">
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
-
-        <p class="text-sm text-[#717971]">
-          Produtos
-        </p>
-
-        <b class="text-2xl">
-          ${products.length}
-        </b>
-
+        <p class="text-sm text-[#717971]">Produtos</p>
+        <b class="text-2xl">${products.length}</b>
       </div>
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
-
-        <p class="text-sm text-[#717971]">
-          Ativos
-        </p>
-
+        <p class="text-sm text-[#717971]">Ativos</p>
         <b class="text-2xl">
-          ${
-            products.filter(
-              p => p.active !== false
-            ).length
-          }
+          ${products.filter(p => p.active !== false).length}
         </b>
-
       </div>
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
-
-        <p class="text-sm text-[#717971]">
-          Stock baixo
-        </p>
-
+        <p class="text-sm text-[#717971]">Stock baixo</p>
         <b class="text-2xl">
-          ${
-            products.filter(
-              p => (p.stock ?? 0) < 5
-            ).length
-          }
+          ${products.filter(p => (p.stock ?? 0) < 5).length}
         </b>
-
       </div>
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
-
-        <p class="text-sm text-[#717971]">
-          Conta
-        </p>
-
-        <b class="text-2xl">
-          Admin
-        </b>
-
+        <p class="text-sm text-[#717971]">Rancho do Mês</p>
+        <b class="text-2xl">${bundles.length}</b>
       </div>
 
     </div>
@@ -559,8 +597,7 @@ function render() {
 
         <button
           id="goProducts"
-          class="px-4 py-2 rounded-xl
-                 bg-[#00361a] text-white"
+          class="px-4 py-2 rounded-xl bg-[#00361a] text-white"
         >
           Gerir produtos
         </button>
@@ -589,9 +626,9 @@ function render() {
   $("#goSettings").onclick = renderSettings;
 }
 
-/* =========================
-   LISTA DE PRODUTOS
-========================= */
+/* ============================================================
+   PRODUTOS
+============================================================ */
 
 function renderProducts() {
 
@@ -621,10 +658,7 @@ function renderProducts() {
 
     </div>
 
-    <div
-      class="bg-white rounded-2xl shadow-sm
-             overflow-x-auto mt-6"
-    >
+    <div class="bg-white rounded-2xl shadow-sm overflow-x-auto mt-6">
 
       <table class="w-full text-sm">
 
@@ -632,25 +666,11 @@ function renderProducts() {
 
           <tr>
 
-            <th class="text-left p-4">
-              Produto
-            </th>
-
-            <th class="text-left p-4">
-              Categoria
-            </th>
-
-            <th class="text-left p-4">
-              Preço
-            </th>
-
-            <th class="text-left p-4">
-              Stock
-            </th>
-
-            <th class="p-4">
-              Ações
-            </th>
+            <th class="text-left p-4">Produto</th>
+            <th class="text-left p-4">Categoria</th>
+            <th class="text-left p-4">Preço</th>
+            <th class="text-left p-4">Stock</th>
+            <th class="p-4">Ações</th>
 
           </tr>
 
@@ -661,12 +681,9 @@ function renderProducts() {
           ${
             products.map(p => {
 
-              const category =
-                categories.find(
-                  c =>
-                    String(c.id) ===
-                    String(p.category_id)
-                );
+              const category = categories.find(
+                c => String(c.id) === String(p.category_id)
+              );
 
               return `
 
@@ -676,22 +693,31 @@ function renderProducts() {
 
                     <div class="flex items-center gap-3">
 
-                      <img
-                        src="${esc(p.image_url || "")}"
-                        class="w-12 h-12
-                               object-cover rounded-lg"
-                      >
+                      ${
+                        p.image_url
+                          ? `
+                            <img
+                              src="${esc(p.image_url)}"
+                              class="w-12 h-12 object-cover rounded-lg"
+                            >
+                          `
+                          : `
+                            <div class="w-12 h-12 rounded-lg bg-[#eef5f7]
+                                        flex items-center justify-center">
+                              <span class="material-symbols-outlined">
+                                image
+                              </span>
+                            </div>
+                          `
+                      }
 
                       <div>
 
                         <b>
-                          ${esc(p.name?.pt || "")}
+                          ${esc(current(p.name))}
                         </b>
 
-                        <div
-                          class="text-xs
-                                 text-[#717971]"
-                        >
+                        <div class="text-xs text-[#717971]">
                           ${esc(p.sku || p.id)}
                         </div>
 
@@ -702,30 +728,11 @@ function renderProducts() {
                   </td>
 
                   <td class="p-4">
-
-                    ${
-                      esc(
-                        category?.name?.pt ||
-                        "Sem categoria"
-                      )
-                    }
-
+                    ${esc(current(category?.name) || "Sem categoria")}
                   </td>
 
                   <td class="p-4 font-bold">
-
-                    ${
-                      Number(p.price || 0)
-                        .toLocaleString(
-                          "pt-MZ",
-                          {
-                            minimumFractionDigits: 2
-                          }
-                        )
-                    }
-
-                    MZN
-
+                    ${formatMoney(p.price)}
                   </td>
 
                   <td class="p-4">
@@ -736,8 +743,7 @@ function renderProducts() {
 
                     <button
                       data-edit="${esc(p.id)}"
-                      class="px-3 py-2 rounded-lg
-                             bg-[#e8eff1]"
+                      class="px-3 py-2 rounded-lg bg-[#e8eff1]"
                     >
                       Editar
                     </button>
@@ -745,7 +751,6 @@ function renderProducts() {
                   </td>
 
                 </tr>
-
               `;
 
             }).join("")
@@ -766,12 +771,9 @@ function renderProducts() {
 
       button.onclick = () => {
 
-        const product =
-          products.find(
-            p =>
-              String(p.id) ===
-              String(button.dataset.edit)
-          );
+        const product = products.find(
+          p => String(p.id) === String(button.dataset.edit)
+        );
 
         form(product);
       };
@@ -779,9 +781,9 @@ function renderProducts() {
     });
 }
 
-/* =========================
-   FORMULÁRIO PRODUTO
-========================= */
+/* ============================================================
+   FORM PRODUTO
+============================================================ */
 
 function form(product = null) {
 
@@ -791,13 +793,9 @@ function form(product = null) {
 
     id: "RF-" + Date.now(),
 
-    name: {
-      pt: ""
-    },
+    name: { pt: "" },
 
-    description: {
-      pt: ""
-    },
+    description: { pt: "" },
 
     price: 0,
 
@@ -809,9 +807,7 @@ function form(product = null) {
 
     unit: "",
 
-    tag: {
-      pt: ""
-    },
+    tag: { pt: "" },
 
     category_id: "",
 
@@ -827,24 +823,19 @@ function form(product = null) {
     .map(category => {
 
       const categoryName =
-        category?.name?.pt ||
-        category?.name ||
-        "Categoria";
+        current(category.name) || "Categoria";
 
       return `
-
         <option
           value="${esc(category.id)}"
           ${
-            String(category.id) ===
-            String(p.category_id)
+            String(category.id) === String(p.category_id)
               ? "selected"
               : ""
           }
         >
           ${esc(categoryName)}
         </option>
-
       `;
 
     })
@@ -854,94 +845,47 @@ function form(product = null) {
 
     <div class="max-w-4xl">
 
-      <button
-        id="back"
-        class="text-sm text-[#414942]"
-      >
+      <button id="back" class="text-sm text-[#414942]">
         ← Voltar
       </button>
 
-      <h1
-        class="font-[Montserrat]
-               text-3xl font-bold mt-3"
-      >
-        ${isNew
-          ? "Adicionar produto"
-          : "Editar produto"}
+      <h1 class="font-[Montserrat] text-3xl font-bold mt-3">
+        ${isNew ? "Adicionar produto" : "Editar produto"}
       </h1>
 
       <form
         id="productForm"
-        class="bg-white rounded-2xl
-               p-6 shadow-sm mt-6 space-y-5"
+        class="bg-white rounded-2xl p-6 shadow-sm mt-6 space-y-5"
       >
 
         <div class="grid md:grid-cols-2 gap-4">
 
-          ${field(
-            "Nome do produto",
-            "name_pt",
-            p.name?.pt
-          )}
+          ${field("Nome do produto", "name_pt", p.name?.pt)}
 
-          ${field(
-            "Descrição",
-            "desc_pt",
-            p.description?.pt
-          )}
+          ${field("Descrição", "desc_pt", p.description?.pt)}
 
-          ${field(
-            "Preço (MZN)",
-            "price",
-            p.price,
-            "number"
-          )}
+          ${field("Preço (MZN)", "price", p.price, "number")}
 
-          ${field(
-            "Preço anterior",
-            "old_price",
-            p.old_price,
-            "number"
-          )}
+          ${field("Preço anterior", "old_price", p.old_price, "number")}
 
-          ${field(
-            "Stock",
-            "stock",
-            p.stock,
-            "number"
-          )}
+          ${field("Stock", "stock", p.stock, "number")}
 
-          ${field(
-            "SKU",
-            "sku",
-            p.sku
-          )}
+          ${field("SKU", "sku", p.sku)}
 
-          ${field(
-            "Unidade",
-            "unit",
-            p.unit
-          )}
+          ${field("Unidade", "unit", p.unit)}
 
-          ${field(
-            "Tag",
-            "tag_pt",
-            p.tag?.pt
-          )}
+          ${field("Tag", "tag_pt", p.tag?.pt)}
 
         </div>
 
-        <label
-          class="block text-sm font-semibold"
-        >
+        <label class="block text-sm font-semibold">
 
           Categoria
 
           <select
             id="category_id"
             required
-            class="mt-1 w-full border
-                   rounded-xl p-3"
+            class="mt-1 w-full border rounded-xl p-3"
           >
 
             <option value="">
@@ -954,14 +898,9 @@ function form(product = null) {
 
         </label>
 
-        <div
-          class="border-2 border-dashed
-                 rounded-2xl p-5"
-        >
+        <div class="border-2 border-dashed rounded-2xl p-5">
 
-          <label
-            class="block text-sm font-semibold"
-          >
+          <label class="block text-sm font-semibold">
 
             Imagem do produto
 
@@ -977,8 +916,7 @@ function form(product = null) {
           <img
             id="preview"
             src="${esc(p.image_url || "")}"
-            class="mt-4 w-40 h-40
-                   object-cover rounded-xl
+            class="mt-4 w-40 h-40 object-cover rounded-xl
                    ${p.image_url ? "" : "hidden"}"
           >
 
@@ -987,27 +925,21 @@ function form(product = null) {
         <div class="flex gap-5">
 
           <label>
-
             <input
               id="active"
               type="checkbox"
               ${p.active !== false ? "checked" : ""}
             >
-
             Ativo
-
           </label>
 
           <label>
-
             <input
               id="featured"
               type="checkbox"
               ${p.featured ? "checked" : ""}
             >
-
             Destaque
-
           </label>
 
         </div>
@@ -1015,11 +947,8 @@ function form(product = null) {
         <div class="flex gap-3">
 
           <button
-            class="px-5 py-3
-                   bg-[#00361a]
-                   text-white
-                   rounded-xl
-                   font-bold"
+            class="px-5 py-3 bg-[#00361a]
+                   text-white rounded-xl font-bold"
           >
             Guardar
           </button>
@@ -1030,10 +959,8 @@ function form(product = null) {
                 <button
                   type="button"
                   id="delete"
-                  class="px-5 py-3
-                         bg-red-50
-                         text-red-700
-                         rounded-xl"
+                  class="px-5 py-3 bg-red-50
+                         text-red-700 rounded-xl"
                 >
                   Excluir
                 </button>
@@ -1050,7 +977,7 @@ function form(product = null) {
 
   $("#back").onclick = renderProducts;
 
-  $("#image").onchange = (e) => {
+  $("#image").onchange = e => {
 
     const file = e.target.files[0];
 
@@ -1062,62 +989,49 @@ function form(product = null) {
     $("#preview").classList.remove("hidden");
   };
 
-  $("#productForm").onsubmit =
-    async (e) => {
+  $("#productForm").onsubmit = async e => {
 
-      e.preventDefault();
+    e.preventDefault();
 
-      await saveProduct(p, isNew);
-    };
+    await saveProduct(p, isNew);
+  };
 
   if (!isNew) {
 
-    $("#delete").onclick =
-      async () => {
+    $("#delete").onclick = async () => {
 
-        if (
-          !confirm(
-            "Tem certeza que deseja excluir este produto?"
-          )
-        ) {
-          return;
-        }
+      if (!confirm("Tem certeza que deseja excluir este produto?")) {
+        return;
+      }
 
-        const { error } =
-          await supabase
-            .from("products")
-            .delete()
-            .eq("id", p.id);
+      const {
+        error
+      } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", p.id);
 
-        if (error) {
+      if (error) {
+        toast(error.message);
+        return;
+      }
 
-          toast(error.message);
+      toast("Produto excluído.");
 
-          return;
-        }
+      await load();
 
-        toast("Produto excluído.");
-
-        await load();
-
-        renderProducts();
-      };
+      renderProducts();
+    };
   }
 }
 
-/* =========================
+/* ============================================================
    CAMPO
-========================= */
+============================================================ */
 
-function field(
-  label,
-  id,
-  value = "",
-  type = "text"
-) {
+function field(label, id, value = "", type = "text") {
 
   return `
-
     <label class="block text-sm font-semibold">
 
       ${esc(label)}
@@ -1126,93 +1040,29 @@ function field(
         id="${esc(id)}"
         type="${esc(type)}"
         value="${esc(value)}"
-        class="mt-1 w-full border
-               rounded-xl p-3"
+        class="mt-1 w-full border rounded-xl p-3"
       >
 
     </label>
-
   `;
 }
 
-/* =========================
-   UPLOAD DE IMAGEM
-========================= */
-
-async function uploadImage(file, folder = "site") {
-
-  if (!file) {
-    return null;
-  }
-
-  const ext =
-    file.name
-      .split(".")
-      .pop()
-      .toLowerCase();
-
-  const path =
-    `${folder}/${crypto.randomUUID()}.${ext}`;
-
-  const {
-    error: uploadError
-  } =
-    await supabase
-      .storage
-      .from("site-images")
-      .upload(
-        path,
-        file,
-        {
-          upsert: false
-        }
-      );
-
-  if (uploadError) {
-
-    throw new Error(
-      "Erro no upload: " +
-      uploadError.message
-    );
-  }
-
-  const publicUrl =
-    supabase
-      .storage
-      .from("site-images")
-      .getPublicUrl(path)
-      .data
-      .publicUrl;
-
-  return publicUrl;
-}
-
-/* =========================
+/* ============================================================
    GUARDAR PRODUTO
-========================= */
+============================================================ */
 
 async function saveProduct(p, isNew) {
 
   let image_url = p.image_url || null;
 
-  const file = $("#image").files[0];
+  const file = $("#image")?.files?.[0];
 
-  try {
+  if (file) {
 
-    if (file) {
+    image_url =
+      await uploadImage(file, "products");
 
-      image_url =
-        await uploadImage(
-          file,
-          "products"
-        );
-    }
-
-  } catch (error) {
-
-    toast(error.message);
-
-    return;
+    if (!image_url) return;
   }
 
   const row = {
@@ -1231,19 +1081,13 @@ async function saveProduct(p, isNew) {
       $("#category_id").value || null,
 
     price:
-      Number(
-        $("#price").value || 0
-      ),
+      Number($("#price").value || 0),
 
     old_price:
-      Number(
-        $("#old_price").value || 0
-      ) || null,
+      Number($("#old_price").value || 0) || null,
 
     stock:
-      Number(
-        $("#stock").value || 0
-      ),
+      Number($("#stock").value || 0),
 
     sku:
       $("#sku").value,
@@ -1272,18 +1116,16 @@ async function saveProduct(p, isNew) {
 
   if (isNew) {
 
-    result =
-      await supabase
-        .from("products")
-        .insert(row);
+    result = await supabase
+      .from("products")
+      .insert(row);
 
   } else {
 
-    result =
-      await supabase
-        .from("products")
-        .update(row)
-        .eq("id", p.id);
+    result = await supabase
+      .from("products")
+      .update(row)
+      .eq("id", p.id);
 
   }
 
@@ -1308,25 +1150,19 @@ async function saveProduct(p, isNew) {
   renderProducts();
 }
 
-/* =========================
+/* ============================================================
    PEDIDOS
-========================= */
+============================================================ */
 
 function renderOrders() {
 
   shell(`
 
-    <h1
-      class="font-[Montserrat]
-             text-3xl font-bold"
-    >
+    <h1 class="font-[Montserrat] text-3xl font-bold">
       Pedidos
     </h1>
 
-    <div
-      id="orders"
-      class="mt-6"
-    ></div>
+    <div id="orders" class="mt-6"></div>
 
   `);
 
@@ -1338,16 +1174,12 @@ async function loadOrders() {
   const {
     data,
     error
-  } =
-    await supabase
-      .from("orders")
-      .select("*")
-      .order(
-        "created_at",
-        {
-          ascending: false
-        }
-      );
+  } = await supabase
+    .from("orders")
+    .select("*")
+    .order("created_at", {
+      ascending: false
+    });
 
   if (error) {
 
@@ -1359,10 +1191,7 @@ async function loadOrders() {
 
   $("#orders").innerHTML = `
 
-    <div
-      class="bg-white rounded-2xl
-             overflow-x-auto"
-    >
+    <div class="bg-white rounded-2xl overflow-x-auto">
 
       <table class="w-full text-sm">
 
@@ -1370,21 +1199,10 @@ async function loadOrders() {
 
           <tr>
 
-            <th class="p-4 text-left">
-              Pedido
-            </th>
-
-            <th class="p-4 text-left">
-              Cliente
-            </th>
-
-            <th class="p-4 text-left">
-              Total
-            </th>
-
-            <th class="p-4 text-left">
-              Estado
-            </th>
+            <th class="p-4 text-left">Pedido</th>
+            <th class="p-4 text-left">Cliente</th>
+            <th class="p-4 text-left">Total</th>
+            <th class="p-4 text-left">Estado</th>
 
           </tr>
 
@@ -1392,254 +1210,349 @@ async function loadOrders() {
 
         <tbody>
 
-          ${(data || [])
-            .map(o => `
+          ${(data || []).map(o => `
 
-              <tr class="border-t">
+            <tr class="border-t">
 
-                <td class="p-4 font-bold">
-                  ${esc(o.order_number)}
-                </td>
+              <td class="p-4 font-bold">
+                ${esc(o.order_number)}
+              </td>
 
-                <td class="p-4">
-                  ${esc(o.customer_name)}
+              <td class="p-4">
+                ${esc(o.customer_name)}
+                <br>
+                <span class="text-xs">
+                  ${esc(o.customer_phone)}
+                </span>
+              </td>
 
-                  <br>
+              <td class="p-4 font-bold">
+                ${formatMoney(o.total)}
+              </td>
 
-                  <span class="text-xs">
-                    ${esc(o.customer_phone)}
-                  </span>
-                </td>
+              <td class="p-4">
 
-                <td class="p-4 font-bold">
-                  ${money(o.total)}
-                </td>
+                <select
+                  data-status="${esc(o.id)}"
+                  class="border rounded-lg p-2"
+                >
 
-                <td class="p-4">
+                  <option value="new">Novo</option>
+                  <option value="confirmed">Confirmado</option>
+                  <option value="preparing">Em preparação</option>
+                  <option value="ready">Pronto</option>
+                  <option value="delivered">Entregue</option>
+                  <option value="cancelled">Cancelado</option>
 
-                  <select
-                    data-status="${esc(o.id)}"
-                    class="border rounded-lg p-2"
-                  >
+                </select>
 
-                    <option value="new">
-                      Novo
-                    </option>
+              </td>
 
-                    <option value="confirmed">
-                      Confirmado
-                    </option>
+            </tr>
 
-                    <option value="preparing">
-                      Em preparação
-                    </option>
-
-                    <option value="ready">
-                      Pronto
-                    </option>
-
-                    <option value="delivered">
-                      Entregue
-                    </option>
-
-                    <option value="cancelled">
-                      Cancelado
-                    </option>
-
-                  </select>
-
-                </td>
-
-              </tr>
-
-            `)
-            .join("")}
+          `).join("")}
 
         </tbody>
 
       </table>
 
     </div>
-
   `;
 
   for (
     const select
-    of document.querySelectorAll(
-      "[data-status]"
-    )
+    of document.querySelectorAll("[data-status]")
   ) {
 
-    const row =
-      data.find(
-        x =>
-          String(x.id) ===
-          String(select.dataset.status)
-      );
+    const row = data.find(
+      x =>
+        String(x.id) ===
+        String(select.dataset.status)
+    );
 
     if (!row) continue;
 
     select.value = row.status;
 
-    select.onchange =
-      async () => {
+    select.onchange = async () => {
 
-        const {
-          error
-        } =
-          await supabase
-            .from("orders")
-            .update({
-              status: select.value,
-              updated_at:
-                new Date().toISOString()
-            })
-            .eq("id", row.id);
+      const {
+        error
+      } = await supabase
+        .from("orders")
+        .update({
+          status: select.value,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", row.id);
 
-        toast(
-          error
-            ? error.message
-            : "Estado atualizado."
-        );
-
-      };
+      toast(
+        error
+          ? error.message
+          : "Estado atualizado."
+      );
+    };
   }
 }
 
-/* =========================
+/* ============================================================
    CONFIGURAÇÕES
-========================= */
-
-async function getSiteSettings() {
-
-  const {
-    data,
-    error
-  } =
-    await supabase
-      .from("site_settings")
-      .select("*");
-
-  if (error) {
-
-    console.error(
-      "Erro ao carregar configurações:",
-      error
-    );
-
-    return {};
-  }
-
-  return Object.fromEntries(
-    (data || []).map(
-      item => [
-        item.key,
-        item.value
-      ]
-    )
-  );
-}
+============================================================ */
 
 function renderSettings() {
 
-  const essential =
-    bundles.find(
-      b => b.id === "essential"
-    );
+  const heroImage =
+    typeof settings.hero_image === "string"
+      ? settings.hero_image
+      : "";
 
-  const economy =
-    bundles.find(
-      b => b.id === "economy"
-    );
+  const whatsapp =
+    typeof settings.whatsapp === "string"
+      ? settings.whatsapp
+      : "+258840000000";
 
-  const couple =
-    bundles.find(
-      b => b.id === "couple"
-    );
+  const email =
+    typeof settings.contact_email === "string"
+      ? settings.contact_email
+      : "contato@ranchoflexivel.co.mz";
 
-  const family =
-    bundles.find(
-      b => b.id === "family"
-    );
+  const defaultLanguage =
+    typeof settings.default_language === "string"
+      ? settings.default_language
+      : "pt";
 
   shell(`
 
     <div class="max-w-5xl">
 
-      <h1
-        class="font-[Montserrat]
-               text-3xl font-bold"
+      <div>
+
+        <p class="text-sm text-[#717971]">
+          Configurações do site
+        </p>
+
+        <h1 class="font-[Montserrat] text-3xl font-bold">
+          Configurações
+        </h1>
+
+      </div>
+
+
+      <!-- ==================================================
+           IMAGEM GRANDE DO TOPO
+      =================================================== -->
+
+      <section
+        class="bg-white rounded-2xl p-6 mt-6 shadow-sm"
       >
-        Configurações
-      </h1>
 
-      <p class="text-sm text-[#717971] mt-1">
-        Gerir informações gerais e imagens do site.
-      </p>
-
-
-      <!-- =========================
-           CONFIGURAÇÕES GERAIS
-      ========================== -->
-
-      <div
-        class="bg-white rounded-2xl
-               p-6 mt-6"
-      >
-
-        <h2
-          class="font-[Montserrat]
-                 text-xl font-bold"
-        >
-          Informações gerais
+        <h2 class="font-[Montserrat] text-xl font-bold">
+          Imagem grande do topo
         </h2>
 
-        <form
-          id="settings"
-          class="mt-5 space-y-4"
+        <p class="text-sm text-[#717971] mt-1">
+          Imagem principal da página inicial.
+        </p>
+
+        <div
+          class="mt-5 border-2 border-dashed
+                 rounded-2xl p-5"
         >
+
+          <input
+            id="heroImageInput"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            class="block w-full"
+          >
+
+          <div
+            class="mt-4 rounded-2xl overflow-hidden
+                   bg-[#eef5f7] aspect-[16/6]"
+          >
+
+            <img
+              id="heroPreview"
+              src="${esc(heroImage)}"
+              class="w-full h-full object-cover
+                     ${heroImage ? "" : "hidden"}"
+            >
+
+            <div
+              id="heroEmpty"
+              class="w-full h-full flex items-center
+                     justify-center text-[#717971]
+                     ${heroImage ? "hidden" : ""}"
+            >
+              Nenhuma imagem definida
+            </div>
+
+          </div>
+
+          <button
+            id="saveHero"
+            type="button"
+            class="mt-4 px-5 py-3
+                   bg-[#00361a] text-white
+                   rounded-xl font-bold"
+          >
+            Guardar imagem do topo
+          </button>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==================================================
+           RANCHO DO MÊS
+      =================================================== -->
+
+      <section
+        class="bg-white rounded-2xl p-6 mt-6 shadow-sm"
+      >
+
+        <h2 class="font-[Montserrat] text-xl font-bold">
+          Rancho do Mês
+        </h2>
+
+        <p class="text-sm text-[#717971] mt-1">
+          Altere a imagem de cada Rancho do Mês.
+        </p>
+
+        <div
+          id="bundlesAdmin"
+          class="grid md:grid-cols-2 gap-5 mt-5"
+        >
+
+          ${
+            bundles.length
+              ? bundles.map(bundle => bundleImageCard(bundle)).join("")
+              : `
+                <div
+                  class="md:col-span-2
+                         border rounded-2xl p-6
+                         text-center text-[#717971]"
+                >
+                  Nenhum Rancho do Mês encontrado.
+                </div>
+              `
+          }
+
+        </div>
+
+      </section>
+
+
+      <!-- ==================================================
+           CATEGORIAS
+      =================================================== -->
+
+      <section
+        class="bg-white rounded-2xl p-6 mt-6 shadow-sm"
+      >
+
+        <h2 class="font-[Montserrat] text-xl font-bold">
+          Categorias
+        </h2>
+
+        <p class="text-sm text-[#717971] mt-1">
+          Altere a imagem de cada categoria.
+        </p>
+
+        <div
+          id="categoriesAdmin"
+          class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5"
+        >
+
+          ${
+            categories.length
+              ? categories.map(category =>
+                  categoryImageCard(category)
+                ).join("")
+              : `
+                <div
+                  class="sm:col-span-2 lg:col-span-3
+                         border rounded-2xl p-6
+                         text-center text-[#717971]"
+                >
+                  Nenhuma categoria encontrada.
+                </div>
+              `
+          }
+
+        </div>
+
+      </section>
+
+
+      <!-- ==================================================
+           CONTACTO
+      =================================================== -->
+
+      <section
+        class="bg-white rounded-2xl p-6 mt-6 shadow-sm"
+      >
+
+        <h2 class="font-[Montserrat] text-xl font-bold">
+          Contacto
+        </h2>
+
+        <form id="settingsForm" class="mt-5 space-y-4">
 
           ${field(
             "WhatsApp",
             "wa",
-            ""
+            whatsapp
           )}
 
           ${field(
             "E-mail",
             "email",
-            ""
+            email
           )}
 
-          <label
-            class="block text-sm font-semibold"
-          >
+          <label class="block text-sm font-semibold">
 
             Idioma padrão
 
             <select
               id="defaultLang"
-              class="mt-1 w-full
-                     border rounded-xl p-3"
+              class="mt-1 w-full border rounded-xl p-3"
             >
 
-              <option value="pt">
+              <option
+                value="pt"
+                ${defaultLanguage === "pt" ? "selected" : ""}
+              >
                 Português
               </option>
 
-              <option value="en">
+              <option
+                value="en"
+                ${defaultLanguage === "en" ? "selected" : ""}
+              >
                 English
               </option>
 
-              <option value="fr">
+              <option
+                value="fr"
+                ${defaultLanguage === "fr" ? "selected" : ""}
+              >
                 Français
               </option>
 
-              <option value="zh">
+              <option
+                value="zh"
+                ${defaultLanguage === "zh" ? "selected" : ""}
+              >
                 中文
               </option>
 
-              <option value="chg">
+              <option
+                value="chg"
+                ${defaultLanguage === "chg" ? "selected" : ""}
+              >
                 Changana
               </option>
 
@@ -1651,221 +1564,143 @@ function renderSettings() {
             class="px-5 py-3
                    bg-[#00361a]
                    text-white
-                   rounded-xl
-                   font-bold"
+                   rounded-xl font-bold"
           >
             Guardar configurações
           </button>
 
         </form>
 
-      </div>
-
-
-      <!-- =========================
-           IMAGEM GRANDE DO TOPO
-      ========================== -->
-
-      <div
-        class="bg-white rounded-2xl
-               p-6 mt-6"
-      >
-
-        <h2
-          class="font-[Montserrat]
-                 text-xl font-bold"
-        >
-          Imagem grande do topo
-        </h2>
-
-        <p class="text-sm text-[#717971] mt-1">
-          Esta é a imagem principal apresentada no topo do site.
-        </p>
-
-        <form
-          id="heroForm"
-          class="mt-5 space-y-4"
-        >
-
-          <input
-            id="heroImage"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            class="block w-full border
-                   rounded-xl p-3"
-          >
-
-          <img
-            id="heroPreview"
-            class="w-full max-w-2xl
-                   h-56 object-cover
-                   rounded-2xl mt-3"
-            alt="Imagem grande do topo"
-          >
-
-          <button
-            class="px-5 py-3
-                   bg-[#00361a]
-                   text-white
-                   rounded-xl
-                   font-bold"
-          >
-            Guardar imagem do topo
-          </button>
-
-        </form>
-
-      </div>
-
-
-      <!-- =========================
-           RANCHO DO MÊS
-      ========================== -->
-
-      <div
-        class="bg-white rounded-2xl
-               p-6 mt-6"
-      >
-
-        <div>
-
-          <h2
-            class="font-[Montserrat]
-                   text-xl font-bold"
-          >
-            Imagens do Rancho do Mês
-          </h2>
-
-          <p class="text-sm text-[#717971] mt-1">
-            Altere as imagens dos quatro kits apresentados no site.
-          </p>
-
-        </div>
-
-
-        <div
-          class="grid md:grid-cols-2
-                 gap-6 mt-6"
-        >
-
-          ${bundleImageCard(
-            essential,
-            "essential",
-            "Rancho Essencial"
-          )}
-
-          ${bundleImageCard(
-            economy,
-            "economy",
-            "Rancho Económico"
-          )}
-
-          ${bundleImageCard(
-            couple,
-            "couple",
-            "Rancho para Casal"
-          )}
-
-          ${bundleImageCard(
-            family,
-            "family",
-            "Rancho Familiar"
-          )}
-
-        </div>
-
-      </div>
+      </section>
 
     </div>
-
   `);
 
 
-  /* =========================
-     CARREGAR CONFIGURAÇÕES
-  ========================== */
+  /* ==========================================================
+     HERO PREVIEW
+  ========================================================== */
 
-  loadSettingsIntoForm();
+  $("#heroImageInput").onchange = e => {
+
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    $("#heroPreview").src =
+      URL.createObjectURL(file);
+
+    $("#heroPreview").classList.remove("hidden");
+    $("#heroEmpty").classList.add("hidden");
+  };
 
 
-  /* =========================
-     IMAGEM TOPO
-  ========================== */
-
-  loadHeroPreview();
-
-
-  $("#heroImage").onchange =
-    (e) => {
+  $("#saveHero").onclick =
+    async () => {
 
       const file =
-        e.target.files[0];
+        $("#heroImageInput").files[0];
 
-      if (!file) return;
+      if (!file) {
 
-      $("#heroPreview").src =
-        URL.createObjectURL(file);
+        toast("Selecione uma imagem primeiro.");
 
+        return;
+      }
+
+      toast("A enviar imagem...");
+
+      const url =
+        await uploadImage(file, "hero");
+
+      if (!url) return;
+
+      const saved =
+        await saveSetting(
+          "hero_image",
+          url
+        );
+
+      if (!saved) return;
+
+      settings.hero_image = url;
+
+      toast("Imagem grande do topo atualizada.");
+
+      setTimeout(() => {
+        renderSettings();
+      }, 500);
     };
 
 
-  $("#heroForm").onsubmit =
-    async (e) => {
+  /* ==========================================================
+     CONTACTOS
+  ========================================================== */
+
+  $("#settingsForm").onsubmit =
+    async e => {
 
       e.preventDefault();
 
-      await saveHeroImage();
+      const values = [
+        [
+          "whatsapp",
+          $("#wa").value
+        ],
+        [
+          "contact_email",
+          $("#email").value
+        ],
+        [
+          "default_language",
+          $("#defaultLang").value
+        ]
+      ];
 
+      for (const [key, value] of values) {
+
+        const saved =
+          await saveSetting(key, value);
+
+        if (!saved) return;
+
+        settings[key] = value;
+      }
+
+      toast("Configurações guardadas.");
     };
 
 
-  /* =========================
-     CONFIGURAÇÕES
-  ========================== */
-
-  $("#settings").onsubmit =
-    async (e) => {
-
-      e.preventDefault();
-
-      await saveGeneralSettings();
-
-    };
-
-
-  /* =========================
-     IMAGENS DOS KITS
-  ========================== */
+  /* ==========================================================
+     BOTÕES DOS BUNDLES
+  ========================================================== */
 
   document
-    .querySelectorAll("[data-bundle-file]")
+    .querySelectorAll("[data-bundle-image]")
     .forEach(input => {
 
-      input.onchange =
-        (e) => {
+      input.onchange = e => {
 
-          const file =
-            e.target.files[0];
+        const file = e.target.files[0];
 
-          if (!file) return;
+        if (!file) return;
 
-          const id =
-            input.dataset.bundleFile;
+        const id =
+          input.dataset.bundleImage;
 
-          const preview =
-            document.querySelector(
-              `[data-bundle-preview="${id}"]`
-            );
+        const preview =
+          document.querySelector(
+            `[data-bundle-preview="${CSS.escape(id)}"]`
+          );
 
-          if (preview) {
+        if (preview) {
 
-            preview.src =
-              URL.createObjectURL(file);
+          preview.src =
+            URL.createObjectURL(file);
 
-          }
-
-        };
-
+          preview.classList.remove("hidden");
+        }
+      };
     });
 
 
@@ -1876,491 +1711,343 @@ function renderSettings() {
       button.onclick =
         async () => {
 
-          await saveBundleImage(
-            button.dataset.saveBundle
-          );
+          const id =
+            button.dataset.saveBundle;
 
+          const input =
+            document.querySelector(
+              `[data-bundle-image="${CSS.escape(id)}"]`
+            );
+
+          const file =
+            input?.files?.[0];
+
+          if (!file) {
+
+            toast("Selecione uma nova imagem.");
+
+            return;
+          }
+
+          toast("A enviar imagem...");
+
+          const url =
+            await uploadImage(
+              file,
+              "bundles"
+            );
+
+          if (!url) return;
+
+          const {
+            error
+          } = await supabase
+            .from("bundles")
+            .update({
+              image_url: url,
+              updated_at:
+                new Date().toISOString()
+            })
+            .eq("id", id);
+
+          if (error) {
+
+            toast(
+              "Erro ao guardar: " +
+              error.message
+            );
+
+            return;
+          }
+
+          toast("Imagem do Rancho do Mês atualizada.");
+
+          await load();
+
+          renderSettings();
         };
-
     });
 
+
+  /* ==========================================================
+     BOTÕES DAS CATEGORIAS
+  ========================================================== */
+
+  document
+    .querySelectorAll("[data-category-image]")
+    .forEach(input => {
+
+      input.onchange = e => {
+
+        const file = e.target.files[0];
+
+        if (!file) return;
+
+        const id =
+          input.dataset.categoryImage;
+
+        const preview =
+          document.querySelector(
+            `[data-category-preview="${CSS.escape(id)}"]`
+          );
+
+        if (preview) {
+
+          preview.src =
+            URL.createObjectURL(file);
+
+          preview.classList.remove("hidden");
+        }
+      };
+    });
+
+
+  document
+    .querySelectorAll("[data-save-category]")
+    .forEach(button => {
+
+      button.onclick =
+        async () => {
+
+          const id =
+            button.dataset.saveCategory;
+
+          const input =
+            document.querySelector(
+              `[data-category-image="${CSS.escape(id)}"]`
+            );
+
+          const file =
+            input?.files?.[0];
+
+          if (!file) {
+
+            toast("Selecione uma nova imagem.");
+
+            return;
+          }
+
+          toast("A enviar imagem...");
+
+          const url =
+            await uploadImage(
+              file,
+              "categories"
+            );
+
+          if (!url) return;
+
+          const {
+            error
+          } = await supabase
+            .from("categories")
+            .update({
+              image_url: url,
+              updated_at:
+                new Date().toISOString()
+            })
+            .eq("id", id);
+
+          if (error) {
+
+            toast(
+              "Erro ao guardar: " +
+              error.message
+            );
+
+            return;
+          }
+
+          toast("Imagem da categoria atualizada.");
+
+          await load();
+
+          renderSettings();
+        };
+    });
 }
 
-/* =========================
-   CARD DO RANCHO DO MÊS
-========================= */
+/* ============================================================
+   CARD — RANCHO DO MÊS
+============================================================ */
 
-function bundleImageCard(
-  bundle,
-  id,
-  title
-) {
+function bundleImageCard(bundle) {
 
   const image =
-    bundle?.image_url || "";
+    bundle.image_url || "";
+
+  const name =
+    current(bundle.name) ||
+    bundle.id ||
+    "Rancho";
 
   return `
 
-    <div
-      class="border rounded-2xl
-             p-4"
-    >
+    <div class="border rounded-2xl overflow-hidden">
 
-      <h3 class="font-bold text-lg">
-        ${esc(title)}
-      </h3>
+      <div class="h-44 bg-[#eef5f7]">
 
-      <p
-        class="text-xs text-[#717971]
-               mt-1"
-      >
-        ${esc(
-          bundle
-            ? current(bundle.name)
-            : "Kit não encontrado"
-        )}
-      </p>
+        ${
+          image
+            ? `
+              <img
+                data-bundle-preview="${esc(bundle.id)}"
+                src="${esc(image)}"
+                class="w-full h-full object-cover"
+                alt="${esc(name)}"
+              >
+            `
+            : `
+              <div
+                data-bundle-preview="${esc(bundle.id)}"
+                class="w-full h-full flex items-center
+                       justify-center text-[#717971]"
+              >
+                <span class="material-symbols-outlined text-4xl">
+                  image
+                </span>
+              </div>
+            `
+        }
 
-      <img
-        data-bundle-preview="${esc(id)}"
-        src="${esc(image)}"
-        class="w-full h-48
-               object-cover rounded-xl
-               mt-4
-               ${image ? "" : "hidden"}"
-        alt="${esc(title)}"
-      >
+      </div>
 
-      ${
-        !image
-          ? `
-            <div
-              data-bundle-preview-placeholder="${esc(id)}"
-              class="w-full h-48
-                     bg-[#eef5f7]
-                     rounded-xl mt-4
-                     flex items-center
-                     justify-center
-                     text-[#717971]"
-            >
-              Sem imagem
-            </div>
-          `
-          : ""
-      }
+      <div class="p-4">
 
-      <input
-        data-bundle-file="${esc(id)}"
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        class="mt-4 block w-full
-               border rounded-xl p-3"
-      >
+        <h3 class="font-bold text-lg">
+          ${esc(name)}
+        </h3>
 
-      <button
-        type="button"
-        data-save-bundle="${esc(id)}"
-        class="mt-4 w-full
-               px-4 py-3
-               bg-[#00361a]
-               text-white
-               rounded-xl
-               font-bold"
-      >
-        Guardar imagem
-      </button>
+        <p class="text-sm text-[#717971] mt-1">
+          ${formatMoney(bundle.price)}
+        </p>
+
+        <input
+          data-bundle-image="${esc(bundle.id)}"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          class="mt-4 block w-full text-sm"
+        >
+
+        <button
+          data-save-bundle="${esc(bundle.id)}"
+          class="mt-4 w-full px-4 py-3
+                 bg-[#00361a] text-white
+                 rounded-xl font-bold"
+        >
+          Guardar imagem
+        </button>
+
+      </div>
 
     </div>
-
   `;
 }
 
-/* =========================
-   CARREGAR SETTINGS
-========================= */
+/* ============================================================
+   CARD — CATEGORIA
+============================================================ */
 
-async function loadSettingsIntoForm() {
+function categoryImageCard(category) {
 
-  const settings =
-    await getSiteSettings();
+  const image =
+    category.image_url || "";
 
-  const wa =
-    settings.whatsapp;
+  const name =
+    current(category.name) ||
+    "Categoria";
 
-  const email =
-    settings.contact_email;
+  return `
 
-  const language =
-    settings.default_language ||
-    settings["default language"] ||
-    "pt";
+    <div class="border rounded-2xl overflow-hidden">
 
-  if ($("#wa")) {
+      <div class="h-40 bg-[#eef5f7]">
 
-    $("#wa").value =
-      typeof wa === "string"
-        ? wa
-        : "";
+        ${
+          image
+            ? `
+              <img
+                data-category-preview="${esc(category.id)}"
+                src="${esc(image)}"
+                class="w-full h-full object-cover"
+                alt="${esc(name)}"
+              >
+            `
+            : `
+              <div
+                data-category-preview="${esc(category.id)}"
+                class="w-full h-full flex items-center
+                       justify-center text-[#717971]"
+              >
+                <span class="material-symbols-outlined text-4xl">
+                  image
+                </span>
+              </div>
+            `
+        }
 
-  }
+      </div>
 
-  if ($("#email")) {
+      <div class="p-4">
 
-    $("#email").value =
-      typeof email === "string"
-        ? email
-        : "";
+        <h3 class="font-bold">
+          ${esc(name)}
+        </h3>
 
-  }
+        <input
+          data-category-image="${esc(category.id)}"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          class="mt-4 block w-full text-sm"
+        >
 
-  if ($("#defaultLang")) {
+        <button
+          data-save-category="${esc(category.id)}"
+          class="mt-4 w-full px-4 py-3
+                 bg-[#00361a] text-white
+                 rounded-xl font-bold"
+        >
+          Guardar imagem
+        </button>
 
-    $("#defaultLang").value =
-      typeof language === "string"
-        ? language
-        : "pt";
+      </div>
 
-  }
-
+    </div>
+  `;
 }
 
-/* =========================
-   IMAGEM HERO
-========================= */
+/* ============================================================
+   GUARDAR CONFIGURAÇÃO
+============================================================ */
 
-async function loadHeroPreview() {
+async function saveSetting(key, value) {
 
-  const settings =
-    await getSiteSettings();
+  const {
+    error
+  } = await supabase
+    .from("site_settings")
+    .upsert({
+      key,
+      value,
+      updated_at:
+        new Date().toISOString()
+    });
 
-  const hero =
-    settings.hero_image;
-
-  if (!$("#heroPreview")) {
-    return;
-  }
-
-  if (
-    typeof hero === "string" &&
-    hero
-  ) {
-
-    $("#heroPreview").src =
-      hero;
-
-  } else {
-
-    $("#heroPreview").classList.add(
-      "hidden"
-    );
-
-  }
-
-}
-
-/* =========================
-   GUARDAR HERO
-========================= */
-
-async function saveHeroImage() {
-
-  const file =
-    $("#heroImage").files[0];
-
-  if (!file) {
+  if (error) {
 
     toast(
-      "Selecione uma imagem primeiro."
-    );
-
-    return;
-  }
-
-  try {
-
-    const imageUrl =
-      await uploadImage(
-        file,
-        "hero"
-      );
-
-    const {
-      error
-    } =
-      await supabase
-        .from("site_settings")
-        .upsert({
-          key: "hero_image",
-          value: imageUrl,
-          updated_at:
-            new Date().toISOString()
-        });
-
-    if (error) {
-
-      toast(
-        "Erro ao guardar imagem: " +
-        error.message
-      );
-
-      return;
-    }
-
-    toast(
-      "Imagem grande do topo atualizada."
-    );
-
-    $("#heroPreview").src =
-      imageUrl;
-
-    $("#heroImage").value = "";
-
-  } catch (error) {
-
-    toast(error.message);
-
-  }
-
-}
-
-/* =========================
-   GUARDAR CONFIGURAÇÕES
-========================= */
-
-async function saveGeneralSettings() {
-
-  const values = [
-
-    [
-      "whatsapp",
-      $("#wa").value
-    ],
-
-    [
-      "contact_email",
-      $("#email").value
-    ],
-
-    [
-      "default_language",
-      $("#defaultLang").value
-    ]
-
-  ];
-
-  for (
-    const [key, value]
-    of values
-  ) {
-
-    const {
-      error
-    } =
-      await supabase
-        .from("site_settings")
-        .upsert({
-
-          key,
-
-          value,
-
-          updated_at:
-            new Date().toISOString()
-
-        });
-
-    if (error) {
-
-      toast(
-        "Erro ao guardar: " +
-        error.message
-      );
-
-      return;
-    }
-
-  }
-
-  toast(
-    "Configurações guardadas."
-  );
-
-}
-
-/* =========================
-   GUARDAR IMAGEM DO BUNDLE
-========================= */
-
-async function saveBundleImage(
-  bundleId
-) {
-
-  const bundle =
-    bundles.find(
-      b => String(b.id) === String(bundleId)
-    );
-
-  if (!bundle) {
-
-    toast(
-      "Rancho do Mês não encontrado."
-    );
-
-    return;
-  }
-
-  const input =
-    document.querySelector(
-      `[data-bundle-file="${bundleId}"]`
-    );
-
-  const file =
-    input?.files?.[0];
-
-  if (!file) {
-
-    toast(
-      "Selecione uma imagem primeiro."
-    );
-
-    return;
-  }
-
-  const button =
-    document.querySelector(
-      `[data-save-bundle="${bundleId}"]`
-    );
-
-  if (button) {
-
-    button.disabled = true;
-
-    button.textContent =
-      "A guardar...";
-
-  }
-
-  try {
-
-    /* =========================
-       UPLOAD
-    ========================== */
-
-    const imageUrl =
-      await uploadImage(
-        file,
-        "bundles"
-      );
-
-
-    /* =========================
-       ATUALIZAR BUNDLE
-    ========================== */
-
-    const {
-      data,
-      error
-    } =
-      await supabase
-        .from("bundles")
-        .update({
-          image_url: imageUrl,
-          updated_at:
-            new Date().toISOString()
-        })
-        .eq("id", bundle.id)
-        .select()
-        .single();
-
-    if (error) {
-
-      toast(
-        "Erro ao guardar imagem: " +
-        error.message
-      );
-
-      return;
-    }
-
-
-    /* =========================
-       ATUALIZAR MEMÓRIA LOCAL
-    ========================== */
-
-    const index =
-      bundles.findIndex(
-        b =>
-          String(b.id) ===
-          String(bundle.id)
-      );
-
-    if (index !== -1) {
-
-      bundles[index] =
-        data || {
-          ...bundle,
-          image_url: imageUrl
-        };
-
-    }
-
-
-    const preview =
-      document.querySelector(
-        `[data-bundle-preview="${bundleId}"]`
-      );
-
-    if (preview) {
-
-      preview.src =
-        imageUrl;
-
-      preview.classList.remove(
-        "hidden"
-      );
-
-    }
-
-    const placeholder =
-      document.querySelector(
-        `[data-bundle-preview-placeholder="${bundleId}"]`
-      );
-
-    if (placeholder) {
-
-      placeholder.remove();
-
-    }
-
-    input.value = "";
-
-    toast(
-      "Imagem do Rancho do Mês atualizada."
-    );
-
-  } catch (error) {
-
-    toast(
+      "Erro ao guardar: " +
       error.message
     );
 
-  } finally {
-
-    if (button) {
-
-      button.disabled = false;
-
-      button.textContent =
-        "Guardar imagem";
-
-    }
-
+    return false;
   }
 
+  return true;
 }
 
-/* =========================
+/* ============================================================
    INICIAR
-========================= */
+============================================================ */
 
 boot();
