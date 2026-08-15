@@ -6,7 +6,6 @@ let session = null;
 let products = [];
 let categories = [];
 let bundles = [];
-let settings = {};
 
 /* =========================
    UTILITÁRIOS
@@ -22,17 +21,6 @@ function esc(s) {
   }[m]));
 }
 
-function current(v) {
-  if (typeof v === "string") return v;
-
-  return (
-    v?.pt ||
-    v?.en ||
-    Object.values(v || {})[0] ||
-    ""
-  );
-}
-
 function toast(message) {
   let t = $("#toast");
 
@@ -40,7 +28,7 @@ function toast(message) {
     t = document.createElement("div");
     t.id = "toast";
     t.className =
-      "fixed bottom-5 right-5 z-50 bg-[#00361a] text-white px-5 py-3 rounded-xl shadow-lg z-[9999]";
+      "fixed bottom-5 right-5 z-50 bg-[#00361a] text-white px-5 py-3 rounded-xl shadow-lg";
     document.body.appendChild(t);
   }
 
@@ -52,66 +40,22 @@ function toast(message) {
   }, 3000);
 }
 
-function formatMoney(value) {
+function current(v) {
+  if (typeof v === "string") return v;
+
+  return (
+    v?.pt ||
+    v?.en ||
+    Object.values(v || {})[0] ||
+    ""
+  );
+}
+
+function money(value) {
   return Number(value || 0).toLocaleString("pt-MZ", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }) + " MZN";
-}
-
-/* =========================
-   UPLOAD DE IMAGEM
-========================= */
-
-async function uploadImage(file, folder = "site") {
-
-  if (!file) {
-    return null;
-  }
-
-  const allowed = [
-    "image/jpeg",
-    "image/png",
-    "image/webp"
-  ];
-
-  if (!allowed.includes(file.type)) {
-    toast("Formato de imagem não permitido.");
-    return null;
-  }
-
-  const ext = file.name.split(".").pop().toLowerCase();
-
-  const path =
-    `${folder}/${crypto.randomUUID()}.${ext}`;
-
-  const {
-    error
-  } = await supabase
-    .storage
-    .from("site-images")
-    .upload(
-      path,
-      file,
-      {
-        upsert: false,
-        contentType: file.type
-      }
-    );
-
-  if (error) {
-    toast("Erro no upload: " + error.message);
-    return null;
-  }
-
-  const {
-    data
-  } = supabase
-    .storage
-    .from("site-images")
-    .getPublicUrl(path);
-
-  return data?.publicUrl || null;
 }
 
 /* =========================
@@ -164,6 +108,7 @@ async function boot() {
   }
 
   if (!profile || profile.role !== "admin") {
+
     await supabase.auth.signOut();
 
     login(
@@ -295,7 +240,9 @@ function login(msg = "") {
 
 async function load() {
 
-  /* PRODUTOS */
+  /* =========================
+     PRODUTOS
+  ========================= */
 
   const productsResult =
     await supabase
@@ -306,7 +253,8 @@ async function load() {
       });
 
   if (productsResult.error) {
-    showError(
+
+    showLoadError(
       "Erro ao carregar produtos",
       productsResult.error.message
     );
@@ -317,7 +265,9 @@ async function load() {
   products = productsResult.data || [];
 
 
-  /* CATEGORIAS */
+  /* =========================
+     CATEGORIAS
+  ========================= */
 
   const categoriesResult =
     await supabase
@@ -328,7 +278,8 @@ async function load() {
       });
 
   if (categoriesResult.error) {
-    showError(
+
+    showLoadError(
       "Erro ao carregar categorias",
       categoriesResult.error.message
     );
@@ -339,7 +290,9 @@ async function load() {
   categories = categoriesResult.data || [];
 
 
-  /* RANCHO DO MÊS */
+  /* =========================
+     RANCHO DO MÊS
+  ========================= */
 
   const bundlesResult =
     await supabase
@@ -351,61 +304,24 @@ async function load() {
 
   if (bundlesResult.error) {
 
-    console.warn(
-      "Não foi possível carregar bundles:",
+    showLoadError(
+      "Erro ao carregar Rancho do Mês",
       bundlesResult.error.message
     );
 
-    bundles = [];
-
-  } else {
-
-    bundles = bundlesResult.data || [];
-
+    return false;
   }
 
-
-  /* CONFIGURAÇÕES */
-
-  const settingsResult =
-    await supabase
-      .from("site_settings")
-      .select("*");
-
-  if (settingsResult.error) {
-
-    console.warn(
-      "Erro ao carregar configurações:",
-      settingsResult.error.message
-    );
-
-    settings = {};
-
-  } else {
-
-    settings = Object.fromEntries(
-      (settingsResult.data || []).map(row => [
-        row.key,
-        row.value
-      ])
-    );
-
-  }
+  bundles = bundlesResult.data || [];
 
 
-  console.log("Produtos:", products);
-  console.log("Categorias:", categories);
-  console.log("Rancho do mês:", bundles);
-  console.log("Configurações:", settings);
+  console.log("Categorias carregadas:", categories);
+  console.log("Rancho do Mês carregado:", bundles);
 
   return true;
 }
 
-/* =========================
-   ERRO
-========================= */
-
-function showError(title, message) {
+function showLoadError(title, message) {
 
   document.body.innerHTML = `
     <main class="min-h-screen flex items-center justify-center p-6">
@@ -427,7 +343,7 @@ function showError(title, message) {
 }
 
 /* =========================
-   SHELL
+   ESTRUTURA DO PAINEL
 ========================= */
 
 function shell(content) {
@@ -467,14 +383,6 @@ function shell(content) {
           </button>
 
           <button
-            data-tab="content"
-            class="w-full text-left px-3 py-3
-                   rounded-lg hover:bg-white/10"
-          >
-            Imagens do site
-          </button>
-
-          <button
             data-tab="orders"
             class="w-full text-left px-3 py-3
                    rounded-lg hover:bg-white/10"
@@ -508,12 +416,6 @@ function shell(content) {
 
     </div>
 
-    <div
-      id="toast"
-      class="hidden fixed bottom-5 right-5 z-[9999]
-             bg-[#00361a] text-white px-5 py-3
-             rounded-xl shadow-lg"
-    ></div>
   `;
 
   $("#logout").onclick = async () => {
@@ -521,12 +423,11 @@ function shell(content) {
     await supabase.auth.signOut();
 
     location.reload();
-
   };
 
   document
     .querySelectorAll("[data-tab]")
-    .forEach(button => {
+    .forEach((button) => {
 
       button.onclick = () => {
 
@@ -542,10 +443,6 @@ function shell(content) {
 
         else if (tab === "orders") {
           renderOrders();
-        }
-
-        else if (tab === "content") {
-          renderContent();
         }
 
         else {
@@ -589,50 +486,68 @@ function render() {
 
     </div>
 
-
     <div
       class="grid sm:grid-cols-2 lg:grid-cols-4
              gap-4 mt-7"
     >
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
+
         <p class="text-sm text-[#717971]">
           Produtos
         </p>
+
         <b class="text-2xl">
           ${products.length}
         </b>
+
       </div>
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
+
         <p class="text-sm text-[#717971]">
-          Categorias
+          Ativos
         </p>
+
         <b class="text-2xl">
-          ${categories.length}
+          ${
+            products.filter(
+              p => p.active !== false
+            ).length
+          }
         </b>
+
       </div>
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
+
         <p class="text-sm text-[#717971]">
-          Rancho do Mês
+          Stock baixo
         </p>
+
         <b class="text-2xl">
-          ${bundles.length}
+          ${
+            products.filter(
+              p => (p.stock ?? 0) < 5
+            ).length
+          }
         </b>
+
       </div>
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
+
         <p class="text-sm text-[#717971]">
           Conta
         </p>
+
         <b class="text-2xl">
           Admin
         </b>
+
       </div>
 
     </div>
-
 
     <div class="mt-8 bg-white rounded-2xl p-5">
 
@@ -651,17 +566,17 @@ function render() {
         </button>
 
         <button
-          id="goContent"
-          class="px-4 py-2 rounded-xl border"
-        >
-          Gerir imagens
-        </button>
-
-        <button
           id="goOrders"
           class="px-4 py-2 rounded-xl border"
         >
           Pedidos
+        </button>
+
+        <button
+          id="goSettings"
+          class="px-4 py-2 rounded-xl border"
+        >
+          Configurações
         </button>
 
       </div>
@@ -670,704 +585,12 @@ function render() {
   `);
 
   $("#goProducts").onclick = renderProducts;
-  $("#goContent").onclick = renderContent;
   $("#goOrders").onclick = renderOrders;
-}
-
-/* ============================================================
-   IMAGENS DO SITE
-============================================================ */
-
-function renderContent() {
-
-  const heroImage =
-    typeof settings.hero_image === "string"
-      ? settings.hero_image
-      : "";
-
-  let categoryImages = {};
-
-  if (
-    settings.category_images &&
-    typeof settings.category_images === "object"
-  ) {
-    categoryImages = settings.category_images;
-  }
-
-
-  shell(`
-
-    <div>
-
-      <p class="text-sm text-[#717971]">
-        Personalização do site
-      </p>
-
-      <h1
-        class="font-[Montserrat]
-               text-3xl font-bold"
-      >
-        Imagens do site
-      </h1>
-
-      <p class="text-sm text-[#717971] mt-2">
-        Altere as imagens principais que aparecem
-        na página inicial.
-      </p>
-
-    </div>
-
-
-    <!-- ==================================================
-         HERO
-    =================================================== -->
-
-    <section
-      class="bg-white rounded-2xl
-             shadow-sm p-6 mt-7"
-    >
-
-      <div class="flex items-center gap-3">
-
-        <div
-          class="w-11 h-11 rounded-xl
-                 bg-[#e8f2ec]
-                 flex items-center justify-center"
-        >
-          <span class="material-symbols-outlined text-[#00361a]">
-            image
-          </span>
-        </div>
-
-        <div>
-
-          <h2 class="text-xl font-bold">
-            Imagem grande do topo
-          </h2>
-
-          <p class="text-sm text-[#717971]">
-            Imagem principal da página inicial.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div class="grid md:grid-cols-2 gap-6 mt-6">
-
-        <div>
-
-          <label class="block text-sm font-semibold">
-
-            Escolher nova imagem
-
-            <input
-              id="heroFile"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              class="mt-2 block w-full border
-                     rounded-xl p-3"
-            >
-
-          </label>
-
-          <p class="text-xs text-[#717971] mt-2">
-            JPG, PNG ou WebP.
-          </p>
-
-        </div>
-
-
-        <div>
-
-          <p class="text-sm font-semibold mb-2">
-            Pré-visualização
-          </p>
-
-          <div
-            class="rounded-2xl overflow-hidden
-                   bg-[#eef5f7]"
-          >
-
-            ${
-              heroImage
-                ? `
-                  <img
-                    id="heroPreview"
-                    src="${esc(heroImage)}"
-                    class="w-full h-52
-                           object-cover"
-                  >
-                `
-                : `
-                  <div
-                    id="heroPreview"
-                    class="h-52 flex items-center
-                           justify-center text-[#717971]"
-                  >
-                    Sem imagem
-                  </div>
-                `
-            }
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <button
-        id="saveHero"
-        class="mt-6 px-5 py-3
-               bg-[#00361a]
-               text-white rounded-xl font-bold"
-      >
-        Guardar imagem do topo
-      </button>
-
-    </section>
-
-
-    <!-- ==================================================
-         RANCHO DO MÊS
-    =================================================== -->
-
-    <section
-      class="bg-white rounded-2xl
-             shadow-sm p-6 mt-7"
-    >
-
-      <div class="flex items-center gap-3">
-
-        <div
-          class="w-11 h-11 rounded-xl
-                 bg-[#fff2df]
-                 flex items-center justify-center"
-        >
-          <span class="material-symbols-outlined text-[#fd9d27]">
-            shopping_basket
-          </span>
-        </div>
-
-        <div>
-
-          <h2 class="text-xl font-bold">
-            Rancho do Mês
-          </h2>
-
-          <p class="text-sm text-[#717971]">
-            Altere a imagem de cada Rancho do Mês.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
-
-        ${
-          bundles.length
-            ? bundles.map(bundle => `
-
-              <div
-                class="border rounded-2xl
-                       overflow-hidden"
-              >
-
-                <div class="h-44 bg-[#eef5f7]">
-
-                  ${
-                    bundle.image_url
-                      ? `
-                        <img
-                          src="${esc(bundle.image_url)}"
-                          class="w-full h-full object-cover"
-                        >
-                      `
-                      : `
-                        <div
-                          class="h-full flex items-center
-                                 justify-center
-                                 text-[#717971]"
-                        >
-                          Sem imagem
-                        </div>
-                      `
-                  }
-
-                </div>
-
-                <div class="p-4">
-
-                  <h3 class="font-bold">
-                    ${esc(current(bundle.name))}
-                  </h3>
-
-                  <p class="text-sm text-[#717971] mt-1">
-                    ${formatMoney(bundle.price)}
-                  </p>
-
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    data-bundle-file="${esc(bundle.id)}"
-                    class="mt-4 block w-full text-sm"
-                  >
-
-                  <button
-                    data-save-bundle="${esc(bundle.id)}"
-                    class="mt-3 w-full py-2.5
-                           bg-[#00361a]
-                           text-white rounded-xl
-                           font-semibold"
-                  >
-                    Alterar imagem
-                  </button>
-
-                </div>
-
-              </div>
-
-            `).join("")
-            : `
-              <div
-                class="col-span-full
-                       text-center py-8
-                       text-[#717971]"
-              >
-                Nenhum Rancho do Mês encontrado.
-              </div>
-            `
-        }
-
-      </div>
-
-    </section>
-
-
-    <!-- ==================================================
-         CATEGORIAS
-    =================================================== -->
-
-    <section
-      class="bg-white rounded-2xl
-             shadow-sm p-6 mt-7"
-    >
-
-      <div class="flex items-center gap-3">
-
-        <div
-          class="w-11 h-11 rounded-xl
-                 bg-[#e8f2ec]
-                 flex items-center justify-center"
-        >
-          <span class="material-symbols-outlined text-[#00361a]">
-            category
-          </span>
-        </div>
-
-        <div>
-
-          <h2 class="text-xl font-bold">
-            Categorias
-          </h2>
-
-          <p class="text-sm text-[#717971]">
-            Altere a imagem de cada categoria.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
-
-        ${
-          categories.map(category => {
-
-            const image =
-              categoryImages[category.id] || "";
-
-            return `
-
-              <div
-                class="border rounded-2xl
-                       overflow-hidden"
-              >
-
-                <div
-                  class="h-36 bg-[#eef5f7]"
-                >
-
-                  ${
-                    image
-                      ? `
-                        <img
-                          src="${esc(image)}"
-                          class="w-full h-full
-                                 object-cover"
-                        >
-                      `
-                      : `
-                        <div
-                          class="h-full flex
-                                 items-center
-                                 justify-center
-                                 text-[#717971]"
-                        >
-                          Sem imagem
-                        </div>
-                      `
-                  }
-
-                </div>
-
-
-                <div class="p-4">
-
-                  <h3 class="font-bold">
-                    ${esc(current(category.name))}
-                  </h3>
-
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    data-category-file="${esc(category.id)}"
-                    class="mt-4 block w-full text-sm"
-                  >
-
-                  <button
-                    data-save-category="${esc(category.id)}"
-                    class="mt-3 w-full py-2.5
-                           bg-[#00361a]
-                           text-white rounded-xl
-                           font-semibold"
-                  >
-                    Alterar imagem
-                  </button>
-
-                </div>
-
-              </div>
-
-            `;
-
-          }).join("")
-        }
-
-      </div>
-
-    </section>
-
-  `);
-
-
-  /* ==================================================
-     PREVIEW HERO
-  =================================================== */
-
-  $("#heroFile").onchange = (e) => {
-
-    const file = e.target.files[0];
-
-    if (!file) return;
-
-    const preview = $("#heroPreview");
-
-    if (preview.tagName === "IMG") {
-
-      preview.src =
-        URL.createObjectURL(file);
-
-    } else {
-
-      preview.outerHTML = `
-        <img
-          id="heroPreview"
-          src="${URL.createObjectURL(file)}"
-          class="w-full h-52 object-cover"
-        >
-      `;
-
-    }
-
-  };
-
-
-  /* ==================================================
-     GUARDAR HERO
-  =================================================== */
-
-  $("#saveHero").onclick = async () => {
-
-    const file =
-      $("#heroFile").files[0];
-
-    if (!file) {
-
-      toast("Escolha uma imagem primeiro.");
-
-      return;
-    }
-
-    $("#saveHero").disabled = true;
-    $("#saveHero").textContent = "A carregar...";
-
-    const url =
-      await uploadImage(
-        file,
-        "hero"
-      );
-
-    if (!url) {
-
-      $("#saveHero").disabled = false;
-      $("#saveHero").textContent =
-        "Guardar imagem do topo";
-
-      return;
-    }
-
-    const {
-      error
-    } =
-      await supabase
-        .from("site_settings")
-        .upsert({
-          key: "hero_image",
-          value: url,
-          updated_at: new Date().toISOString()
-        });
-
-    if (error) {
-
-      toast(
-        "Erro ao guardar imagem: " +
-        error.message
-      );
-
-    } else {
-
-      settings.hero_image = url;
-
-      toast(
-        "Imagem do topo atualizada."
-      );
-
-    }
-
-    $("#saveHero").disabled = false;
-    $("#saveHero").textContent =
-      "Guardar imagem do topo";
-  };
-
-
-  /* ==================================================
-     GUARDAR RANCHO DO MÊS
-  =================================================== */
-
-  document
-    .querySelectorAll("[data-save-bundle]")
-    .forEach(button => {
-
-      button.onclick = async () => {
-
-        const id =
-          button.dataset.saveBundle;
-
-        const input =
-          document.querySelector(
-            `[data-bundle-file="${CSS.escape(id)}"]`
-          );
-
-        const file =
-          input?.files?.[0];
-
-        if (!file) {
-
-          toast(
-            "Escolha uma imagem primeiro."
-          );
-
-          return;
-        }
-
-        button.disabled = true;
-        button.textContent = "A carregar...";
-
-        const url =
-          await uploadImage(
-            file,
-            "bundles"
-          );
-
-        if (!url) {
-
-          button.disabled = false;
-          button.textContent =
-            "Alterar imagem";
-
-          return;
-        }
-
-        const {
-          error
-        } =
-          await supabase
-            .from("bundles")
-            .update({
-              image_url: url,
-              updated_at:
-                new Date().toISOString()
-            })
-            .eq("id", id);
-
-        if (error) {
-
-          toast(
-            "Erro ao guardar: " +
-            error.message
-          );
-
-        } else {
-
-          toast(
-            "Imagem do Rancho do Mês atualizada."
-          );
-
-          await load();
-          renderContent();
-
-          return;
-        }
-
-        button.disabled = false;
-        button.textContent =
-          "Alterar imagem";
-      };
-
-    });
-
-
-  /* ==================================================
-     GUARDAR CATEGORIA
-  =================================================== */
-
-  document
-    .querySelectorAll("[data-save-category]")
-    .forEach(button => {
-
-      button.onclick = async () => {
-
-        const id =
-          button.dataset.saveCategory;
-
-        const input =
-          document.querySelector(
-            `[data-category-file="${CSS.escape(id)}"]`
-          );
-
-        const file =
-          input?.files?.[0];
-
-        if (!file) {
-
-          toast(
-            "Escolha uma imagem primeiro."
-          );
-
-          return;
-        }
-
-        button.disabled = true;
-        button.textContent = "A carregar...";
-
-        const url =
-          await uploadImage(
-            file,
-            "categories"
-          );
-
-        if (!url) {
-
-          button.disabled = false;
-          button.textContent =
-            "Alterar imagem";
-
-          return;
-        }
-
-
-        /* Ler novamente as imagens */
-
-        let categoryImages = {};
-
-        if (
-          settings.category_images &&
-          typeof settings.category_images === "object"
-        ) {
-
-          categoryImages =
-            {
-              ...settings.category_images
-            };
-
-        }
-
-        categoryImages[id] = url;
-
-
-        const {
-          error
-        } =
-          await supabase
-            .from("site_settings")
-            .upsert({
-              key: "category_images",
-              value: categoryImages,
-              updated_at:
-                new Date().toISOString()
-            });
-
-
-        if (error) {
-
-          toast(
-            "Erro ao guardar: " +
-            error.message
-          );
-
-        } else {
-
-          settings.category_images =
-            categoryImages;
-
-          toast(
-            "Imagem da categoria atualizada."
-          );
-
-          await load();
-
-          renderContent();
-
-          return;
-        }
-
-        button.disabled = false;
-        button.textContent =
-          "Alterar imagem";
-      };
-
-    });
-
+  $("#goSettings").onclick = renderSettings;
 }
 
 /* =========================
-   PRODUTOS
+   LISTA DE PRODUTOS
 ========================= */
 
 function renderProducts() {
@@ -1397,7 +620,6 @@ function renderProducts() {
       </button>
 
     </div>
-
 
     <div
       class="bg-white rounded-2xl shadow-sm
@@ -1454,23 +676,11 @@ function renderProducts() {
 
                     <div class="flex items-center gap-3">
 
-                      ${
-                        p.image_url
-                          ? `
-                            <img
-                              src="${esc(p.image_url)}"
-                              class="w-12 h-12
-                                     object-cover rounded-lg"
-                            >
-                          `
-                          : `
-                            <div
-                              class="w-12 h-12
-                                     rounded-lg
-                                     bg-[#eef5f7]"
-                            ></div>
-                          `
-                      }
+                      <img
+                        src="${esc(p.image_url || "")}"
+                        class="w-12 h-12
+                               object-cover rounded-lg"
+                      >
 
                       <div>
 
@@ -1492,14 +702,30 @@ function renderProducts() {
                   </td>
 
                   <td class="p-4">
-                    ${esc(
-                      category?.name?.pt ||
-                      "Sem categoria"
-                    )}
+
+                    ${
+                      esc(
+                        category?.name?.pt ||
+                        "Sem categoria"
+                      )
+                    }
+
                   </td>
 
                   <td class="p-4 font-bold">
-                    ${formatMoney(p.price)}
+
+                    ${
+                      Number(p.price || 0)
+                        .toLocaleString(
+                          "pt-MZ",
+                          {
+                            minimumFractionDigits: 2
+                          }
+                        )
+                    }
+
+                    MZN
+
                   </td>
 
                   <td class="p-4">
@@ -1554,7 +780,7 @@ function renderProducts() {
 }
 
 /* =========================
-   FORM PRODUTO
+   FORMULÁRIO PRODUTO
 ========================= */
 
 function form(product = null) {
@@ -1597,35 +823,32 @@ function form(product = null) {
 
   };
 
+  const categoryOptions = categories
+    .map(category => {
 
-  const categoryOptions =
-    categories
-      .map(category => {
+      const categoryName =
+        category?.name?.pt ||
+        category?.name ||
+        "Categoria";
 
-        const categoryName =
-          category?.name?.pt ||
-          category?.name ||
-          "Categoria";
+      return `
 
-        return `
+        <option
+          value="${esc(category.id)}"
+          ${
+            String(category.id) ===
+            String(p.category_id)
+              ? "selected"
+              : ""
+          }
+        >
+          ${esc(categoryName)}
+        </option>
 
-          <option
-            value="${esc(category.id)}"
-            ${
-              String(category.id) ===
-              String(p.category_id)
-                ? "selected"
-                : ""
-            }
-          >
-            ${esc(categoryName)}
-          </option>
+      `;
 
-        `;
-
-      })
-      .join("");
-
+    })
+    .join("");
 
   shell(`
 
@@ -1646,7 +869,6 @@ function form(product = null) {
           ? "Adicionar produto"
           : "Editar produto"}
       </h1>
-
 
       <form
         id="productForm"
@@ -1709,8 +931,9 @@ function form(product = null) {
 
         </div>
 
-
-        <label class="block text-sm font-semibold">
+        <label
+          class="block text-sm font-semibold"
+        >
 
           Categoria
 
@@ -1731,13 +954,14 @@ function form(product = null) {
 
         </label>
 
-
         <div
           class="border-2 border-dashed
                  rounded-2xl p-5"
         >
 
-          <label class="block text-sm font-semibold">
+          <label
+            class="block text-sm font-semibold"
+          >
 
             Imagem do produto
 
@@ -1750,7 +974,6 @@ function form(product = null) {
 
           </label>
 
-
           <img
             id="preview"
             src="${esc(p.image_url || "")}"
@@ -1760,7 +983,6 @@ function form(product = null) {
           >
 
         </div>
-
 
         <div class="flex gap-5">
 
@@ -1776,7 +998,6 @@ function form(product = null) {
 
           </label>
 
-
           <label>
 
             <input
@@ -1790,7 +1011,6 @@ function form(product = null) {
           </label>
 
         </div>
-
 
         <div class="flex gap-3">
 
@@ -1828,9 +1048,7 @@ function form(product = null) {
     </div>
   `);
 
-
   $("#back").onclick = renderProducts;
-
 
   $("#image").onchange = (e) => {
 
@@ -1844,16 +1062,13 @@ function form(product = null) {
     $("#preview").classList.remove("hidden");
   };
 
-
   $("#productForm").onsubmit =
     async (e) => {
 
       e.preventDefault();
 
       await saveProduct(p, isNew);
-
     };
-
 
   if (!isNew) {
 
@@ -1921,33 +1136,84 @@ function field(
 }
 
 /* =========================
+   UPLOAD DE IMAGEM
+========================= */
+
+async function uploadImage(file, folder = "site") {
+
+  if (!file) {
+    return null;
+  }
+
+  const ext =
+    file.name
+      .split(".")
+      .pop()
+      .toLowerCase();
+
+  const path =
+    `${folder}/${crypto.randomUUID()}.${ext}`;
+
+  const {
+    error: uploadError
+  } =
+    await supabase
+      .storage
+      .from("site-images")
+      .upload(
+        path,
+        file,
+        {
+          upsert: false
+        }
+      );
+
+  if (uploadError) {
+
+    throw new Error(
+      "Erro no upload: " +
+      uploadError.message
+    );
+  }
+
+  const publicUrl =
+    supabase
+      .storage
+      .from("site-images")
+      .getPublicUrl(path)
+      .data
+      .publicUrl;
+
+  return publicUrl;
+}
+
+/* =========================
    GUARDAR PRODUTO
 ========================= */
 
 async function saveProduct(p, isNew) {
 
-  let image_url =
-    p.image_url || null;
+  let image_url = p.image_url || null;
 
-  const file =
-    $("#image").files[0];
+  const file = $("#image").files[0];
 
+  try {
 
-  if (file) {
+    if (file) {
 
-    const uploaded =
-      await uploadImage(
-        file,
-        "products"
-      );
-
-    if (!uploaded) {
-      return;
+      image_url =
+        await uploadImage(
+          file,
+          "products"
+        );
     }
 
-    image_url = uploaded;
-  }
+  } catch (error) {
 
+    toast(error.message);
+
+    return;
+  }
 
   const row = {
 
@@ -1965,13 +1231,19 @@ async function saveProduct(p, isNew) {
       $("#category_id").value || null,
 
     price:
-      Number($("#price").value || 0),
+      Number(
+        $("#price").value || 0
+      ),
 
     old_price:
-      Number($("#old_price").value || 0) || null,
+      Number(
+        $("#old_price").value || 0
+      ) || null,
 
     stock:
-      Number($("#stock").value || 0),
+      Number(
+        $("#stock").value || 0
+      ),
 
     sku:
       $("#sku").value,
@@ -1996,7 +1268,6 @@ async function saveProduct(p, isNew) {
 
   };
 
-
   let result;
 
   if (isNew) {
@@ -2016,7 +1287,6 @@ async function saveProduct(p, isNew) {
 
   }
 
-
   if (result.error) {
 
     toast(
@@ -2027,13 +1297,11 @@ async function saveProduct(p, isNew) {
     return;
   }
 
-
   toast(
     isNew
       ? "Produto adicionado com sucesso."
       : "Produto atualizado com sucesso."
   );
-
 
   await load();
 
@@ -2065,7 +1333,6 @@ function renderOrders() {
   loadOrders();
 }
 
-
 async function loadOrders() {
 
   const {
@@ -2082,7 +1349,6 @@ async function loadOrders() {
         }
       );
 
-
   if (error) {
 
     $("#orders").textContent =
@@ -2090,7 +1356,6 @@ async function loadOrders() {
 
     return;
   }
-
 
   $("#orders").innerHTML = `
 
@@ -2138,14 +1403,16 @@ async function loadOrders() {
 
                 <td class="p-4">
                   ${esc(o.customer_name)}
+
                   <br>
+
                   <span class="text-xs">
                     ${esc(o.customer_phone)}
                   </span>
                 </td>
 
                 <td class="p-4 font-bold">
-                  ${formatMoney(o.total)}
+                  ${money(o.total)}
                 </td>
 
                 <td class="p-4">
@@ -2196,7 +1463,6 @@ async function loadOrders() {
 
   `;
 
-
   for (
     const select
     of document.querySelectorAll(
@@ -2211,12 +1477,9 @@ async function loadOrders() {
           String(select.dataset.status)
       );
 
-
     if (!row) continue;
 
-
     select.value = row.status;
-
 
     select.onchange =
       async () => {
@@ -2233,7 +1496,6 @@ async function loadOrders() {
             })
             .eq("id", row.id);
 
-
         toast(
           error
             ? error.message
@@ -2248,170 +1510,853 @@ async function loadOrders() {
    CONFIGURAÇÕES
 ========================= */
 
+async function getSiteSettings() {
+
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .from("site_settings")
+      .select("*");
+
+  if (error) {
+
+    console.error(
+      "Erro ao carregar configurações:",
+      error
+    );
+
+    return {};
+  }
+
+  return Object.fromEntries(
+    (data || []).map(
+      item => [
+        item.key,
+        item.value
+      ]
+    )
+  );
+}
+
 function renderSettings() {
+
+  const essential =
+    bundles.find(
+      b => b.id === "essential"
+    );
+
+  const economy =
+    bundles.find(
+      b => b.id === "economy"
+    );
+
+  const couple =
+    bundles.find(
+      b => b.id === "couple"
+    );
+
+  const family =
+    bundles.find(
+      b => b.id === "family"
+    );
 
   shell(`
 
-    <h1
-      class="font-[Montserrat]
-             text-3xl font-bold"
-    >
-      Configurações
-    </h1>
+    <div class="max-w-5xl">
 
-    <div
-      class="bg-white rounded-2xl
-             p-6 mt-6 max-w-3xl"
-    >
+      <h1
+        class="font-[Montserrat]
+               text-3xl font-bold"
+      >
+        Configurações
+      </h1>
 
-      <p class="text-sm text-[#414942]">
-
-        Configurações gerais do Rancho Flexível.
-
+      <p class="text-sm text-[#717971] mt-1">
+        Gerir informações gerais e imagens do site.
       </p>
 
-      <form
-        id="settings"
-        class="mt-5 space-y-4"
+
+      <!-- =========================
+           CONFIGURAÇÕES GERAIS
+      ========================== -->
+
+      <div
+        class="bg-white rounded-2xl
+               p-6 mt-6"
       >
 
-        ${field(
-          "WhatsApp",
-          "wa",
-          settings.whatsapp || ""
-        )}
+        <h2
+          class="font-[Montserrat]
+                 text-xl font-bold"
+        >
+          Informações gerais
+        </h2>
 
-        ${field(
-          "E-mail",
-          "email",
-          settings.contact_email || ""
-        )}
-
-        <label
-          class="block text-sm font-semibold"
+        <form
+          id="settings"
+          class="mt-5 space-y-4"
         >
 
-          Idioma padrão
+          ${field(
+            "WhatsApp",
+            "wa",
+            ""
+          )}
 
-          <select
-            id="defaultLang"
-            class="mt-1 w-full
-                   border rounded-xl p-3"
+          ${field(
+            "E-mail",
+            "email",
+            ""
+          )}
+
+          <label
+            class="block text-sm font-semibold"
           >
 
-            <option
-              value="pt"
-              ${
-                settings.default_language === "pt"
-                  ? "selected"
-                  : ""
-              }
+            Idioma padrão
+
+            <select
+              id="defaultLang"
+              class="mt-1 w-full
+                     border rounded-xl p-3"
             >
-              Português
-            </option>
 
-            <option
-              value="en"
-              ${
-                settings.default_language === "en"
-                  ? "selected"
-                  : ""
-              }
-            >
-              English
-            </option>
+              <option value="pt">
+                Português
+              </option>
 
-            <option
-              value="fr"
-              ${
-                settings.default_language === "fr"
-                  ? "selected"
-                  : ""
-              }
-            >
-              Français
-            </option>
+              <option value="en">
+                English
+              </option>
 
-          </select>
+              <option value="fr">
+                Français
+              </option>
 
-        </label>
+              <option value="zh">
+                中文
+              </option>
+
+              <option value="chg">
+                Changana
+              </option>
+
+            </select>
+
+          </label>
+
+          <button
+            class="px-5 py-3
+                   bg-[#00361a]
+                   text-white
+                   rounded-xl
+                   font-bold"
+          >
+            Guardar configurações
+          </button>
+
+        </form>
+
+      </div>
 
 
-        <button
-          class="px-5 py-3
-                 bg-[#00361a]
-                 text-white
-                 rounded-xl"
+      <!-- =========================
+           IMAGEM GRANDE DO TOPO
+      ========================== -->
+
+      <div
+        class="bg-white rounded-2xl
+               p-6 mt-6"
+      >
+
+        <h2
+          class="font-[Montserrat]
+                 text-xl font-bold"
         >
-          Guardar configurações
-        </button>
+          Imagem grande do topo
+        </h2>
 
-      </form>
+        <p class="text-sm text-[#717971] mt-1">
+          Esta é a imagem principal apresentada no topo do site.
+        </p>
+
+        <form
+          id="heroForm"
+          class="mt-5 space-y-4"
+        >
+
+          <input
+            id="heroImage"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            class="block w-full border
+                   rounded-xl p-3"
+          >
+
+          <img
+            id="heroPreview"
+            class="w-full max-w-2xl
+                   h-56 object-cover
+                   rounded-2xl mt-3"
+            alt="Imagem grande do topo"
+          >
+
+          <button
+            class="px-5 py-3
+                   bg-[#00361a]
+                   text-white
+                   rounded-xl
+                   font-bold"
+          >
+            Guardar imagem do topo
+          </button>
+
+        </form>
+
+      </div>
+
+
+      <!-- =========================
+           RANCHO DO MÊS
+      ========================== -->
+
+      <div
+        class="bg-white rounded-2xl
+               p-6 mt-6"
+      >
+
+        <div>
+
+          <h2
+            class="font-[Montserrat]
+                   text-xl font-bold"
+          >
+            Imagens do Rancho do Mês
+          </h2>
+
+          <p class="text-sm text-[#717971] mt-1">
+            Altere as imagens dos quatro kits apresentados no site.
+          </p>
+
+        </div>
+
+
+        <div
+          class="grid md:grid-cols-2
+                 gap-6 mt-6"
+        >
+
+          ${bundleImageCard(
+            essential,
+            "essential",
+            "Rancho Essencial"
+          )}
+
+          ${bundleImageCard(
+            economy,
+            "economy",
+            "Rancho Económico"
+          )}
+
+          ${bundleImageCard(
+            couple,
+            "couple",
+            "Rancho para Casal"
+          )}
+
+          ${bundleImageCard(
+            family,
+            "family",
+            "Rancho Familiar"
+          )}
+
+        </div>
+
+      </div>
 
     </div>
 
   `);
 
 
+  /* =========================
+     CARREGAR CONFIGURAÇÕES
+  ========================== */
+
+  loadSettingsIntoForm();
+
+
+  /* =========================
+     IMAGEM TOPO
+  ========================== */
+
+  loadHeroPreview();
+
+
+  $("#heroImage").onchange =
+    (e) => {
+
+      const file =
+        e.target.files[0];
+
+      if (!file) return;
+
+      $("#heroPreview").src =
+        URL.createObjectURL(file);
+
+    };
+
+
+  $("#heroForm").onsubmit =
+    async (e) => {
+
+      e.preventDefault();
+
+      await saveHeroImage();
+
+    };
+
+
+  /* =========================
+     CONFIGURAÇÕES
+  ========================== */
+
   $("#settings").onsubmit =
     async (e) => {
 
       e.preventDefault();
 
-      const values = [
-
-        [
-          "whatsapp",
-          $("#wa").value
-        ],
-
-        [
-          "contact_email",
-          $("#email").value
-        ],
-
-        [
-          "default_language",
-          $("#defaultLang").value
-        ]
-
-      ];
-
-
-      for (
-        const [key, value]
-        of values
-      ) {
-
-        const {
-          error
-        } =
-          await supabase
-            .from("site_settings")
-            .upsert({
-              key,
-              value,
-              updated_at:
-                new Date().toISOString()
-            });
-
-        if (error) {
-
-          toast(error.message);
-
-          return;
-        }
-
-      }
-
-
-      await load();
-
-      toast(
-        "Configurações guardadas."
-      );
+      await saveGeneralSettings();
 
     };
+
+
+  /* =========================
+     IMAGENS DOS KITS
+  ========================== */
+
+  document
+    .querySelectorAll("[data-bundle-file]")
+    .forEach(input => {
+
+      input.onchange =
+        (e) => {
+
+          const file =
+            e.target.files[0];
+
+          if (!file) return;
+
+          const id =
+            input.dataset.bundleFile;
+
+          const preview =
+            document.querySelector(
+              `[data-bundle-preview="${id}"]`
+            );
+
+          if (preview) {
+
+            preview.src =
+              URL.createObjectURL(file);
+
+          }
+
+        };
+
+    });
+
+
+  document
+    .querySelectorAll("[data-save-bundle]")
+    .forEach(button => {
+
+      button.onclick =
+        async () => {
+
+          await saveBundleImage(
+            button.dataset.saveBundle
+          );
+
+        };
+
+    });
+
+}
+
+/* =========================
+   CARD DO RANCHO DO MÊS
+========================= */
+
+function bundleImageCard(
+  bundle,
+  id,
+  title
+) {
+
+  const image =
+    bundle?.image_url || "";
+
+  return `
+
+    <div
+      class="border rounded-2xl
+             p-4"
+    >
+
+      <h3 class="font-bold text-lg">
+        ${esc(title)}
+      </h3>
+
+      <p
+        class="text-xs text-[#717971]
+               mt-1"
+      >
+        ${esc(
+          bundle
+            ? current(bundle.name)
+            : "Kit não encontrado"
+        )}
+      </p>
+
+      <img
+        data-bundle-preview="${esc(id)}"
+        src="${esc(image)}"
+        class="w-full h-48
+               object-cover rounded-xl
+               mt-4
+               ${image ? "" : "hidden"}"
+        alt="${esc(title)}"
+      >
+
+      ${
+        !image
+          ? `
+            <div
+              data-bundle-preview-placeholder="${esc(id)}"
+              class="w-full h-48
+                     bg-[#eef5f7]
+                     rounded-xl mt-4
+                     flex items-center
+                     justify-center
+                     text-[#717971]"
+            >
+              Sem imagem
+            </div>
+          `
+          : ""
+      }
+
+      <input
+        data-bundle-file="${esc(id)}"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        class="mt-4 block w-full
+               border rounded-xl p-3"
+      >
+
+      <button
+        type="button"
+        data-save-bundle="${esc(id)}"
+        class="mt-4 w-full
+               px-4 py-3
+               bg-[#00361a]
+               text-white
+               rounded-xl
+               font-bold"
+      >
+        Guardar imagem
+      </button>
+
+    </div>
+
+  `;
+}
+
+/* =========================
+   CARREGAR SETTINGS
+========================= */
+
+async function loadSettingsIntoForm() {
+
+  const settings =
+    await getSiteSettings();
+
+  const wa =
+    settings.whatsapp;
+
+  const email =
+    settings.contact_email;
+
+  const language =
+    settings.default_language ||
+    settings["default language"] ||
+    "pt";
+
+  if ($("#wa")) {
+
+    $("#wa").value =
+      typeof wa === "string"
+        ? wa
+        : "";
+
+  }
+
+  if ($("#email")) {
+
+    $("#email").value =
+      typeof email === "string"
+        ? email
+        : "";
+
+  }
+
+  if ($("#defaultLang")) {
+
+    $("#defaultLang").value =
+      typeof language === "string"
+        ? language
+        : "pt";
+
+  }
+
+}
+
+/* =========================
+   IMAGEM HERO
+========================= */
+
+async function loadHeroPreview() {
+
+  const settings =
+    await getSiteSettings();
+
+  const hero =
+    settings.hero_image;
+
+  if (!$("#heroPreview")) {
+    return;
+  }
+
+  if (
+    typeof hero === "string" &&
+    hero
+  ) {
+
+    $("#heroPreview").src =
+      hero;
+
+  } else {
+
+    $("#heroPreview").classList.add(
+      "hidden"
+    );
+
+  }
+
+}
+
+/* =========================
+   GUARDAR HERO
+========================= */
+
+async function saveHeroImage() {
+
+  const file =
+    $("#heroImage").files[0];
+
+  if (!file) {
+
+    toast(
+      "Selecione uma imagem primeiro."
+    );
+
+    return;
+  }
+
+  try {
+
+    const imageUrl =
+      await uploadImage(
+        file,
+        "hero"
+      );
+
+    const {
+      error
+    } =
+      await supabase
+        .from("site_settings")
+        .upsert({
+          key: "hero_image",
+          value: imageUrl,
+          updated_at:
+            new Date().toISOString()
+        });
+
+    if (error) {
+
+      toast(
+        "Erro ao guardar imagem: " +
+        error.message
+      );
+
+      return;
+    }
+
+    toast(
+      "Imagem grande do topo atualizada."
+    );
+
+    $("#heroPreview").src =
+      imageUrl;
+
+    $("#heroImage").value = "";
+
+  } catch (error) {
+
+    toast(error.message);
+
+  }
+
+}
+
+/* =========================
+   GUARDAR CONFIGURAÇÕES
+========================= */
+
+async function saveGeneralSettings() {
+
+  const values = [
+
+    [
+      "whatsapp",
+      $("#wa").value
+    ],
+
+    [
+      "contact_email",
+      $("#email").value
+    ],
+
+    [
+      "default_language",
+      $("#defaultLang").value
+    ]
+
+  ];
+
+  for (
+    const [key, value]
+    of values
+  ) {
+
+    const {
+      error
+    } =
+      await supabase
+        .from("site_settings")
+        .upsert({
+
+          key,
+
+          value,
+
+          updated_at:
+            new Date().toISOString()
+
+        });
+
+    if (error) {
+
+      toast(
+        "Erro ao guardar: " +
+        error.message
+      );
+
+      return;
+    }
+
+  }
+
+  toast(
+    "Configurações guardadas."
+  );
+
+}
+
+/* =========================
+   GUARDAR IMAGEM DO BUNDLE
+========================= */
+
+async function saveBundleImage(
+  bundleId
+) {
+
+  const bundle =
+    bundles.find(
+      b => String(b.id) === String(bundleId)
+    );
+
+  if (!bundle) {
+
+    toast(
+      "Rancho do Mês não encontrado."
+    );
+
+    return;
+  }
+
+  const input =
+    document.querySelector(
+      `[data-bundle-file="${bundleId}"]`
+    );
+
+  const file =
+    input?.files?.[0];
+
+  if (!file) {
+
+    toast(
+      "Selecione uma imagem primeiro."
+    );
+
+    return;
+  }
+
+  const button =
+    document.querySelector(
+      `[data-save-bundle="${bundleId}"]`
+    );
+
+  if (button) {
+
+    button.disabled = true;
+
+    button.textContent =
+      "A guardar...";
+
+  }
+
+  try {
+
+    /* =========================
+       UPLOAD
+    ========================== */
+
+    const imageUrl =
+      await uploadImage(
+        file,
+        "bundles"
+      );
+
+
+    /* =========================
+       ATUALIZAR BUNDLE
+    ========================== */
+
+    const {
+      data,
+      error
+    } =
+      await supabase
+        .from("bundles")
+        .update({
+          image_url: imageUrl,
+          updated_at:
+            new Date().toISOString()
+        })
+        .eq("id", bundle.id)
+        .select()
+        .single();
+
+    if (error) {
+
+      toast(
+        "Erro ao guardar imagem: " +
+        error.message
+      );
+
+      return;
+    }
+
+
+    /* =========================
+       ATUALIZAR MEMÓRIA LOCAL
+    ========================== */
+
+    const index =
+      bundles.findIndex(
+        b =>
+          String(b.id) ===
+          String(bundle.id)
+      );
+
+    if (index !== -1) {
+
+      bundles[index] =
+        data || {
+          ...bundle,
+          image_url: imageUrl
+        };
+
+    }
+
+
+    const preview =
+      document.querySelector(
+        `[data-bundle-preview="${bundleId}"]`
+      );
+
+    if (preview) {
+
+      preview.src =
+        imageUrl;
+
+      preview.classList.remove(
+        "hidden"
+      );
+
+    }
+
+    const placeholder =
+      document.querySelector(
+        `[data-bundle-preview-placeholder="${bundleId}"]`
+      );
+
+    if (placeholder) {
+
+      placeholder.remove();
+
+    }
+
+    input.value = "";
+
+    toast(
+      "Imagem do Rancho do Mês atualizada."
+    );
+
+  } catch (error) {
+
+    toast(
+      error.message
+    );
+
+  } finally {
+
+    if (button) {
+
+      button.disabled = false;
+
+      button.textContent =
+        "Guardar imagem";
+
+    }
+
+  }
+
 }
 
 /* =========================
