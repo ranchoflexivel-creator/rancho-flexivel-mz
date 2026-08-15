@@ -5,6 +5,8 @@ const $ = (s) => document.querySelector(s);
 let session = null;
 let products = [];
 let categories = [];
+let bundles = [];
+let settings = {};
 
 /* =========================
    UTILITÁRIOS
@@ -20,6 +22,17 @@ function esc(s) {
   }[m]));
 }
 
+function current(v) {
+  if (typeof v === "string") return v;
+
+  return (
+    v?.pt ||
+    v?.en ||
+    Object.values(v || {})[0] ||
+    ""
+  );
+}
+
 function toast(message) {
   let t = $("#toast");
 
@@ -27,7 +40,7 @@ function toast(message) {
     t = document.createElement("div");
     t.id = "toast";
     t.className =
-      "fixed bottom-5 right-5 z-50 bg-[#00361a] text-white px-5 py-3 rounded-xl shadow-lg";
+      "fixed bottom-5 right-5 z-50 bg-[#00361a] text-white px-5 py-3 rounded-xl shadow-lg z-[9999]";
     document.body.appendChild(t);
   }
 
@@ -37,6 +50,68 @@ function toast(message) {
   setTimeout(() => {
     t.classList.add("hidden");
   }, 3000);
+}
+
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString("pt-MZ", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }) + " MZN";
+}
+
+/* =========================
+   UPLOAD DE IMAGEM
+========================= */
+
+async function uploadImage(file, folder = "site") {
+
+  if (!file) {
+    return null;
+  }
+
+  const allowed = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ];
+
+  if (!allowed.includes(file.type)) {
+    toast("Formato de imagem não permitido.");
+    return null;
+  }
+
+  const ext = file.name.split(".").pop().toLowerCase();
+
+  const path =
+    `${folder}/${crypto.randomUUID()}.${ext}`;
+
+  const {
+    error
+  } = await supabase
+    .storage
+    .from("site-images")
+    .upload(
+      path,
+      file,
+      {
+        upsert: false,
+        contentType: file.type
+      }
+    );
+
+  if (error) {
+    toast("Erro no upload: " + error.message);
+    return null;
+  }
+
+  const {
+    data
+  } = supabase
+    .storage
+    .from("site-images")
+    .getPublicUrl(path);
+
+  return data?.publicUrl || null;
 }
 
 /* =========================
@@ -215,7 +290,7 @@ function login(msg = "") {
 }
 
 /* =========================
-   CARREGAR PRODUTOS E CATEGORIAS
+   CARREGAR DADOS
 ========================= */
 
 async function load() {
@@ -231,24 +306,10 @@ async function load() {
       });
 
   if (productsResult.error) {
-
-    document.body.innerHTML = `
-      <main class="min-h-screen flex items-center justify-center p-6">
-
-        <div class="max-w-xl bg-white rounded-2xl shadow p-6">
-
-          <h1 class="text-2xl font-bold text-red-700">
-            Erro ao carregar produtos
-          </h1>
-
-          <p class="mt-4">
-            ${esc(productsResult.error.message)}
-          </p>
-
-        </div>
-
-      </main>
-    `;
+    showError(
+      "Erro ao carregar produtos",
+      productsResult.error.message
+    );
 
     return false;
   }
@@ -256,9 +317,7 @@ async function load() {
   products = productsResult.data || [];
 
 
-  /* =========================
-     CATEGORIAS
-  ========================= */
+  /* CATEGORIAS */
 
   const categoriesResult =
     await supabase
@@ -269,56 +328,106 @@ async function load() {
       });
 
   if (categoriesResult.error) {
-
-    document.body.innerHTML = `
-      <main class="min-h-screen flex items-center justify-center p-6">
-
-        <div class="max-w-xl bg-white rounded-2xl shadow p-6">
-
-          <h1 class="text-2xl font-bold text-red-700">
-            Erro ao carregar categorias
-          </h1>
-
-          <p class="mt-4">
-            ${esc(categoriesResult.error.message)}
-          </p>
-
-        </div>
-
-      </main>
-    `;
+    showError(
+      "Erro ao carregar categorias",
+      categoriesResult.error.message
+    );
 
     return false;
   }
 
   categories = categoriesResult.data || [];
 
-  /*
-   * IMPORTANTE:
-   * Aqui não estamos a procurar "name" como texto.
-   *
-   * A sua categoria tem:
-   *
-   * {
-   *   "en": "Rice & cereals",
-   *   "fr": "Riz et céréales",
-   *   "pt": "Arroz e cereais",
-   *   "zh": "大米和谷物",
-   *   "chg": "Rice ni swigweto"
-   * }
-   *
-   * Portanto, no formulário usamos:
-   *
-   * category.name.pt
-   */
 
-  console.log("Categorias carregadas:", categories);
+  /* RANCHO DO MÊS */
+
+  const bundlesResult =
+    await supabase
+      .from("bundles")
+      .select("*")
+      .order("sort_order", {
+        ascending: true
+      });
+
+  if (bundlesResult.error) {
+
+    console.warn(
+      "Não foi possível carregar bundles:",
+      bundlesResult.error.message
+    );
+
+    bundles = [];
+
+  } else {
+
+    bundles = bundlesResult.data || [];
+
+  }
+
+
+  /* CONFIGURAÇÕES */
+
+  const settingsResult =
+    await supabase
+      .from("site_settings")
+      .select("*");
+
+  if (settingsResult.error) {
+
+    console.warn(
+      "Erro ao carregar configurações:",
+      settingsResult.error.message
+    );
+
+    settings = {};
+
+  } else {
+
+    settings = Object.fromEntries(
+      (settingsResult.data || []).map(row => [
+        row.key,
+        row.value
+      ])
+    );
+
+  }
+
+
+  console.log("Produtos:", products);
+  console.log("Categorias:", categories);
+  console.log("Rancho do mês:", bundles);
+  console.log("Configurações:", settings);
 
   return true;
 }
 
 /* =========================
-   ESTRUTURA DO PAINEL
+   ERRO
+========================= */
+
+function showError(title, message) {
+
+  document.body.innerHTML = `
+    <main class="min-h-screen flex items-center justify-center p-6">
+
+      <div class="max-w-xl bg-white rounded-2xl shadow p-6">
+
+        <h1 class="text-2xl font-bold text-red-700">
+          ${esc(title)}
+        </h1>
+
+        <p class="mt-4">
+          ${esc(message)}
+        </p>
+
+      </div>
+
+    </main>
+  `;
+}
+
+/* =========================
+   SHELL
 ========================= */
 
 function shell(content) {
@@ -358,6 +467,14 @@ function shell(content) {
           </button>
 
           <button
+            data-tab="content"
+            class="w-full text-left px-3 py-3
+                   rounded-lg hover:bg-white/10"
+          >
+            Imagens do site
+          </button>
+
+          <button
             data-tab="orders"
             class="w-full text-left px-3 py-3
                    rounded-lg hover:bg-white/10"
@@ -390,6 +507,13 @@ function shell(content) {
       </main>
 
     </div>
+
+    <div
+      id="toast"
+      class="hidden fixed bottom-5 right-5 z-[9999]
+             bg-[#00361a] text-white px-5 py-3
+             rounded-xl shadow-lg"
+    ></div>
   `;
 
   $("#logout").onclick = async () => {
@@ -397,11 +521,12 @@ function shell(content) {
     await supabase.auth.signOut();
 
     location.reload();
+
   };
 
   document
     .querySelectorAll("[data-tab]")
-    .forEach((button) => {
+    .forEach(button => {
 
       button.onclick = () => {
 
@@ -417,6 +542,10 @@ function shell(content) {
 
         else if (tab === "orders") {
           renderOrders();
+        }
+
+        else if (tab === "content") {
+          renderContent();
         }
 
         else {
@@ -470,7 +599,6 @@ function render() {
         <p class="text-sm text-[#717971]">
           Produtos
         </p>
-
         <b class="text-2xl">
           ${products.length}
         </b>
@@ -478,29 +606,19 @@ function render() {
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
         <p class="text-sm text-[#717971]">
-          Ativos
+          Categorias
         </p>
-
         <b class="text-2xl">
-          ${
-            products.filter(
-              p => p.active !== false
-            ).length
-          }
+          ${categories.length}
         </b>
       </div>
 
       <div class="bg-white rounded-2xl p-5 shadow-sm">
         <p class="text-sm text-[#717971]">
-          Stock baixo
+          Rancho do Mês
         </p>
-
         <b class="text-2xl">
-          ${
-            products.filter(
-              p => (p.stock ?? 0) < 5
-            ).length
-          }
+          ${bundles.length}
         </b>
       </div>
 
@@ -508,7 +626,6 @@ function render() {
         <p class="text-sm text-[#717971]">
           Conta
         </p>
-
         <b class="text-2xl">
           Admin
         </b>
@@ -534,17 +651,17 @@ function render() {
         </button>
 
         <button
+          id="goContent"
+          class="px-4 py-2 rounded-xl border"
+        >
+          Gerir imagens
+        </button>
+
+        <button
           id="goOrders"
           class="px-4 py-2 rounded-xl border"
         >
           Pedidos
-        </button>
-
-        <button
-          id="goSettings"
-          class="px-4 py-2 rounded-xl border"
-        >
-          Configurações
         </button>
 
       </div>
@@ -553,12 +670,704 @@ function render() {
   `);
 
   $("#goProducts").onclick = renderProducts;
+  $("#goContent").onclick = renderContent;
   $("#goOrders").onclick = renderOrders;
-  $("#goSettings").onclick = renderSettings;
+}
+
+/* ============================================================
+   IMAGENS DO SITE
+============================================================ */
+
+function renderContent() {
+
+  const heroImage =
+    typeof settings.hero_image === "string"
+      ? settings.hero_image
+      : "";
+
+  let categoryImages = {};
+
+  if (
+    settings.category_images &&
+    typeof settings.category_images === "object"
+  ) {
+    categoryImages = settings.category_images;
+  }
+
+
+  shell(`
+
+    <div>
+
+      <p class="text-sm text-[#717971]">
+        Personalização do site
+      </p>
+
+      <h1
+        class="font-[Montserrat]
+               text-3xl font-bold"
+      >
+        Imagens do site
+      </h1>
+
+      <p class="text-sm text-[#717971] mt-2">
+        Altere as imagens principais que aparecem
+        na página inicial.
+      </p>
+
+    </div>
+
+
+    <!-- ==================================================
+         HERO
+    =================================================== -->
+
+    <section
+      class="bg-white rounded-2xl
+             shadow-sm p-6 mt-7"
+    >
+
+      <div class="flex items-center gap-3">
+
+        <div
+          class="w-11 h-11 rounded-xl
+                 bg-[#e8f2ec]
+                 flex items-center justify-center"
+        >
+          <span class="material-symbols-outlined text-[#00361a]">
+            image
+          </span>
+        </div>
+
+        <div>
+
+          <h2 class="text-xl font-bold">
+            Imagem grande do topo
+          </h2>
+
+          <p class="text-sm text-[#717971]">
+            Imagem principal da página inicial.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="grid md:grid-cols-2 gap-6 mt-6">
+
+        <div>
+
+          <label class="block text-sm font-semibold">
+
+            Escolher nova imagem
+
+            <input
+              id="heroFile"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              class="mt-2 block w-full border
+                     rounded-xl p-3"
+            >
+
+          </label>
+
+          <p class="text-xs text-[#717971] mt-2">
+            JPG, PNG ou WebP.
+          </p>
+
+        </div>
+
+
+        <div>
+
+          <p class="text-sm font-semibold mb-2">
+            Pré-visualização
+          </p>
+
+          <div
+            class="rounded-2xl overflow-hidden
+                   bg-[#eef5f7]"
+          >
+
+            ${
+              heroImage
+                ? `
+                  <img
+                    id="heroPreview"
+                    src="${esc(heroImage)}"
+                    class="w-full h-52
+                           object-cover"
+                  >
+                `
+                : `
+                  <div
+                    id="heroPreview"
+                    class="h-52 flex items-center
+                           justify-center text-[#717971]"
+                  >
+                    Sem imagem
+                  </div>
+                `
+            }
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <button
+        id="saveHero"
+        class="mt-6 px-5 py-3
+               bg-[#00361a]
+               text-white rounded-xl font-bold"
+      >
+        Guardar imagem do topo
+      </button>
+
+    </section>
+
+
+    <!-- ==================================================
+         RANCHO DO MÊS
+    =================================================== -->
+
+    <section
+      class="bg-white rounded-2xl
+             shadow-sm p-6 mt-7"
+    >
+
+      <div class="flex items-center gap-3">
+
+        <div
+          class="w-11 h-11 rounded-xl
+                 bg-[#fff2df]
+                 flex items-center justify-center"
+        >
+          <span class="material-symbols-outlined text-[#fd9d27]">
+            shopping_basket
+          </span>
+        </div>
+
+        <div>
+
+          <h2 class="text-xl font-bold">
+            Rancho do Mês
+          </h2>
+
+          <p class="text-sm text-[#717971]">
+            Altere a imagem de cada Rancho do Mês.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
+
+        ${
+          bundles.length
+            ? bundles.map(bundle => `
+
+              <div
+                class="border rounded-2xl
+                       overflow-hidden"
+              >
+
+                <div class="h-44 bg-[#eef5f7]">
+
+                  ${
+                    bundle.image_url
+                      ? `
+                        <img
+                          src="${esc(bundle.image_url)}"
+                          class="w-full h-full object-cover"
+                        >
+                      `
+                      : `
+                        <div
+                          class="h-full flex items-center
+                                 justify-center
+                                 text-[#717971]"
+                        >
+                          Sem imagem
+                        </div>
+                      `
+                  }
+
+                </div>
+
+                <div class="p-4">
+
+                  <h3 class="font-bold">
+                    ${esc(current(bundle.name))}
+                  </h3>
+
+                  <p class="text-sm text-[#717971] mt-1">
+                    ${formatMoney(bundle.price)}
+                  </p>
+
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    data-bundle-file="${esc(bundle.id)}"
+                    class="mt-4 block w-full text-sm"
+                  >
+
+                  <button
+                    data-save-bundle="${esc(bundle.id)}"
+                    class="mt-3 w-full py-2.5
+                           bg-[#00361a]
+                           text-white rounded-xl
+                           font-semibold"
+                  >
+                    Alterar imagem
+                  </button>
+
+                </div>
+
+              </div>
+
+            `).join("")
+            : `
+              <div
+                class="col-span-full
+                       text-center py-8
+                       text-[#717971]"
+              >
+                Nenhum Rancho do Mês encontrado.
+              </div>
+            `
+        }
+
+      </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         CATEGORIAS
+    =================================================== -->
+
+    <section
+      class="bg-white rounded-2xl
+             shadow-sm p-6 mt-7"
+    >
+
+      <div class="flex items-center gap-3">
+
+        <div
+          class="w-11 h-11 rounded-xl
+                 bg-[#e8f2ec]
+                 flex items-center justify-center"
+        >
+          <span class="material-symbols-outlined text-[#00361a]">
+            category
+          </span>
+        </div>
+
+        <div>
+
+          <h2 class="text-xl font-bold">
+            Categorias
+          </h2>
+
+          <p class="text-sm text-[#717971]">
+            Altere a imagem de cada categoria.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
+
+        ${
+          categories.map(category => {
+
+            const image =
+              categoryImages[category.id] || "";
+
+            return `
+
+              <div
+                class="border rounded-2xl
+                       overflow-hidden"
+              >
+
+                <div
+                  class="h-36 bg-[#eef5f7]"
+                >
+
+                  ${
+                    image
+                      ? `
+                        <img
+                          src="${esc(image)}"
+                          class="w-full h-full
+                                 object-cover"
+                        >
+                      `
+                      : `
+                        <div
+                          class="h-full flex
+                                 items-center
+                                 justify-center
+                                 text-[#717971]"
+                        >
+                          Sem imagem
+                        </div>
+                      `
+                  }
+
+                </div>
+
+
+                <div class="p-4">
+
+                  <h3 class="font-bold">
+                    ${esc(current(category.name))}
+                  </h3>
+
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    data-category-file="${esc(category.id)}"
+                    class="mt-4 block w-full text-sm"
+                  >
+
+                  <button
+                    data-save-category="${esc(category.id)}"
+                    class="mt-3 w-full py-2.5
+                           bg-[#00361a]
+                           text-white rounded-xl
+                           font-semibold"
+                  >
+                    Alterar imagem
+                  </button>
+
+                </div>
+
+              </div>
+
+            `;
+
+          }).join("")
+        }
+
+      </div>
+
+    </section>
+
+  `);
+
+
+  /* ==================================================
+     PREVIEW HERO
+  =================================================== */
+
+  $("#heroFile").onchange = (e) => {
+
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    const preview = $("#heroPreview");
+
+    if (preview.tagName === "IMG") {
+
+      preview.src =
+        URL.createObjectURL(file);
+
+    } else {
+
+      preview.outerHTML = `
+        <img
+          id="heroPreview"
+          src="${URL.createObjectURL(file)}"
+          class="w-full h-52 object-cover"
+        >
+      `;
+
+    }
+
+  };
+
+
+  /* ==================================================
+     GUARDAR HERO
+  =================================================== */
+
+  $("#saveHero").onclick = async () => {
+
+    const file =
+      $("#heroFile").files[0];
+
+    if (!file) {
+
+      toast("Escolha uma imagem primeiro.");
+
+      return;
+    }
+
+    $("#saveHero").disabled = true;
+    $("#saveHero").textContent = "A carregar...";
+
+    const url =
+      await uploadImage(
+        file,
+        "hero"
+      );
+
+    if (!url) {
+
+      $("#saveHero").disabled = false;
+      $("#saveHero").textContent =
+        "Guardar imagem do topo";
+
+      return;
+    }
+
+    const {
+      error
+    } =
+      await supabase
+        .from("site_settings")
+        .upsert({
+          key: "hero_image",
+          value: url,
+          updated_at: new Date().toISOString()
+        });
+
+    if (error) {
+
+      toast(
+        "Erro ao guardar imagem: " +
+        error.message
+      );
+
+    } else {
+
+      settings.hero_image = url;
+
+      toast(
+        "Imagem do topo atualizada."
+      );
+
+    }
+
+    $("#saveHero").disabled = false;
+    $("#saveHero").textContent =
+      "Guardar imagem do topo";
+  };
+
+
+  /* ==================================================
+     GUARDAR RANCHO DO MÊS
+  =================================================== */
+
+  document
+    .querySelectorAll("[data-save-bundle]")
+    .forEach(button => {
+
+      button.onclick = async () => {
+
+        const id =
+          button.dataset.saveBundle;
+
+        const input =
+          document.querySelector(
+            `[data-bundle-file="${CSS.escape(id)}"]`
+          );
+
+        const file =
+          input?.files?.[0];
+
+        if (!file) {
+
+          toast(
+            "Escolha uma imagem primeiro."
+          );
+
+          return;
+        }
+
+        button.disabled = true;
+        button.textContent = "A carregar...";
+
+        const url =
+          await uploadImage(
+            file,
+            "bundles"
+          );
+
+        if (!url) {
+
+          button.disabled = false;
+          button.textContent =
+            "Alterar imagem";
+
+          return;
+        }
+
+        const {
+          error
+        } =
+          await supabase
+            .from("bundles")
+            .update({
+              image_url: url,
+              updated_at:
+                new Date().toISOString()
+            })
+            .eq("id", id);
+
+        if (error) {
+
+          toast(
+            "Erro ao guardar: " +
+            error.message
+          );
+
+        } else {
+
+          toast(
+            "Imagem do Rancho do Mês atualizada."
+          );
+
+          await load();
+          renderContent();
+
+          return;
+        }
+
+        button.disabled = false;
+        button.textContent =
+          "Alterar imagem";
+      };
+
+    });
+
+
+  /* ==================================================
+     GUARDAR CATEGORIA
+  =================================================== */
+
+  document
+    .querySelectorAll("[data-save-category]")
+    .forEach(button => {
+
+      button.onclick = async () => {
+
+        const id =
+          button.dataset.saveCategory;
+
+        const input =
+          document.querySelector(
+            `[data-category-file="${CSS.escape(id)}"]`
+          );
+
+        const file =
+          input?.files?.[0];
+
+        if (!file) {
+
+          toast(
+            "Escolha uma imagem primeiro."
+          );
+
+          return;
+        }
+
+        button.disabled = true;
+        button.textContent = "A carregar...";
+
+        const url =
+          await uploadImage(
+            file,
+            "categories"
+          );
+
+        if (!url) {
+
+          button.disabled = false;
+          button.textContent =
+            "Alterar imagem";
+
+          return;
+        }
+
+
+        /* Ler novamente as imagens */
+
+        let categoryImages = {};
+
+        if (
+          settings.category_images &&
+          typeof settings.category_images === "object"
+        ) {
+
+          categoryImages =
+            {
+              ...settings.category_images
+            };
+
+        }
+
+        categoryImages[id] = url;
+
+
+        const {
+          error
+        } =
+          await supabase
+            .from("site_settings")
+            .upsert({
+              key: "category_images",
+              value: categoryImages,
+              updated_at:
+                new Date().toISOString()
+            });
+
+
+        if (error) {
+
+          toast(
+            "Erro ao guardar: " +
+            error.message
+          );
+
+        } else {
+
+          settings.category_images =
+            categoryImages;
+
+          toast(
+            "Imagem da categoria atualizada."
+          );
+
+          await load();
+
+          renderContent();
+
+          return;
+        }
+
+        button.disabled = false;
+        button.textContent =
+          "Alterar imagem";
+      };
+
+    });
+
 }
 
 /* =========================
-   LISTA DE PRODUTOS
+   PRODUTOS
 ========================= */
 
 function renderProducts() {
@@ -645,11 +1454,23 @@ function renderProducts() {
 
                     <div class="flex items-center gap-3">
 
-                      <img
-                        src="${esc(p.image_url || "")}"
-                        class="w-12 h-12
-                               object-cover rounded-lg"
-                      >
+                      ${
+                        p.image_url
+                          ? `
+                            <img
+                              src="${esc(p.image_url)}"
+                              class="w-12 h-12
+                                     object-cover rounded-lg"
+                            >
+                          `
+                          : `
+                            <div
+                              class="w-12 h-12
+                                     rounded-lg
+                                     bg-[#eef5f7]"
+                            ></div>
+                          `
+                      }
 
                       <div>
 
@@ -671,30 +1492,14 @@ function renderProducts() {
                   </td>
 
                   <td class="p-4">
-
-                    ${
-                      esc(
-                        category?.name?.pt ||
-                        "Sem categoria"
-                      )
-                    }
-
+                    ${esc(
+                      category?.name?.pt ||
+                      "Sem categoria"
+                    )}
                   </td>
 
                   <td class="p-4 font-bold">
-
-                    ${
-                      Number(p.price || 0)
-                        .toLocaleString(
-                          "pt-MZ",
-                          {
-                            minimumFractionDigits: 2
-                          }
-                        )
-                    }
-
-                    MZN
-
+                    ${formatMoney(p.price)}
                   </td>
 
                   <td class="p-4">
@@ -749,8 +1554,7 @@ function renderProducts() {
 }
 
 /* =========================
-   FORMULÁRIO
-   SOMENTE PORTUGUÊS
+   FORM PRODUTO
 ========================= */
 
 function form(product = null) {
@@ -794,43 +1598,33 @@ function form(product = null) {
   };
 
 
-  /*
-   * AQUI ESTÁ A CORREÇÃO PRINCIPAL:
-   *
-   * categories já contém os registos vindos
-   * da tabela categories.
-   *
-   * O nome está dentro de:
-   *
-   * category.name.pt
-   */
+  const categoryOptions =
+    categories
+      .map(category => {
 
-  const categoryOptions = categories
-    .map(category => {
+        const categoryName =
+          category?.name?.pt ||
+          category?.name ||
+          "Categoria";
 
-      const categoryName =
-        category?.name?.pt ||
-        category?.name ||
-        "Categoria";
+        return `
 
-      return `
+          <option
+            value="${esc(category.id)}"
+            ${
+              String(category.id) ===
+              String(p.category_id)
+                ? "selected"
+                : ""
+            }
+          >
+            ${esc(categoryName)}
+          </option>
 
-        <option
-          value="${esc(category.id)}"
-          ${
-            String(category.id) ===
-            String(p.category_id)
-              ? "selected"
-              : ""
-          }
-        >
-          ${esc(categoryName)}
-        </option>
+        `;
 
-      `;
-
-    })
-    .join("");
+      })
+      .join("");
 
 
   shell(`
@@ -916,11 +1710,7 @@ function form(product = null) {
         </div>
 
 
-        <!-- CATEGORIA -->
-
-        <label
-          class="block text-sm font-semibold"
-        >
+        <label class="block text-sm font-semibold">
 
           Categoria
 
@@ -942,16 +1732,12 @@ function form(product = null) {
         </label>
 
 
-        <!-- IMAGEM -->
-
         <div
           class="border-2 border-dashed
                  rounded-2xl p-5"
         >
 
-          <label
-            class="block text-sm font-semibold"
-          >
+          <label class="block text-sm font-semibold">
 
             Imagem do produto
 
@@ -975,8 +1761,6 @@ function form(product = null) {
 
         </div>
 
-
-        <!-- ESTADO -->
 
         <div class="flex gap-5">
 
@@ -1067,6 +1851,7 @@ function form(product = null) {
       e.preventDefault();
 
       await saveProduct(p, isNew);
+
     };
 
 
@@ -1141,66 +1926,28 @@ function field(
 
 async function saveProduct(p, isNew) {
 
-  let image_url = p.image_url || null;
+  let image_url =
+    p.image_url || null;
 
-  const file = $("#image").files[0];
+  const file =
+    $("#image").files[0];
 
-
-  /* =========================
-     UPLOAD DA IMAGEM
-  ========================= */
 
   if (file) {
 
-    const ext =
-      file.name
-        .split(".")
-        .pop()
-        .toLowerCase();
-
-    const path =
-      `products/${crypto.randomUUID()}.${ext}`;
-
-
-    const {
-      error: uploadError
-    } =
-      await supabase
-        .storage
-        .from("site-images")
-        .upload(
-          path,
-          file,
-          {
-            upsert: false
-          }
-        );
-
-
-    if (uploadError) {
-
-      toast(
-        "Erro no upload: " +
-        uploadError.message
+    const uploaded =
+      await uploadImage(
+        file,
+        "products"
       );
 
+    if (!uploaded) {
       return;
     }
 
-
-    image_url =
-      supabase
-        .storage
-        .from("site-images")
-        .getPublicUrl(path)
-        .data
-        .publicUrl;
+    image_url = uploaded;
   }
 
-
-  /* =========================
-     DADOS DO PRODUTO
-  ========================= */
 
   const row = {
 
@@ -1218,19 +1965,13 @@ async function saveProduct(p, isNew) {
       $("#category_id").value || null,
 
     price:
-      Number(
-        $("#price").value || 0
-      ),
+      Number($("#price").value || 0),
 
     old_price:
-      Number(
-        $("#old_price").value || 0
-      ) || null,
+      Number($("#old_price").value || 0) || null,
 
     stock:
-      Number(
-        $("#stock").value || 0
-      ),
+      Number($("#stock").value || 0),
 
     sku:
       $("#sku").value,
@@ -1255,10 +1996,6 @@ async function saveProduct(p, isNew) {
 
   };
 
-
-  /* =========================
-     INSERT / UPDATE
-  ========================= */
 
   let result;
 
@@ -1401,18 +2138,14 @@ async function loadOrders() {
 
                 <td class="p-4">
                   ${esc(o.customer_name)}
-
                   <br>
-
                   <span class="text-xs">
                     ${esc(o.customer_phone)}
                   </span>
                 </td>
 
                 <td class="p-4 font-bold">
-                  ${Number(o.total || 0)
-                    .toLocaleString("pt-MZ")}
-                  MZN
+                  ${formatMoney(o.total)}
                 </td>
 
                 <td class="p-4">
@@ -1533,8 +2266,7 @@ function renderSettings() {
 
       <p class="text-sm text-[#414942]">
 
-        As configurações gerais são
-        armazenadas no Supabase.
+        Configurações gerais do Rancho Flexível.
 
       </p>
 
@@ -1546,13 +2278,13 @@ function renderSettings() {
         ${field(
           "WhatsApp",
           "wa",
-          "+258840000000"
+          settings.whatsapp || ""
         )}
 
         ${field(
           "E-mail",
           "email",
-          "contato@ranchoflexivel.co.mz"
+          settings.contact_email || ""
         )}
 
         <label
@@ -1567,8 +2299,37 @@ function renderSettings() {
                    border rounded-xl p-3"
           >
 
-            <option value="pt">
+            <option
+              value="pt"
+              ${
+                settings.default_language === "pt"
+                  ? "selected"
+                  : ""
+              }
+            >
               Português
+            </option>
+
+            <option
+              value="en"
+              ${
+                settings.default_language === "en"
+                  ? "selected"
+                  : ""
+              }
+            >
+              English
+            </option>
+
+            <option
+              value="fr"
+              ${
+                settings.default_language === "fr"
+                  ? "selected"
+                  : ""
+              }
+            >
+              Français
             </option>
 
           </select>
@@ -1597,22 +2358,29 @@ function renderSettings() {
 
       e.preventDefault();
 
+      const values = [
+
+        [
+          "whatsapp",
+          $("#wa").value
+        ],
+
+        [
+          "contact_email",
+          $("#email").value
+        ],
+
+        [
+          "default_language",
+          $("#defaultLang").value
+        ]
+
+      ];
+
+
       for (
         const [key, value]
-        of [
-          [
-            "whatsapp",
-            $("#wa").value
-          ],
-          [
-            "contact_email",
-            $("#email").value
-          ],
-          [
-            "default_language",
-            $("#defaultLang").value
-          ]
-        ]
+        of values
       ) {
 
         const {
@@ -1622,7 +2390,9 @@ function renderSettings() {
             .from("site_settings")
             .upsert({
               key,
-              value
+              value,
+              updated_at:
+                new Date().toISOString()
             });
 
         if (error) {
@@ -1631,11 +2401,16 @@ function renderSettings() {
 
           return;
         }
+
       }
+
+
+      await load();
 
       toast(
         "Configurações guardadas."
       );
+
     };
 }
 
