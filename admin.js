@@ -3,6 +3,7 @@ import { supabase } from "./data.js";
 const $ = (s) => document.querySelector(s);
 
 let session = null;
+
 let products = [];
 let categories = [];
 let bundles = [];
@@ -12,8 +13,8 @@ let settings = {};
    UTILITÁRIOS
 ============================================================ */
 
-function esc(s) {
-  return String(s ?? "").replace(/[&<>"']/g, (m) => ({
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (m) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
@@ -22,53 +23,89 @@ function esc(s) {
   }[m]));
 }
 
+function jsonValue(value, fallback = "") {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+
+  if (typeof value === "object") {
+    return value;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function localized(value, lang = "pt") {
+  const obj = jsonValue(value, {});
+
+  if (typeof obj === "string") {
+    return obj;
+  }
+
+  return (
+    obj?.[lang] ||
+    obj?.pt ||
+    obj?.en ||
+    obj?.fr ||
+    obj?.zh ||
+    obj?.chg ||
+    ""
+  );
+}
+
 function toast(message) {
   let t = $("#toast");
 
   if (!t) {
     t = document.createElement("div");
+
     t.id = "toast";
+
     t.className =
-      "fixed bottom-5 right-5 z-[100] bg-[#00361a] text-white px-5 py-3 rounded-xl shadow-lg";
+      "fixed bottom-5 right-5 z-[9999] bg-[#00361a] text-white px-5 py-3 rounded-xl shadow-lg";
+
     document.body.appendChild(t);
   }
 
   t.textContent = message;
+
   t.classList.remove("hidden");
 
-  setTimeout(() => {
+  clearTimeout(window.__rfToast);
+
+  window.__rfToast = setTimeout(() => {
     t.classList.add("hidden");
   }, 3000);
 }
 
-function current(v) {
-  if (typeof v === "string") return v;
-
-  return (
-    v?.pt ||
-    v?.en ||
-    v?.fr ||
-    v?.zh ||
-    v?.chg ||
-    Object.values(v || {})[0] ||
-    ""
-  );
-}
-
-function formatMoney(value) {
+function money(value) {
   return Number(value || 0).toLocaleString("pt-MZ", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }) + " MZN";
 }
 
+function imageUrl(row) {
+  return (
+    row?.image_url ||
+    row?.image ||
+    ""
+  );
+}
+
 /* ============================================================
-   UPLOAD DE IMAGENS
+   UPLOAD DE IMAGEM
 ============================================================ */
 
-async function uploadImage(file, folder = "site") {
+async function uploadImage(file, folder = "admin") {
 
-  if (!file) return null;
+  if (!file) {
+    return null;
+  }
 
   const allowed = [
     "image/jpeg",
@@ -77,48 +114,51 @@ async function uploadImage(file, folder = "site") {
   ];
 
   if (!allowed.includes(file.type)) {
-    toast("Formato de imagem não permitido. Use JPG, PNG ou WebP.");
-    return null;
+    throw new Error(
+      "Formato inválido. Use JPG, PNG ou WEBP."
+    );
   }
 
-  if (file.size > 8 * 1024 * 1024) {
-    toast("A imagem deve ter no máximo 8 MB.");
-    return null;
-  }
-
-  const ext =
-    file.name.split(".").pop().toLowerCase() || "jpg";
+  const extension =
+    file.name
+      .split(".")
+      .pop()
+      .toLowerCase();
 
   const path =
-    `${folder}/${crypto.randomUUID()}.${ext}`;
+    `${folder}/${crypto.randomUUID()}.${extension}`;
 
   const {
-    error: uploadError
+    error
   } = await supabase
     .storage
     .from("site-images")
-    .upload(path, file, {
-      upsert: false,
-      contentType: file.type
-    });
+    .upload(
+      path,
+      file,
+      {
+        upsert: false,
+        contentType: file.type
+      }
+    );
 
-  if (uploadError) {
-    toast("Erro no upload: " + uploadError.message);
-    return null;
+  if (error) {
+    throw error;
   }
 
   const {
     data
-  } = supabase
-    .storage
-    .from("site-images")
-    .getPublicUrl(path);
+  } =
+    supabase
+      .storage
+      .from("site-images")
+      .getPublicUrl(path);
 
-  return data?.publicUrl || null;
+  return data.publicUrl;
 }
 
 /* ============================================================
-   INICIALIZAÇÃO
+   BOOT
 ============================================================ */
 
 async function boot() {
@@ -131,36 +171,46 @@ async function boot() {
   const {
     data: sessionData,
     error: sessionError
-  } = await supabase.auth.getSession();
+  } =
+    await supabase.auth.getSession();
 
   if (sessionError) {
-    login("Erro ao obter a sessão: " + sessionError.message);
+    login(
+      "Erro ao obter a sessão: " +
+      sessionError.message
+    );
+
     return;
   }
 
-  session = sessionData.session;
+  session =
+    sessionData?.session || null;
 
   if (!session) {
     login();
     return;
   }
 
-  /* VERIFICAR ADMIN */
+  /* ========================================================
+     VERIFICAR ADMIN
+  ======================================================== */
 
   const {
     data: profile,
     error: profileError
-  } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", session.user.id)
-    .maybeSingle();
+  } =
+    await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", session.user.id)
+      .maybeSingle();
 
   if (profileError) {
     login(
       "Erro ao verificar a conta de administrador: " +
       profileError.message
     );
+
     return;
   }
 
@@ -175,9 +225,15 @@ async function boot() {
     return;
   }
 
+  /* ========================================================
+     CARREGAR DADOS
+  ======================================================== */
+
   const loaded = await load();
 
-  if (!loaded) return;
+  if (!loaded) {
+    return;
+  }
 
   render();
 }
@@ -186,75 +242,108 @@ async function boot() {
    LOGIN
 ============================================================ */
 
-function login(msg = "") {
+function login(message = "") {
 
   document.body.innerHTML = `
-    <main class="min-h-screen flex items-center justify-center p-4 bg-[#f5f7f6]">
 
-      <section class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
+    <main
+      class="min-h-screen flex items-center
+             justify-center p-4 bg-[#f5f7f6]"
+    >
 
-        <div class="w-14 h-14 bg-[#00361a] text-white rounded-2xl
-                    flex items-center justify-center mx-auto">
+      <section
+        class="w-full max-w-md bg-white
+               rounded-3xl shadow-xl p-8"
+      >
 
+        <div
+          class="w-14 h-14 bg-[#00361a]
+                 text-white rounded-2xl
+                 flex items-center justify-center mx-auto"
+        >
           <span class="material-symbols-outlined">
             admin_panel_settings
           </span>
-
         </div>
 
-        <h1 class="font-[Montserrat] text-2xl font-bold text-center mt-5">
+        <h1
+          class="font-[Montserrat]
+                 text-2xl font-bold
+                 text-center mt-5"
+        >
           Rancho Flexível
         </h1>
 
-        <p class="text-center text-sm text-[#414942] mt-2">
+        <p
+          class="text-center text-sm
+                 text-[#414942] mt-2"
+        >
           Área administrativa
         </p>
 
         ${
-          msg
+          message
             ? `
-              <div class="mt-4 bg-[#fff4e5] text-[#673b00]
-                          p-3 rounded-xl text-sm">
-                ${esc(msg)}
+              <div
+                class="mt-4 bg-[#fff4e5]
+                       text-[#673b00]
+                       p-3 rounded-xl text-sm"
+              >
+                ${esc(message)}
               </div>
             `
             : ""
         }
 
-        <form id="login" class="mt-6 space-y-4">
+        <form
+          id="login"
+          class="mt-6 space-y-4"
+        >
 
-          <label class="block text-sm font-semibold">
+          <label
+            class="block text-sm font-semibold"
+          >
             E-mail
 
             <input
               id="email"
               type="email"
               required
-              class="mt-1 w-full border rounded-xl p-3"
+              autocomplete="email"
+              class="mt-1 w-full border
+                     rounded-xl p-3"
             >
           </label>
 
-          <label class="block text-sm font-semibold">
+          <label
+            class="block text-sm font-semibold"
+          >
             Senha
 
             <input
               id="password"
               type="password"
               required
-              class="mt-1 w-full border rounded-xl p-3"
+              autocomplete="current-password"
+              class="mt-1 w-full border
+                     rounded-xl p-3"
             >
           </label>
 
           <button
-            class="w-full py-3 bg-[#00361a] text-white
-                   rounded-xl font-bold"
+            class="w-full py-3
+                   bg-[#00361a]
+                   text-white rounded-xl
+                   font-bold"
           >
             Entrar
           </button>
 
         </form>
 
-        <p class="text-xs text-[#717971] mt-5">
+        <p
+          class="text-xs text-[#717971] mt-5"
+        >
           A autenticação é feita pelo Supabase.
         </p>
 
@@ -267,15 +356,16 @@ function login(msg = "") {
 
     e.preventDefault();
 
-    const email = $("#email").value;
+    const email = $("#email").value.trim();
     const password = $("#password").value;
 
     const {
       error
-    } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
     if (error) {
       login(error.message);
@@ -287,23 +377,26 @@ function login(msg = "") {
 }
 
 /* ============================================================
-   CARREGAR DADOS
+   CARREGAR TODOS OS DADOS
 ============================================================ */
 
 async function load() {
 
-  /* PRODUTOS */
+  /* ========================================================
+     PRODUTOS
+  ======================================================== */
 
-  const productsResult = await supabase
-    .from("products")
-    .select("*")
-    .order("sort_order", {
-      ascending: true
-    });
+  const productsResult =
+    await supabase
+      .from("products")
+      .select("*")
+      .order("sort_order", {
+        ascending: true
+      });
 
   if (productsResult.error) {
 
-    showError(
+    showFatalError(
       "Erro ao carregar produtos",
       productsResult.error.message
     );
@@ -311,21 +404,25 @@ async function load() {
     return false;
   }
 
-  products = productsResult.data || [];
+  products =
+    productsResult.data || [];
 
 
-  /* CATEGORIAS */
+  /* ========================================================
+     CATEGORIAS
+  ======================================================== */
 
-  const categoriesResult = await supabase
-    .from("categories")
-    .select("*")
-    .order("sort_order", {
-      ascending: true
-    });
+  const categoriesResult =
+    await supabase
+      .from("categories")
+      .select("*")
+      .order("sort_order", {
+        ascending: true
+      });
 
   if (categoriesResult.error) {
 
-    showError(
+    showFatalError(
       "Erro ao carregar categorias",
       categoriesResult.error.message
     );
@@ -333,59 +430,64 @@ async function load() {
     return false;
   }
 
-  categories = categoriesResult.data || [];
+  categories =
+    categoriesResult.data || [];
 
 
-  /* RANCHO DO MÊS / BUNDLES */
+  /* ========================================================
+     RANCHO DO MÊS / BUNDLES
+  ======================================================== */
 
-  const bundlesResult = await supabase
-    .from("bundles")
-    .select("*")
-    .order("sort_order", {
-      ascending: true
-    });
+  const bundlesResult =
+    await supabase
+      .from("bundles")
+      .select("*")
+      .order("sort_order", {
+        ascending: true
+      });
 
   if (bundlesResult.error) {
 
-    console.error(
-      "Erro ao carregar bundles:",
-      bundlesResult.error
+    showFatalError(
+      "Erro ao carregar Rancho do Mês",
+      bundlesResult.error.message
     );
 
-    bundles = [];
-
-  } else {
-
-    bundles = bundlesResult.data || [];
-
+    return false;
   }
 
+  bundles =
+    bundlesResult.data || [];
 
-  /* CONFIGURAÇÕES */
 
-  const settingsResult = await supabase
-    .from("site_settings")
-    .select("*");
+  /* ========================================================
+     CONFIGURAÇÕES
+  ======================================================== */
+
+  const settingsResult =
+    await supabase
+      .from("site_settings")
+      .select("*");
 
   if (settingsResult.error) {
 
-    console.error(
-      "Erro ao carregar configurações:",
-      settingsResult.error
+    showFatalError(
+      "Erro ao carregar configurações",
+      settingsResult.error.message
     );
 
-    settings = {};
-
-  } else {
-
-    settings = Object.fromEntries(
-      (settingsResult.data || []).map(row => [
-        row.key,
-        row.value
-      ])
-    );
-
+    return false;
   }
+
+  settings = {};
+
+  (settingsResult.data || [])
+    .forEach(row => {
+
+      settings[row.key] =
+        jsonValue(row.value, row.value);
+
+    });
 
 
   console.log("Produtos:", products);
@@ -397,23 +499,45 @@ async function load() {
 }
 
 /* ============================================================
-   ERRO
+   ERRO FATAL
 ============================================================ */
 
-function showError(title, message) {
+function showFatalError(title, message) {
 
   document.body.innerHTML = `
-    <main class="min-h-screen flex items-center justify-center p-6 bg-[#f5f7f6]">
 
-      <div class="max-w-xl bg-white rounded-2xl shadow p-6">
+    <main
+      class="min-h-screen flex
+             items-center justify-center p-6
+             bg-[#f5f7f6]"
+    >
 
-        <h1 class="text-2xl font-bold text-red-700">
+      <div
+        class="max-w-xl w-full
+               bg-white rounded-2xl
+               shadow p-6"
+      >
+
+        <h1
+          class="text-2xl
+                 font-bold text-red-700"
+        >
           ${esc(title)}
         </h1>
 
-        <p class="mt-4">
+        <p class="mt-4 text-[#414942]">
           ${esc(message)}
         </p>
+
+        <button
+          onclick="location.reload()"
+          class="mt-6 px-5 py-3
+                 rounded-xl
+                 bg-[#00361a]
+                 text-white font-bold"
+        >
+          Tentar novamente
+        </button>
 
       </div>
 
@@ -422,23 +546,29 @@ function showError(title, message) {
 }
 
 /* ============================================================
-   ESTRUTURA DO PAINEL
+   SHELL
 ============================================================ */
 
 function shell(content) {
 
   document.body.innerHTML = `
 
-    <div class="min-h-screen flex bg-[#f5f7f6]">
+    <div
+      class="min-h-screen flex
+             bg-[#f5f7f6]"
+    >
 
       <aside
-        class="hidden md:flex w-64 bg-[#00361a]
-        text-white p-5 flex-col"
+        class="hidden md:flex
+               w-64 bg-[#00361a]
+               text-white p-5
+               flex-col"
       >
 
         <a
           href="index.html"
-          class="font-[Montserrat] text-xl font-bold mb-8"
+          class="font-[Montserrat]
+                 text-xl font-bold mb-8"
         >
           Rancho Flexível
         </a>
@@ -447,28 +577,54 @@ function shell(content) {
 
           <button
             data-tab="dashboard"
-            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
+            class="w-full text-left
+                   px-3 py-3 rounded-lg
+                   hover:bg-white/10"
           >
             Dashboard
           </button>
 
           <button
             data-tab="products"
-            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
+            class="w-full text-left
+                   px-3 py-3 rounded-lg
+                   hover:bg-white/10"
           >
             Produtos
           </button>
 
           <button
+            data-tab="bundles"
+            class="w-full text-left
+                   px-3 py-3 rounded-lg
+                   hover:bg-white/10"
+          >
+            Rancho do Mês
+          </button>
+
+          <button
+            data-tab="categories"
+            class="w-full text-left
+                   px-3 py-3 rounded-lg
+                   hover:bg-white/10"
+          >
+            Categorias
+          </button>
+
+          <button
             data-tab="orders"
-            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
+            class="w-full text-left
+                   px-3 py-3 rounded-lg
+                   hover:bg-white/10"
           >
             Pedidos
           </button>
 
           <button
             data-tab="settings"
-            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
+            class="w-full text-left
+                   px-3 py-3 rounded-lg
+                   hover:bg-white/10"
           >
             Configurações
           </button>
@@ -477,14 +633,18 @@ function shell(content) {
 
         <button
           id="logout"
-          class="mt-auto text-left px-3 py-3 rounded-lg hover:bg-white/10"
+          class="mt-auto text-left
+                 px-3 py-3 rounded-lg
+                 hover:bg-white/10"
         >
           Terminar sessão
         </button>
 
       </aside>
 
-      <main class="flex-1 p-4 lg:p-8">
+      <main
+        class="flex-1 p-4 lg:p-8"
+      >
         ${content}
       </main>
 
@@ -504,22 +664,31 @@ function shell(content) {
 
       button.onclick = () => {
 
-        const tab = button.dataset.tab;
+        const tab =
+          button.dataset.tab;
 
         if (tab === "products") {
           renderProducts();
         }
 
-        else if (tab === "dashboard") {
-          render();
+        else if (tab === "bundles") {
+          renderBundles();
+        }
+
+        else if (tab === "categories") {
+          renderCategories();
         }
 
         else if (tab === "orders") {
           renderOrders();
         }
 
-        else {
+        else if (tab === "settings") {
           renderSettings();
+        }
+
+        else {
+          render();
         }
 
       };
@@ -535,16 +704,25 @@ function render() {
 
   shell(`
 
-    <div class="flex flex-col md:flex-row
-                md:items-center justify-between gap-4">
+    <div
+      class="flex flex-col md:flex-row
+             md:items-center
+             justify-between gap-4"
+    >
 
       <div>
 
-        <p class="text-sm text-[#717971]">
+        <p
+          class="text-sm
+                 text-[#717971]"
+        >
           Painel administrativo
         </p>
 
-        <h1 class="font-[Montserrat] text-3xl font-bold">
+        <h1
+          class="font-[Montserrat]
+                 text-3xl font-bold"
+        >
           Dashboard
         </h1>
 
@@ -552,66 +730,137 @@ function render() {
 
       <a
         href="index.html"
-        class="px-4 py-2 rounded-xl border bg-white"
+        class="px-4 py-2
+               rounded-xl border bg-white"
       >
         Ver site
       </a>
 
     </div>
 
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-7">
+    <div
+      class="grid sm:grid-cols-2
+             lg:grid-cols-4
+             gap-4 mt-7"
+    >
 
-      <div class="bg-white rounded-2xl p-5 shadow-sm">
-        <p class="text-sm text-[#717971]">Produtos</p>
-        <b class="text-2xl">${products.length}</b>
-      </div>
+      <div
+        class="bg-white
+               rounded-2xl p-5 shadow-sm"
+      >
+        <p
+          class="text-sm
+                 text-[#717971]"
+        >
+          Produtos
+        </p>
 
-      <div class="bg-white rounded-2xl p-5 shadow-sm">
-        <p class="text-sm text-[#717971]">Ativos</p>
         <b class="text-2xl">
-          ${products.filter(p => p.active !== false).length}
+          ${products.length}
         </b>
       </div>
 
-      <div class="bg-white rounded-2xl p-5 shadow-sm">
-        <p class="text-sm text-[#717971]">Stock baixo</p>
+      <div
+        class="bg-white
+               rounded-2xl p-5 shadow-sm"
+      >
+        <p
+          class="text-sm
+                 text-[#717971]"
+        >
+          Ativos
+        </p>
+
         <b class="text-2xl">
-          ${products.filter(p => (p.stock ?? 0) < 5).length}
+          ${
+            products.filter(
+              p => p.active !== false
+            ).length
+          }
         </b>
       </div>
 
-      <div class="bg-white rounded-2xl p-5 shadow-sm">
-        <p class="text-sm text-[#717971]">Rancho do Mês</p>
-        <b class="text-2xl">${bundles.length}</b>
+      <div
+        class="bg-white
+               rounded-2xl p-5 shadow-sm"
+      >
+        <p
+          class="text-sm
+                 text-[#717971]"
+        >
+          Rancho do Mês
+        </p>
+
+        <b class="text-2xl">
+          ${bundles.length}
+        </b>
+      </div>
+
+      <div
+        class="bg-white
+               rounded-2xl p-5 shadow-sm"
+      >
+        <p
+          class="text-sm
+                 text-[#717971]"
+        >
+          Categorias
+        </p>
+
+        <b class="text-2xl">
+          ${categories.length}
+        </b>
       </div>
 
     </div>
 
-    <div class="mt-8 bg-white rounded-2xl p-5">
+    <div
+      class="mt-8 bg-white
+             rounded-2xl p-5"
+    >
 
-      <h2 class="font-[Montserrat] text-xl font-bold">
+      <h2
+        class="font-[Montserrat]
+               text-xl font-bold"
+      >
         Gestão rápida
       </h2>
 
-      <div class="flex flex-wrap gap-3 mt-4">
+      <div
+        class="flex flex-wrap
+               gap-3 mt-4"
+      >
 
         <button
           id="goProducts"
-          class="px-4 py-2 rounded-xl bg-[#00361a] text-white"
+          class="px-4 py-2
+                 rounded-xl
+                 bg-[#00361a]
+                 text-white"
         >
           Gerir produtos
         </button>
 
         <button
-          id="goOrders"
-          class="px-4 py-2 rounded-xl border"
+          id="goBundles"
+          class="px-4 py-2
+                 rounded-xl border"
         >
-          Pedidos
+          Rancho do Mês
+        </button>
+
+        <button
+          id="goCategories"
+          class="px-4 py-2
+                 rounded-xl border"
+        >
+          Categorias
         </button>
 
         <button
           id="goSettings"
-          class="px-4 py-2 rounded-xl border"
+          class="px-4 py-2
+                 rounded-xl border"
         >
           Configurações
         </button>
@@ -621,9 +870,17 @@ function render() {
     </div>
   `);
 
-  $("#goProducts").onclick = renderProducts;
-  $("#goOrders").onclick = renderOrders;
-  $("#goSettings").onclick = renderSettings;
+  $("#goProducts").onclick =
+    renderProducts;
+
+  $("#goBundles").onclick =
+    renderBundles;
+
+  $("#goCategories").onclick =
+    renderCategories;
+
+  $("#goSettings").onclick =
+    renderSettings;
 }
 
 /* ============================================================
@@ -634,43 +891,76 @@ function renderProducts() {
 
   shell(`
 
-    <div class="flex items-center justify-between gap-4">
+    <div
+      class="flex items-center
+             justify-between gap-4"
+    >
 
       <div>
 
-        <h1 class="font-[Montserrat] text-3xl font-bold">
+        <h1
+          class="font-[Montserrat]
+                 text-3xl font-bold"
+        >
           Produtos
         </h1>
 
-        <p class="text-sm text-[#717971]">
-          Gerir produtos, preços, stock e imagens.
+        <p
+          class="text-sm
+                 text-[#717971]"
+        >
+          Gerir produtos, preços,
+          stock e imagens.
         </p>
 
       </div>
 
       <button
-        id="new"
-        class="px-4 py-2 bg-[#fd9d27]
-               text-white rounded-xl font-bold"
+        id="newProduct"
+        class="px-4 py-2
+               bg-[#fd9d27]
+               text-white rounded-xl
+               font-bold"
       >
         + Adicionar produto
       </button>
 
     </div>
 
-    <div class="bg-white rounded-2xl shadow-sm overflow-x-auto mt-6">
+    <div
+      class="bg-white
+             rounded-2xl
+             shadow-sm
+             overflow-x-auto mt-6"
+    >
 
       <table class="w-full text-sm">
 
-        <thead class="bg-[#eef5f7]">
+        <thead
+          class="bg-[#eef5f7]"
+        >
 
           <tr>
 
-            <th class="text-left p-4">Produto</th>
-            <th class="text-left p-4">Categoria</th>
-            <th class="text-left p-4">Preço</th>
-            <th class="text-left p-4">Stock</th>
-            <th class="p-4">Ações</th>
+            <th class="text-left p-4">
+              Produto
+            </th>
+
+            <th class="text-left p-4">
+              Categoria
+            </th>
+
+            <th class="text-left p-4">
+              Preço
+            </th>
+
+            <th class="text-left p-4">
+              Stock
+            </th>
+
+            <th class="p-4">
+              Ações
+            </th>
 
           </tr>
 
@@ -679,32 +969,49 @@ function renderProducts() {
         <tbody>
 
           ${
-            products.map(p => {
+            products.map(product => {
 
-              const category = categories.find(
-                c => String(c.id) === String(p.category_id)
-              );
+              const category =
+                categories.find(
+                  c =>
+                    String(c.id) ===
+                    String(product.category_id)
+                );
 
               return `
 
-                <tr class="border-t">
+                <tr
+                  class="border-t"
+                >
 
                   <td class="p-4">
 
-                    <div class="flex items-center gap-3">
+                    <div
+                      class="flex items-center
+                             gap-3"
+                    >
 
                       ${
-                        p.image_url
+                        product.image_url
                           ? `
                             <img
-                              src="${esc(p.image_url)}"
-                              class="w-12 h-12 object-cover rounded-lg"
+                              src="${esc(product.image_url)}"
+                              class="w-12 h-12
+                                     object-cover
+                                     rounded-lg"
                             >
                           `
                           : `
-                            <div class="w-12 h-12 rounded-lg bg-[#eef5f7]
-                                        flex items-center justify-center">
-                              <span class="material-symbols-outlined">
+                            <div
+                              class="w-12 h-12
+                                     rounded-lg
+                                     bg-[#eef5f7]
+                                     flex items-center
+                                     justify-center"
+                            >
+                              <span
+                                class="material-symbols-outlined"
+                              >
                                 image
                               </span>
                             </div>
@@ -714,11 +1021,21 @@ function renderProducts() {
                       <div>
 
                         <b>
-                          ${esc(current(p.name))}
+                          ${esc(
+                            localized(
+                              product.name
+                            )
+                          )}
                         </b>
 
-                        <div class="text-xs text-[#717971]">
-                          ${esc(p.sku || p.id)}
+                        <div
+                          class="text-xs
+                                 text-[#717971]"
+                        >
+                          ${esc(
+                            product.sku ||
+                            product.id
+                          )}
                         </div>
 
                       </div>
@@ -728,22 +1045,35 @@ function renderProducts() {
                   </td>
 
                   <td class="p-4">
-                    ${esc(current(category?.name) || "Sem categoria")}
+                    ${esc(
+                      localized(
+                        category?.name
+                      ) ||
+                      "Sem categoria"
+                    )}
                   </td>
 
-                  <td class="p-4 font-bold">
-                    ${formatMoney(p.price)}
+                  <td
+                    class="p-4 font-bold"
+                  >
+                    ${money(product.price)}
                   </td>
 
                   <td class="p-4">
-                    ${p.stock ?? 0}
+                    ${product.stock ?? 0}
                   </td>
 
-                  <td class="p-4 text-right">
+                  <td
+                    class="p-4 text-right"
+                  >
 
                     <button
-                      data-edit="${esc(p.id)}"
-                      class="px-3 py-2 rounded-lg bg-[#e8eff1]"
+                      data-edit-product="${esc(
+                        product.id
+                      )}"
+                      class="px-3 py-2
+                             rounded-lg
+                             bg-[#e8eff1]"
                     >
                       Editar
                     </button>
@@ -763,19 +1093,27 @@ function renderProducts() {
     </div>
   `);
 
-  $("#new").onclick = () => form();
+  $("#newProduct").onclick =
+    () => productForm();
 
   document
-    .querySelectorAll("[data-edit]")
+    .querySelectorAll(
+      "[data-edit-product]"
+    )
     .forEach(button => {
 
       button.onclick = () => {
 
-        const product = products.find(
-          p => String(p.id) === String(button.dataset.edit)
-        );
+        const product =
+          products.find(
+            p =>
+              String(p.id) ===
+              String(
+                button.dataset.editProduct
+              )
+          );
 
-        form(product);
+        productForm(product);
       };
 
     });
@@ -785,107 +1123,147 @@ function renderProducts() {
    FORM PRODUTO
 ============================================================ */
 
-function form(product = null) {
+function productForm(product = null) {
 
   const isNew = !product;
 
-  const p = product || {
+  const p =
+    product ||
+    {
+      id: "RF-" + Date.now(),
+      name: { pt: "" },
+      description: { pt: "" },
+      price: 0,
+      old_price: "",
+      stock: 0,
+      sku: "",
+      unit: "",
+      tag: { pt: "" },
+      category_id: "",
+      image_url: "",
+      active: true,
+      featured: false
+    };
 
-    id: "RF-" + Date.now(),
+  const categoryOptions =
+    categories
+      .map(category => `
 
-    name: { pt: "" },
-
-    description: { pt: "" },
-
-    price: 0,
-
-    old_price: "",
-
-    stock: 0,
-
-    sku: "",
-
-    unit: "",
-
-    tag: { pt: "" },
-
-    category_id: "",
-
-    image_url: null,
-
-    active: true,
-
-    featured: false
-
-  };
-
-  const categoryOptions = categories
-    .map(category => {
-
-      const categoryName =
-        current(category.name) || "Categoria";
-
-      return `
         <option
           value="${esc(category.id)}"
           ${
-            String(category.id) === String(p.category_id)
+            String(category.id) ===
+            String(p.category_id)
               ? "selected"
               : ""
           }
         >
-          ${esc(categoryName)}
+          ${esc(
+            localized(category.name)
+          )}
         </option>
-      `;
 
-    })
-    .join("");
+      `)
+      .join("");
 
   shell(`
 
     <div class="max-w-4xl">
 
-      <button id="back" class="text-sm text-[#414942]">
+      <button
+        id="backProducts"
+        class="text-sm text-[#414942]"
+      >
         ← Voltar
       </button>
 
-      <h1 class="font-[Montserrat] text-3xl font-bold mt-3">
-        ${isNew ? "Adicionar produto" : "Editar produto"}
+      <h1
+        class="font-[Montserrat]
+               text-3xl font-bold mt-3"
+      >
+        ${
+          isNew
+            ? "Adicionar produto"
+            : "Editar produto"
+        }
       </h1>
 
       <form
         id="productForm"
-        class="bg-white rounded-2xl p-6 shadow-sm mt-6 space-y-5"
+        class="bg-white rounded-2xl
+               p-6 shadow-sm mt-6
+               space-y-5"
       >
 
-        <div class="grid md:grid-cols-2 gap-4">
+        <div
+          class="grid md:grid-cols-2
+                 gap-4"
+        >
 
-          ${field("Nome do produto", "name_pt", p.name?.pt)}
+          ${field(
+            "Nome do produto",
+            "name_pt",
+            localized(p.name)
+          )}
 
-          ${field("Descrição", "desc_pt", p.description?.pt)}
+          ${field(
+            "Descrição",
+            "desc_pt",
+            localized(p.description)
+          )}
 
-          ${field("Preço (MZN)", "price", p.price, "number")}
+          ${field(
+            "Preço (MZN)",
+            "price",
+            p.price,
+            "number"
+          )}
 
-          ${field("Preço anterior", "old_price", p.old_price, "number")}
+          ${field(
+            "Preço anterior",
+            "old_price",
+            p.old_price || "",
+            "number"
+          )}
 
-          ${field("Stock", "stock", p.stock, "number")}
+          ${field(
+            "Stock",
+            "stock",
+            p.stock || 0,
+            "number"
+          )}
 
-          ${field("SKU", "sku", p.sku)}
+          ${field(
+            "SKU",
+            "sku",
+            p.sku || ""
+          )}
 
-          ${field("Unidade", "unit", p.unit)}
+          ${field(
+            "Unidade",
+            "unit",
+            p.unit || ""
+          )}
 
-          ${field("Tag", "tag_pt", p.tag?.pt)}
+          ${field(
+            "Tag",
+            "tag_pt",
+            localized(p.tag)
+          )}
 
         </div>
 
-        <label class="block text-sm font-semibold">
-
+        <label
+          class="block text-sm
+                 font-semibold"
+        >
           Categoria
 
           <select
             id="category_id"
             required
-            class="mt-1 w-full border rounded-xl p-3"
+            class="mt-1 w-full
+                   border rounded-xl p-3"
           >
 
             <option value="">
@@ -898,14 +1276,21 @@ function form(product = null) {
 
         </label>
 
-        <div class="border-2 border-dashed rounded-2xl p-5">
+        <div
+          class="border-2
+                 border-dashed
+                 rounded-2xl p-5"
+        >
 
-          <label class="block text-sm font-semibold">
+          <label
+            class="block text-sm
+                   font-semibold"
+          >
 
             Imagem do produto
 
             <input
-              id="image"
+              id="productImage"
               type="file"
               accept="image/jpeg,image/png,image/webp"
               class="mt-2 block w-full"
@@ -914,10 +1299,15 @@ function form(product = null) {
           </label>
 
           <img
-            id="preview"
+            id="productPreview"
             src="${esc(p.image_url || "")}"
-            class="mt-4 w-40 h-40 object-cover rounded-xl
-                   ${p.image_url ? "" : "hidden"}"
+            class="mt-4 w-40 h-40
+                   object-cover rounded-xl
+                   ${
+                     p.image_url
+                       ? ""
+                       : "hidden"
+                   }"
           >
 
         </div>
@@ -925,21 +1315,35 @@ function form(product = null) {
         <div class="flex gap-5">
 
           <label>
+
             <input
               id="active"
               type="checkbox"
-              ${p.active !== false ? "checked" : ""}
+              ${
+                p.active !== false
+                  ? "checked"
+                  : ""
+              }
             >
+
             Ativo
+
           </label>
 
           <label>
+
             <input
               id="featured"
               type="checkbox"
-              ${p.featured ? "checked" : ""}
+              ${
+                p.featured
+                  ? "checked"
+                  : ""
+              }
             >
+
             Destaque
+
           </label>
 
         </div>
@@ -947,8 +1351,11 @@ function form(product = null) {
         <div class="flex gap-3">
 
           <button
-            class="px-5 py-3 bg-[#00361a]
-                   text-white rounded-xl font-bold"
+            class="px-5 py-3
+                   bg-[#00361a]
+                   text-white
+                   rounded-xl
+                   font-bold"
           >
             Guardar
           </button>
@@ -958,9 +1365,11 @@ function form(product = null) {
               ? `
                 <button
                   type="button"
-                  id="delete"
-                  class="px-5 py-3 bg-red-50
-                         text-red-700 rounded-xl"
+                  id="deleteProduct"
+                  class="px-5 py-3
+                         bg-red-50
+                         text-red-700
+                         rounded-xl"
                 >
                   Excluir
                 </button>
@@ -975,53 +1384,70 @@ function form(product = null) {
     </div>
   `);
 
-  $("#back").onclick = renderProducts;
+  $("#backProducts").onclick =
+    renderProducts;
 
-  $("#image").onchange = e => {
+  $("#productImage").onchange =
+    e => {
 
-    const file = e.target.files[0];
+      const file =
+        e.target.files[0];
 
-    if (!file) return;
+      if (!file) return;
 
-    $("#preview").src =
-      URL.createObjectURL(file);
+      $("#productPreview").src =
+        URL.createObjectURL(file);
 
-    $("#preview").classList.remove("hidden");
-  };
+      $("#productPreview")
+        .classList
+        .remove("hidden");
+    };
 
-  $("#productForm").onsubmit = async e => {
+  $("#productForm").onsubmit =
+    async e => {
 
-    e.preventDefault();
+      e.preventDefault();
 
-    await saveProduct(p, isNew);
-  };
+      await saveProduct(
+        p,
+        isNew
+      );
+    };
 
   if (!isNew) {
 
-    $("#delete").onclick = async () => {
+    $("#deleteProduct").onclick =
+      async () => {
 
-      if (!confirm("Tem certeza que deseja excluir este produto?")) {
-        return;
-      }
+        if (
+          !confirm(
+            "Tem certeza que deseja excluir este produto?"
+          )
+        ) {
+          return;
+        }
 
-      const {
-        error
-      } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", p.id);
+        const {
+          error
+        } =
+          await supabase
+            .from("products")
+            .delete()
+            .eq("id", p.id);
 
-      if (error) {
-        toast(error.message);
-        return;
-      }
+        if (error) {
+          toast(error.message);
+          return;
+        }
 
-      toast("Produto excluído.");
+        toast(
+          "Produto excluído."
+        );
 
-      await load();
+        await load();
 
-      renderProducts();
-    };
+        renderProducts();
+      };
   }
 }
 
@@ -1029,10 +1455,19 @@ function form(product = null) {
    CAMPO
 ============================================================ */
 
-function field(label, id, value = "", type = "text") {
+function field(
+  label,
+  id,
+  value = "",
+  type = "text"
+) {
 
   return `
-    <label class="block text-sm font-semibold">
+
+    <label
+      class="block text-sm
+             font-semibold"
+    >
 
       ${esc(label)}
 
@@ -1040,10 +1475,12 @@ function field(label, id, value = "", type = "text") {
         id="${esc(id)}"
         type="${esc(type)}"
         value="${esc(value)}"
-        class="mt-1 w-full border rounded-xl p-3"
+        class="mt-1 w-full
+               border rounded-xl p-3"
       >
 
     </label>
+
   `;
 }
 
@@ -1051,103 +1488,1112 @@ function field(label, id, value = "", type = "text") {
    GUARDAR PRODUTO
 ============================================================ */
 
-async function saveProduct(p, isNew) {
+async function saveProduct(
+  p,
+  isNew
+) {
 
-  let image_url = p.image_url || null;
+  try {
 
-  const file = $("#image")?.files?.[0];
+    let image_url =
+      p.image_url || null;
 
-  if (file) {
+    const file =
+      $("#productImage")
+        ?.files?.[0];
 
-    image_url =
-      await uploadImage(file, "products");
+    if (file) {
 
-    if (!image_url) return;
-  }
+      image_url =
+        await uploadImage(
+          file,
+          "products"
+        );
+    }
 
-  const row = {
+    const row = {
 
-    id: p.id,
+      id: p.id,
 
-    name: {
-      pt: $("#name_pt").value
-    },
+      name: {
+        pt:
+          $("#name_pt").value
+      },
 
-    description: {
-      pt: $("#desc_pt").value
-    },
+      description: {
+        pt:
+          $("#desc_pt").value
+      },
 
-    category_id:
-      $("#category_id").value || null,
+      category_id:
+        $("#category_id").value ||
+        null,
 
-    price:
-      Number($("#price").value || 0),
+      price:
+        Number(
+          $("#price").value || 0
+        ),
 
-    old_price:
-      Number($("#old_price").value || 0) || null,
+      old_price:
+        Number(
+          $("#old_price").value || 0
+        ) || null,
 
-    stock:
-      Number($("#stock").value || 0),
+      stock:
+        Number(
+          $("#stock").value || 0
+        ),
 
-    sku:
-      $("#sku").value,
+      sku:
+        $("#sku").value.trim(),
 
-    unit:
-      $("#unit").value,
+      unit:
+        $("#unit").value.trim(),
 
-    tag: {
-      pt: $("#tag_pt").value
-    },
+      tag: {
+        pt:
+          $("#tag_pt").value
+      },
 
-    image_url,
+      image_url,
 
-    active:
-      $("#active").checked,
+      active:
+        $("#active").checked,
 
-    featured:
-      $("#featured").checked,
+      featured:
+        $("#featured").checked,
 
-    updated_at:
-      new Date().toISOString()
+      updated_at:
+        new Date().toISOString()
+    };
 
-  };
+    let result;
 
-  let result;
+    if (isNew) {
 
-  if (isNew) {
+      result =
+        await supabase
+          .from("products")
+          .insert(row);
 
-    result = await supabase
-      .from("products")
-      .insert(row);
+    } else {
 
-  } else {
+      result =
+        await supabase
+          .from("products")
+          .update(row)
+          .eq("id", p.id);
+    }
 
-    result = await supabase
-      .from("products")
-      .update(row)
-      .eq("id", p.id);
-
-  }
-
-  if (result.error) {
+    if (result.error) {
+      throw result.error;
+    }
 
     toast(
-      "Erro ao guardar: " +
-      result.error.message
+      isNew
+        ? "Produto adicionado com sucesso."
+        : "Produto atualizado com sucesso."
     );
 
-    return;
+    await load();
+
+    renderProducts();
+
+  } catch (error) {
+
+    console.error(error);
+
+    toast(
+      "Erro ao guardar produto: " +
+      error.message
+    );
   }
+}
 
-  toast(
-    isNew
-      ? "Produto adicionado com sucesso."
-      : "Produto atualizado com sucesso."
-  );
+/* ============================================================
+   RANCHO DO MÊS
+============================================================ */
 
-  await load();
+function renderBundles() {
 
-  renderProducts();
+  shell(`
+
+    <div>
+
+      <h1
+        class="font-[Montserrat]
+               text-3xl font-bold"
+      >
+        Rancho do Mês
+      </h1>
+
+      <p
+        class="text-sm
+               text-[#717971] mt-2"
+      >
+        Altere a imagem de cada Rancho do Mês.
+      </p>
+
+    </div>
+
+    ${
+      bundles.length
+        ? `
+          <div
+            class="grid sm:grid-cols-2
+                   xl:grid-cols-3
+                   gap-5 mt-6"
+          >
+
+            ${
+              bundles
+                .map(bundle => {
+
+                  const name =
+                    localized(
+                      bundle.name
+                    ) ||
+                    bundle.id;
+
+                  const image =
+                    imageUrl(bundle);
+
+                  return `
+
+                    <article
+                      class="bg-white
+                             rounded-2xl
+                             shadow-sm
+                             overflow-hidden"
+                    >
+
+                      <div
+                        class="h-48
+                               bg-[#eef5f7]
+                               relative"
+                      >
+
+                        ${
+                          image
+                            ? `
+                              <img
+                                src="${esc(image)}"
+                                class="w-full h-full
+                                       object-cover"
+                              >
+                            `
+                            : `
+                              <div
+                                class="w-full h-full
+                                       flex items-center
+                                       justify-center
+                                       text-[#717971]"
+                              >
+                                <span
+                                  class="material-symbols-outlined
+                                         text-5xl"
+                                >
+                                  image
+                                </span>
+                              </div>
+                            `
+                        }
+
+                      </div>
+
+                      <div class="p-5">
+
+                        <h2
+                          class="font-[Montserrat]
+                                 text-xl font-bold"
+                        >
+                          ${esc(name)}
+                        </h2>
+
+                        <p
+                          class="text-sm
+                                 text-[#717971]
+                                 mt-1"
+                        >
+                          ${
+                            esc(
+                              localized(
+                                bundle.description
+                              )
+                            )
+                          }
+                        </p>
+
+                        <p
+                          class="font-bold
+                                 text-[#00361a]
+                                 mt-3"
+                        >
+                          ${money(bundle.price)}
+                        </p>
+
+                        <button
+                          data-edit-bundle="${esc(
+                            bundle.id
+                          )}"
+                          class="mt-4 w-full
+                                 px-4 py-3
+                                 rounded-xl
+                                 bg-[#00361a]
+                                 text-white
+                                 font-bold"
+                        >
+                          Alterar imagem
+                        </button>
+
+                      </div>
+
+                    </article>
+
+                  `;
+
+                })
+                .join("")
+            }
+
+          </div>
+        `
+        : `
+          <div
+            class="mt-6 bg-white
+                   rounded-2xl p-6"
+          >
+            <p
+              class="text-[#717971]"
+            >
+              Nenhum Rancho do Mês encontrado.
+            </p>
+          </div>
+        `
+    }
+
+  `);
+
+  document
+    .querySelectorAll(
+      "[data-edit-bundle]"
+    )
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        const bundle =
+          bundles.find(
+            b =>
+              String(b.id) ===
+              String(
+                button.dataset.editBundle
+              )
+          );
+
+        if (bundle) {
+          bundleImageForm(bundle);
+        }
+      };
+
+    });
+}
+
+/* ============================================================
+   FORM IMAGEM RANCHO
+============================================================ */
+
+function bundleImageForm(bundle) {
+
+  const currentImage =
+    imageUrl(bundle);
+
+  shell(`
+
+    <div class="max-w-2xl">
+
+      <button
+        id="backBundles"
+        class="text-sm
+               text-[#414942]"
+      >
+        ← Voltar
+      </button>
+
+      <h1
+        class="font-[Montserrat]
+               text-3xl
+               font-bold mt-3"
+      >
+        ${esc(
+          localized(bundle.name)
+        )}
+      </h1>
+
+      <p
+        class="text-sm
+               text-[#717971] mt-2"
+      >
+        Altere a imagem deste Rancho do Mês.
+      </p>
+
+      <form
+        id="bundleImageForm"
+        class="bg-white
+               rounded-2xl
+               p-6 shadow-sm
+               mt-6"
+      >
+
+        ${
+          currentImage
+            ? `
+              <img
+                id="bundlePreview"
+                src="${esc(currentImage)}"
+                class="w-full
+                       max-h-80
+                       object-cover
+                       rounded-2xl
+                       mb-5"
+              >
+            `
+            : `
+              <div
+                id="bundlePreviewBox"
+                class="w-full h-64
+                       rounded-2xl
+                       bg-[#eef5f7]
+                       flex items-center
+                       justify-center
+                       mb-5"
+              >
+                <span
+                  class="material-symbols-outlined
+                         text-6xl
+                         text-[#717971]"
+                >
+                  image
+                </span>
+              </div>
+
+              <img
+                id="bundlePreview"
+                class="hidden w-full
+                       max-h-80
+                       object-cover
+                       rounded-2xl
+                       mb-5"
+              >
+            `
+        }
+
+        <label
+          class="block text-sm
+                 font-semibold"
+        >
+
+          Nova imagem
+
+          <input
+            id="bundleImage"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            class="mt-2 block w-full"
+          >
+
+        </label>
+
+        <button
+          class="mt-5 px-5 py-3
+                 bg-[#00361a]
+                 text-white
+                 rounded-xl
+                 font-bold"
+        >
+          Guardar imagem
+        </button>
+
+      </form>
+
+    </div>
+  `);
+
+  $("#backBundles").onclick =
+    renderBundles;
+
+  $("#bundleImage").onchange =
+    e => {
+
+      const file =
+        e.target.files[0];
+
+      if (!file) return;
+
+      const preview =
+        $("#bundlePreview");
+
+      preview.src =
+        URL.createObjectURL(file);
+
+      preview.classList.remove(
+        "hidden"
+      );
+
+      $("#bundlePreviewBox")
+        ?.classList
+        .add("hidden");
+    };
+
+  $("#bundleImageForm").onsubmit =
+    async e => {
+
+      e.preventDefault();
+
+      try {
+
+        const file =
+          $("#bundleImage")
+            .files?.[0];
+
+        if (!file) {
+
+          toast(
+            "Selecione uma imagem."
+          );
+
+          return;
+        }
+
+        toast(
+          "A carregar imagem..."
+        );
+
+        const url =
+          await uploadImage(
+            file,
+            "bundles"
+          );
+
+        const {
+          error
+        } =
+          await supabase
+            .from("bundles")
+            .update({
+              image_url: url,
+              updated_at:
+                new Date().toISOString()
+            })
+            .eq("id", bundle.id);
+
+        if (error) {
+          throw error;
+        }
+
+        toast(
+          "Imagem do Rancho atualizada."
+        );
+
+        await load();
+
+        renderBundles();
+
+      } catch (error) {
+
+        console.error(error);
+
+        toast(
+          "Erro: " +
+          error.message
+        );
+      }
+    };
+}
+
+/* ============================================================
+   CATEGORIAS
+============================================================ */
+
+function renderCategories() {
+
+  shell(`
+
+    <div>
+
+      <h1
+        class="font-[Montserrat]
+               text-3xl font-bold"
+      >
+        Categorias
+      </h1>
+
+      <p
+        class="text-sm
+               text-[#717971] mt-2"
+      >
+        Altere a imagem de cada categoria.
+      </p>
+
+    </div>
+
+    ${
+      categories.length
+        ? `
+          <div
+            class="grid sm:grid-cols-2
+                   lg:grid-cols-3
+                   xl:grid-cols-4
+                   gap-5 mt-6"
+          >
+
+            ${
+              categories
+                .map(category => {
+
+                  const name =
+                    localized(
+                      category.name
+                    );
+
+                  const image =
+                    imageUrl(category);
+
+                  return `
+
+                    <article
+                      class="bg-white
+                             rounded-2xl
+                             shadow-sm
+                             overflow-hidden"
+                    >
+
+                      <div
+                        class="h-40
+                               bg-[#eef5f7]"
+                      >
+
+                        ${
+                          image
+                            ? `
+                              <img
+                                src="${esc(image)}"
+                                class="w-full h-full
+                                       object-cover"
+                              >
+                            `
+                            : `
+                              <div
+                                class="w-full h-full
+                                       flex items-center
+                                       justify-center
+                                       text-[#717971]"
+                              >
+                                <span
+                                  class="material-symbols-outlined
+                                         text-5xl"
+                                >
+                                  image
+                                </span>
+                              </div>
+                            `
+                        }
+
+                      </div>
+
+                      <div class="p-4">
+
+                        <h2
+                          class="font-bold"
+                        >
+                          ${esc(name)}
+                        </h2>
+
+                        <button
+                          data-edit-category="${esc(
+                            category.id
+                          )}"
+                          class="mt-4 w-full
+                                 px-4 py-3
+                                 rounded-xl
+                                 bg-[#00361a]
+                                 text-white
+                                 font-bold"
+                        >
+                          Alterar imagem
+                        </button>
+
+                      </div>
+
+                    </article>
+
+                  `;
+
+                })
+                .join("")
+            }
+
+          </div>
+        `
+        : `
+          <div
+            class="mt-6 bg-white
+                   rounded-2xl p-6"
+          >
+
+            <p
+              class="text-[#717971]"
+            >
+              Nenhuma categoria encontrada.
+            </p>
+
+          </div>
+        `
+    }
+
+  `);
+
+  document
+    .querySelectorAll(
+      "[data-edit-category]"
+    )
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        const category =
+          categories.find(
+            c =>
+              String(c.id) ===
+              String(
+                button.dataset.editCategory
+              )
+          );
+
+        if (category) {
+          categoryImageForm(category);
+        }
+      };
+
+    });
+}
+
+/* ============================================================
+   FORM IMAGEM CATEGORIA
+============================================================ */
+
+function categoryImageForm(category) {
+
+  const currentImage =
+    imageUrl(category);
+
+  shell(`
+
+    <div class="max-w-2xl">
+
+      <button
+        id="backCategories"
+        class="text-sm
+               text-[#414942]"
+      >
+        ← Voltar
+      </button>
+
+      <h1
+        class="font-[Montserrat]
+               text-3xl
+               font-bold mt-3"
+      >
+        ${esc(
+          localized(category.name)
+        )}
+      </h1>
+
+      <p
+        class="text-sm
+               text-[#717971] mt-2"
+      >
+        Altere a imagem desta categoria.
+      </p>
+
+      <form
+        id="categoryImageForm"
+        class="bg-white
+               rounded-2xl
+               p-6 shadow-sm
+               mt-6"
+      >
+
+        ${
+          currentImage
+            ? `
+              <img
+                id="categoryPreview"
+                src="${esc(currentImage)}"
+                class="w-full h-64
+                       object-cover
+                       rounded-2xl
+                       mb-5"
+              >
+            `
+            : `
+              <div
+                id="categoryPreviewBox"
+                class="w-full h-64
+                       rounded-2xl
+                       bg-[#eef5f7]
+                       flex items-center
+                       justify-center
+                       mb-5"
+              >
+                <span
+                  class="material-symbols-outlined
+                         text-6xl
+                         text-[#717971]"
+                >
+                  image
+                </span>
+              </div>
+
+              <img
+                id="categoryPreview"
+                class="hidden w-full h-64
+                       object-cover
+                       rounded-2xl
+                       mb-5"
+              >
+            `
+        }
+
+        <label
+          class="block text-sm
+                 font-semibold"
+        >
+
+          Nova imagem
+
+          <input
+            id="categoryImage"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            class="mt-2 block w-full"
+          >
+
+        </label>
+
+        <button
+          class="mt-5 px-5 py-3
+                 bg-[#00361a]
+                 text-white
+                 rounded-xl
+                 font-bold"
+        >
+          Guardar imagem
+        </button>
+
+      </form>
+
+    </div>
+  `);
+
+  $("#backCategories").onclick =
+    renderCategories;
+
+  $("#categoryImage").onchange =
+    e => {
+
+      const file =
+        e.target.files[0];
+
+      if (!file) return;
+
+      const preview =
+        $("#categoryPreview");
+
+      preview.src =
+        URL.createObjectURL(file);
+
+      preview.classList.remove(
+        "hidden"
+      );
+
+      $("#categoryPreviewBox")
+        ?.classList
+        .add("hidden");
+    };
+
+  $("#categoryImageForm").onsubmit =
+    async e => {
+
+      e.preventDefault();
+
+      try {
+
+        const file =
+          $("#categoryImage")
+            .files?.[0];
+
+        if (!file) {
+
+          toast(
+            "Selecione uma imagem."
+          );
+
+          return;
+        }
+
+        toast(
+          "A carregar imagem..."
+        );
+
+        const url =
+          await uploadImage(
+            file,
+            "categories"
+          );
+
+        const {
+          error
+        } =
+          await supabase
+            .from("categories")
+            .update({
+              image_url: url,
+              updated_at:
+                new Date().toISOString()
+            })
+            .eq("id", category.id);
+
+        if (error) {
+          throw error;
+        }
+
+        toast(
+          "Imagem da categoria atualizada."
+        );
+
+        await load();
+
+        renderCategories();
+
+      } catch (error) {
+
+        console.error(error);
+
+        toast(
+          "Erro: " +
+          error.message
+        );
+      }
+    };
+}
+
+/* ============================================================
+   IMAGEM GRANDE DO TOPO
+============================================================ */
+
+function renderHeroSettings() {
+
+  const heroImage =
+    settings.hero_image || "";
+
+  shell(`
+
+    <div class="max-w-3xl">
+
+      <button
+        id="backSettings"
+        class="text-sm
+               text-[#414942]"
+      >
+        ← Voltar
+      </button>
+
+      <h1
+        class="font-[Montserrat]
+               text-3xl
+               font-bold mt-3"
+      >
+        Imagem grande do topo
+      </h1>
+
+      <p
+        class="text-sm
+               text-[#717971] mt-2"
+      >
+        Imagem principal da página inicial.
+      </p>
+
+      <form
+        id="heroForm"
+        class="bg-white
+               rounded-2xl
+               p-6 shadow-sm
+               mt-6"
+      >
+
+        ${
+          heroImage
+            ? `
+              <img
+                id="heroPreview"
+                src="${esc(heroImage)}"
+                class="w-full
+                       h-80
+                       object-cover
+                       rounded-2xl
+                       mb-5"
+              >
+            `
+            : `
+              <div
+                class="w-full h-80
+                       bg-[#eef5f7]
+                       rounded-2xl
+                       flex items-center
+                       justify-center
+                       mb-5"
+              >
+                <span
+                  class="material-symbols-outlined
+                         text-6xl
+                         text-[#717971]"
+                >
+                  image
+                </span>
+              </div>
+
+              <img
+                id="heroPreview"
+                class="hidden w-full
+                       h-80
+                       object-cover
+                       rounded-2xl
+                       mb-5"
+              >
+            `
+        }
+
+        <label
+          class="block text-sm
+                 font-semibold"
+        >
+
+          Nova imagem do topo
+
+          <input
+            id="heroImage"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            class="mt-2 block w-full"
+          >
+
+        </label>
+
+        <button
+          class="mt-5 px-5 py-3
+                 bg-[#00361a]
+                 text-white
+                 rounded-xl
+                 font-bold"
+        >
+          Guardar imagem
+        </button>
+
+      </form>
+
+    </div>
+  `);
+
+  $("#backSettings").onclick =
+    renderSettings;
+
+  $("#heroImage").onchange =
+    e => {
+
+      const file =
+        e.target.files[0];
+
+      if (!file) return;
+
+      const preview =
+        $("#heroPreview");
+
+      preview.src =
+        URL.createObjectURL(file);
+
+      preview.classList.remove(
+        "hidden"
+      );
+    };
+
+  $("#heroForm").onsubmit =
+    async e => {
+
+      e.preventDefault();
+
+      try {
+
+        const file =
+          $("#heroImage")
+            .files?.[0];
+
+        if (!file) {
+
+          toast(
+            "Selecione uma imagem."
+          );
+
+          return;
+        }
+
+        toast(
+          "A carregar imagem..."
+        );
+
+        const url =
+          await uploadImage(
+            file,
+            "hero"
+          );
+
+        const {
+          error
+        } =
+          await supabase
+            .from("site_settings")
+            .upsert({
+              key: "hero_image",
+              value: url,
+              updated_at:
+                new Date().toISOString()
+            });
+
+        if (error) {
+          throw error;
+        }
+
+        settings.hero_image =
+          url;
+
+        toast(
+          "Imagem do topo atualizada."
+        );
+
+        await load();
+
+        renderHeroSettings();
+
+      } catch (error) {
+
+        console.error(error);
+
+        toast(
+          "Erro: " +
+          error.message
+        );
+      }
+    };
 }
 
 /* ============================================================
@@ -1158,11 +2604,19 @@ function renderOrders() {
 
   shell(`
 
-    <h1 class="font-[Montserrat] text-3xl font-bold">
+    <h1
+      class="font-[Montserrat]
+             text-3xl font-bold"
+    >
       Pedidos
     </h1>
 
-    <div id="orders" class="mt-6"></div>
+    <div
+      id="orders"
+      class="mt-6"
+    >
+      A carregar...
+    </div>
 
   `);
 
@@ -1174,35 +2628,75 @@ async function loadOrders() {
   const {
     data,
     error
-  } = await supabase
-    .from("orders")
-    .select("*")
-    .order("created_at", {
-      ascending: false
-    });
+  } =
+    await supabase
+      .from("orders")
+      .select("*")
+      .order(
+        "created_at",
+        {
+          ascending: false
+        }
+      );
 
   if (error) {
 
-    $("#orders").textContent =
-      error.message;
+    $("#orders").innerHTML = `
+
+      <div
+        class="bg-red-50
+               text-red-700
+               rounded-xl p-4"
+      >
+        ${esc(error.message)}
+      </div>
+
+    `;
 
     return;
   }
 
   $("#orders").innerHTML = `
 
-    <div class="bg-white rounded-2xl overflow-x-auto">
+    <div
+      class="bg-white
+             rounded-2xl
+             overflow-x-auto"
+    >
 
-      <table class="w-full text-sm">
+      <table
+        class="w-full text-sm"
+      >
 
-        <thead class="bg-[#eef5f7]">
+        <thead
+          class="bg-[#eef5f7]"
+        >
 
           <tr>
 
-            <th class="p-4 text-left">Pedido</th>
-            <th class="p-4 text-left">Cliente</th>
-            <th class="p-4 text-left">Total</th>
-            <th class="p-4 text-left">Estado</th>
+            <th
+              class="p-4 text-left"
+            >
+              Pedido
+            </th>
+
+            <th
+              class="p-4 text-left"
+            >
+              Cliente
+            </th>
+
+            <th
+              class="p-4 text-left"
+            >
+              Total
+            </th>
+
+            <th
+              class="p-4 text-left"
+            >
+              Estado
+            </th>
 
           </tr>
 
@@ -1210,89 +2704,145 @@ async function loadOrders() {
 
         <tbody>
 
-          ${(data || []).map(o => `
+          ${
+            (data || [])
+              .map(order => `
 
-            <tr class="border-t">
-
-              <td class="p-4 font-bold">
-                ${esc(o.order_number)}
-              </td>
-
-              <td class="p-4">
-                ${esc(o.customer_name)}
-                <br>
-                <span class="text-xs">
-                  ${esc(o.customer_phone)}
-                </span>
-              </td>
-
-              <td class="p-4 font-bold">
-                ${formatMoney(o.total)}
-              </td>
-
-              <td class="p-4">
-
-                <select
-                  data-status="${esc(o.id)}"
-                  class="border rounded-lg p-2"
+                <tr
+                  class="border-t"
                 >
 
-                  <option value="new">Novo</option>
-                  <option value="confirmed">Confirmado</option>
-                  <option value="preparing">Em preparação</option>
-                  <option value="ready">Pronto</option>
-                  <option value="delivered">Entregue</option>
-                  <option value="cancelled">Cancelado</option>
+                  <td
+                    class="p-4 font-bold"
+                  >
+                    ${esc(
+                      order.order_number ||
+                      order.id
+                    )}
+                  </td>
 
-                </select>
+                  <td class="p-4">
 
-              </td>
+                    ${esc(
+                      order.customer_name
+                    )}
 
-            </tr>
+                    <br>
 
-          `).join("")}
+                    <span
+                      class="text-xs"
+                    >
+                      ${esc(
+                        order.customer_phone
+                      )}
+                    </span>
+
+                  </td>
+
+                  <td
+                    class="p-4 font-bold"
+                  >
+                    ${money(
+                      order.total
+                    )}
+                  </td>
+
+                  <td class="p-4">
+
+                    <select
+                      data-status="${esc(
+                        order.id
+                      )}"
+                      class="border
+                             rounded-lg
+                             p-2"
+                    >
+
+                      <option value="new">
+                        Novo
+                      </option>
+
+                      <option value="confirmed">
+                        Confirmado
+                      </option>
+
+                      <option value="preparing">
+                        Em preparação
+                      </option>
+
+                      <option value="ready">
+                        Pronto
+                      </option>
+
+                      <option value="delivered">
+                        Entregue
+                      </option>
+
+                      <option value="cancelled">
+                        Cancelado
+                      </option>
+
+                    </select>
+
+                  </td>
+
+                </tr>
+
+              `)
+              .join("")
+          }
 
         </tbody>
 
       </table>
 
     </div>
+
   `;
 
-  for (
-    const select
-    of document.querySelectorAll("[data-status]")
-  ) {
+  document
+    .querySelectorAll(
+      "[data-status]"
+    )
+    .forEach(select => {
 
-    const row = data.find(
-      x =>
-        String(x.id) ===
-        String(select.dataset.status)
-    );
+      const row =
+        (data || []).find(
+          x =>
+            String(x.id) ===
+            String(
+              select.dataset.status
+            )
+        );
 
-    if (!row) continue;
+      if (!row) return;
 
-    select.value = row.status;
+      select.value =
+        row.status || "new";
 
-    select.onchange = async () => {
+      select.onchange =
+        async () => {
 
-      const {
-        error
-      } = await supabase
-        .from("orders")
-        .update({
-          status: select.value,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", row.id);
+          const {
+            error
+          } =
+            await supabase
+              .from("orders")
+              .update({
+                status:
+                  select.value,
+                updated_at:
+                  new Date().toISOString()
+              })
+              .eq("id", row.id);
 
-      toast(
-        error
-          ? error.message
-          : "Estado atualizado."
-      );
-    };
-  }
+          toast(
+            error
+              ? error.message
+              : "Estado atualizado."
+          );
+        };
+    });
 }
 
 /* ============================================================
@@ -1301,749 +2851,316 @@ async function loadOrders() {
 
 function renderSettings() {
 
-  const heroImage =
-    typeof settings.hero_image === "string"
-      ? settings.hero_image
-      : "";
-
   const whatsapp =
-    typeof settings.whatsapp === "string"
-      ? settings.whatsapp
-      : "+258840000000";
+    settings.whatsapp || "";
 
   const email =
-    typeof settings.contact_email === "string"
-      ? settings.contact_email
-      : "contato@ranchoflexivel.co.mz";
+    settings.contact_email || "";
 
   const defaultLanguage =
-    typeof settings.default_language === "string"
-      ? settings.default_language
-      : "pt";
+    settings.default_language ||
+    "pt";
 
   shell(`
 
-    <div class="max-w-5xl">
+    <div>
 
-      <div>
+      <h1
+        class="font-[Montserrat]
+               text-3xl font-bold"
+      >
+        Configurações
+      </h1>
 
-        <p class="text-sm text-[#717971]">
-          Configurações do site
-        </p>
+      <p
+        class="text-sm
+               text-[#717971] mt-2"
+      >
+        Gerir as configurações do site.
+      </p>
 
-        <h1 class="font-[Montserrat] text-3xl font-bold">
-          Configurações
-        </h1>
+    </div>
+
+    <div
+      class="bg-white
+             rounded-2xl p-6
+             mt-6 max-w-3xl"
+    >
+
+      <div
+        class="grid md:grid-cols-2
+               gap-3 mb-6"
+      >
+
+        <button
+          id="heroButton"
+          class="p-5
+                 border rounded-2xl
+                 text-left
+                 hover:bg-[#f5f7f6]"
+        >
+
+          <span
+            class="material-symbols-outlined
+                   text-[#00361a]"
+          >
+            panorama
+          </span>
+
+          <h2
+            class="font-bold mt-2"
+          >
+            Imagem grande do topo
+          </h2>
+
+          <p
+            class="text-sm
+                   text-[#717971]"
+          >
+            Alterar a imagem principal.
+          </p>
+
+        </button>
+
+        <button
+          id="bundlesButton"
+          class="p-5
+                 border rounded-2xl
+                 text-left
+                 hover:bg-[#f5f7f6]"
+        >
+
+          <span
+            class="material-symbols-outlined
+                   text-[#00361a]"
+          >
+            shopping_basket
+          </span>
+
+          <h2
+            class="font-bold mt-2"
+          >
+            Rancho do Mês
+          </h2>
+
+          <p
+            class="text-sm
+                   text-[#717971]"
+          >
+            Alterar imagens dos Ranchos.
+          </p>
+
+        </button>
+
+        <button
+          id="categoriesButton"
+          class="p-5
+                 border rounded-2xl
+                 text-left
+                 hover:bg-[#f5f7f6]"
+        >
+
+          <span
+            class="material-symbols-outlined
+                   text-[#00361a]"
+          >
+            category
+          </span>
+
+          <h2
+            class="font-bold mt-2"
+          >
+            Categorias
+          </h2>
+
+          <p
+            class="text-sm
+                   text-[#717971]"
+          >
+            Alterar imagens das categorias.
+          </p>
+
+        </button>
 
       </div>
 
-
-      <!-- ==================================================
-           IMAGEM GRANDE DO TOPO
-      =================================================== -->
-
-      <section
-        class="bg-white rounded-2xl p-6 mt-6 shadow-sm"
+      <form
+        id="settingsForm"
+        class="space-y-4"
       >
 
-        <h2 class="font-[Montserrat] text-xl font-bold">
-          Imagem grande do topo
-        </h2>
+        ${field(
+          "WhatsApp",
+          "wa",
+          whatsapp
+        )}
 
-        <p class="text-sm text-[#717971] mt-1">
-          Imagem principal da página inicial.
-        </p>
+        ${field(
+          "E-mail",
+          "email",
+          email
+        )}
 
-        <div
-          class="mt-5 border-2 border-dashed
-                 rounded-2xl p-5"
+        <label
+          class="block text-sm
+                 font-semibold"
         >
 
-          <input
-            id="heroImageInput"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            class="block w-full"
+          Idioma padrão
+
+          <select
+            id="defaultLang"
+            class="mt-1 w-full
+                   border rounded-xl p-3"
           >
 
-          <div
-            class="mt-4 rounded-2xl overflow-hidden
-                   bg-[#eef5f7] aspect-[16/6]"
-          >
-
-            <img
-              id="heroPreview"
-              src="${esc(heroImage)}"
-              class="w-full h-full object-cover
-                     ${heroImage ? "" : "hidden"}"
+            <option
+              value="pt"
+              ${
+                defaultLanguage === "pt"
+                  ? "selected"
+                  : ""
+              }
             >
+              Português
+            </option>
 
-            <div
-              id="heroEmpty"
-              class="w-full h-full flex items-center
-                     justify-center text-[#717971]
-                     ${heroImage ? "hidden" : ""}"
+            <option
+              value="en"
+              ${
+                defaultLanguage === "en"
+                  ? "selected"
+                  : ""
+              }
             >
-              Nenhuma imagem definida
-            </div>
+              English
+            </option>
 
-          </div>
+            <option
+              value="fr"
+              ${
+                defaultLanguage === "fr"
+                  ? "selected"
+                  : ""
+              }
+            >
+              Français
+            </option>
 
-          <button
-            id="saveHero"
-            type="button"
-            class="mt-4 px-5 py-3
-                   bg-[#00361a] text-white
-                   rounded-xl font-bold"
-          >
-            Guardar imagem do topo
-          </button>
+            <option
+              value="zh"
+              ${
+                defaultLanguage === "zh"
+                  ? "selected"
+                  : ""
+              }
+            >
+              中文
+            </option>
 
-        </div>
+            <option
+              value="chg"
+              ${
+                defaultLanguage === "chg"
+                  ? "selected"
+                  : ""
+              }
+            >
+              Changana
+            </option>
 
-      </section>
+          </select>
 
+        </label>
 
-      <!-- ==================================================
-           RANCHO DO MÊS
-      =================================================== -->
-
-      <section
-        class="bg-white rounded-2xl p-6 mt-6 shadow-sm"
-      >
-
-        <h2 class="font-[Montserrat] text-xl font-bold">
-          Rancho do Mês
-        </h2>
-
-        <p class="text-sm text-[#717971] mt-1">
-          Altere a imagem de cada Rancho do Mês.
-        </p>
-
-        <div
-          id="bundlesAdmin"
-          class="grid md:grid-cols-2 gap-5 mt-5"
+        <button
+          class="px-5 py-3
+                 bg-[#00361a]
+                 text-white
+                 rounded-xl
+                 font-bold"
         >
+          Guardar configurações
+        </button>
 
-          ${
-            bundles.length
-              ? bundles.map(bundle => bundleImageCard(bundle)).join("")
-              : `
-                <div
-                  class="md:col-span-2
-                         border rounded-2xl p-6
-                         text-center text-[#717971]"
-                >
-                  Nenhum Rancho do Mês encontrado.
-                </div>
-              `
-          }
-
-        </div>
-
-      </section>
-
-
-      <!-- ==================================================
-           CATEGORIAS
-      =================================================== -->
-
-      <section
-        class="bg-white rounded-2xl p-6 mt-6 shadow-sm"
-      >
-
-        <h2 class="font-[Montserrat] text-xl font-bold">
-          Categorias
-        </h2>
-
-        <p class="text-sm text-[#717971] mt-1">
-          Altere a imagem de cada categoria.
-        </p>
-
-        <div
-          id="categoriesAdmin"
-          class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5"
-        >
-
-          ${
-            categories.length
-              ? categories.map(category =>
-                  categoryImageCard(category)
-                ).join("")
-              : `
-                <div
-                  class="sm:col-span-2 lg:col-span-3
-                         border rounded-2xl p-6
-                         text-center text-[#717971]"
-                >
-                  Nenhuma categoria encontrada.
-                </div>
-              `
-          }
-
-        </div>
-
-      </section>
-
-
-      <!-- ==================================================
-           CONTACTO
-      =================================================== -->
-
-      <section
-        class="bg-white rounded-2xl p-6 mt-6 shadow-sm"
-      >
-
-        <h2 class="font-[Montserrat] text-xl font-bold">
-          Contacto
-        </h2>
-
-        <form id="settingsForm" class="mt-5 space-y-4">
-
-          ${field(
-            "WhatsApp",
-            "wa",
-            whatsapp
-          )}
-
-          ${field(
-            "E-mail",
-            "email",
-            email
-          )}
-
-          <label class="block text-sm font-semibold">
-
-            Idioma padrão
-
-            <select
-              id="defaultLang"
-              class="mt-1 w-full border rounded-xl p-3"
-            >
-
-              <option
-                value="pt"
-                ${defaultLanguage === "pt" ? "selected" : ""}
-              >
-                Português
-              </option>
-
-              <option
-                value="en"
-                ${defaultLanguage === "en" ? "selected" : ""}
-              >
-                English
-              </option>
-
-              <option
-                value="fr"
-                ${defaultLanguage === "fr" ? "selected" : ""}
-              >
-                Français
-              </option>
-
-              <option
-                value="zh"
-                ${defaultLanguage === "zh" ? "selected" : ""}
-              >
-                中文
-              </option>
-
-              <option
-                value="chg"
-                ${defaultLanguage === "chg" ? "selected" : ""}
-              >
-                Changana
-              </option>
-
-            </select>
-
-          </label>
-
-          <button
-            class="px-5 py-3
-                   bg-[#00361a]
-                   text-white
-                   rounded-xl font-bold"
-          >
-            Guardar configurações
-          </button>
-
-        </form>
-
-      </section>
+      </form>
 
     </div>
   `);
 
+  $("#heroButton").onclick =
+    renderHeroSettings;
 
-  /* ==========================================================
-     HERO PREVIEW
-  ========================================================== */
+  $("#bundlesButton").onclick =
+    renderBundles;
 
-  $("#heroImageInput").onchange = e => {
-
-    const file = e.target.files[0];
-
-    if (!file) return;
-
-    $("#heroPreview").src =
-      URL.createObjectURL(file);
-
-    $("#heroPreview").classList.remove("hidden");
-    $("#heroEmpty").classList.add("hidden");
-  };
-
-
-  $("#saveHero").onclick =
-    async () => {
-
-      const file =
-        $("#heroImageInput").files[0];
-
-      if (!file) {
-
-        toast("Selecione uma imagem primeiro.");
-
-        return;
-      }
-
-      toast("A enviar imagem...");
-
-      const url =
-        await uploadImage(file, "hero");
-
-      if (!url) return;
-
-      const saved =
-        await saveSetting(
-          "hero_image",
-          url
-        );
-
-      if (!saved) return;
-
-      settings.hero_image = url;
-
-      toast("Imagem grande do topo atualizada.");
-
-      setTimeout(() => {
-        renderSettings();
-      }, 500);
-    };
-
-
-  /* ==========================================================
-     CONTACTOS
-  ========================================================== */
+  $("#categoriesButton").onclick =
+    renderCategories;
 
   $("#settingsForm").onsubmit =
     async e => {
 
       e.preventDefault();
 
-      const values = [
-        [
-          "whatsapp",
-          $("#wa").value
-        ],
-        [
-          "contact_email",
-          $("#email").value
-        ],
-        [
-          "default_language",
-          $("#defaultLang").value
-        ]
-      ];
+      try {
 
-      for (const [key, value] of values) {
+        const values = [
 
-        const saved =
-          await saveSetting(key, value);
+          [
+            "whatsapp",
+            $("#wa").value.trim()
+          ],
 
-        if (!saved) return;
+          [
+            "contact_email",
+            $("#email").value.trim()
+          ],
 
-        settings[key] = value;
+          [
+            "default_language",
+            $("#defaultLang").value
+          ]
+
+        ];
+
+        for (
+          const [key, value]
+          of values
+        ) {
+
+          const {
+            error
+          } =
+            await supabase
+              .from("site_settings")
+              .upsert({
+                key,
+                value,
+                updated_at:
+                  new Date().toISOString()
+              });
+
+          if (error) {
+            throw error;
+          }
+        }
+
+        toast(
+          "Configurações guardadas."
+        );
+
+        await load();
+
+      } catch (error) {
+
+        console.error(error);
+
+        toast(
+          "Erro: " +
+          error.message
+        );
       }
-
-      toast("Configurações guardadas.");
     };
-
-
-  /* ==========================================================
-     BOTÕES DOS BUNDLES
-  ========================================================== */
-
-  document
-    .querySelectorAll("[data-bundle-image]")
-    .forEach(input => {
-
-      input.onchange = e => {
-
-        const file = e.target.files[0];
-
-        if (!file) return;
-
-        const id =
-          input.dataset.bundleImage;
-
-        const preview =
-          document.querySelector(
-            `[data-bundle-preview="${CSS.escape(id)}"]`
-          );
-
-        if (preview) {
-
-          preview.src =
-            URL.createObjectURL(file);
-
-          preview.classList.remove("hidden");
-        }
-      };
-    });
-
-
-  document
-    .querySelectorAll("[data-save-bundle]")
-    .forEach(button => {
-
-      button.onclick =
-        async () => {
-
-          const id =
-            button.dataset.saveBundle;
-
-          const input =
-            document.querySelector(
-              `[data-bundle-image="${CSS.escape(id)}"]`
-            );
-
-          const file =
-            input?.files?.[0];
-
-          if (!file) {
-
-            toast("Selecione uma nova imagem.");
-
-            return;
-          }
-
-          toast("A enviar imagem...");
-
-          const url =
-            await uploadImage(
-              file,
-              "bundles"
-            );
-
-          if (!url) return;
-
-          const {
-            error
-          } = await supabase
-            .from("bundles")
-            .update({
-              image_url: url,
-              updated_at:
-                new Date().toISOString()
-            })
-            .eq("id", id);
-
-          if (error) {
-
-            toast(
-              "Erro ao guardar: " +
-              error.message
-            );
-
-            return;
-          }
-
-          toast("Imagem do Rancho do Mês atualizada.");
-
-          await load();
-
-          renderSettings();
-        };
-    });
-
-
-  /* ==========================================================
-     BOTÕES DAS CATEGORIAS
-  ========================================================== */
-
-  document
-    .querySelectorAll("[data-category-image]")
-    .forEach(input => {
-
-      input.onchange = e => {
-
-        const file = e.target.files[0];
-
-        if (!file) return;
-
-        const id =
-          input.dataset.categoryImage;
-
-        const preview =
-          document.querySelector(
-            `[data-category-preview="${CSS.escape(id)}"]`
-          );
-
-        if (preview) {
-
-          preview.src =
-            URL.createObjectURL(file);
-
-          preview.classList.remove("hidden");
-        }
-      };
-    });
-
-
-  document
-    .querySelectorAll("[data-save-category]")
-    .forEach(button => {
-
-      button.onclick =
-        async () => {
-
-          const id =
-            button.dataset.saveCategory;
-
-          const input =
-            document.querySelector(
-              `[data-category-image="${CSS.escape(id)}"]`
-            );
-
-          const file =
-            input?.files?.[0];
-
-          if (!file) {
-
-            toast("Selecione uma nova imagem.");
-
-            return;
-          }
-
-          toast("A enviar imagem...");
-
-          const url =
-            await uploadImage(
-              file,
-              "categories"
-            );
-
-          if (!url) return;
-
-          const {
-            error
-          } = await supabase
-            .from("categories")
-            .update({
-              image_url: url,
-              updated_at:
-                new Date().toISOString()
-            })
-            .eq("id", id);
-
-          if (error) {
-
-            toast(
-              "Erro ao guardar: " +
-              error.message
-            );
-
-            return;
-          }
-
-          toast("Imagem da categoria atualizada.");
-
-          await load();
-
-          renderSettings();
-        };
-    });
-}
-
-/* ============================================================
-   CARD — RANCHO DO MÊS
-============================================================ */
-
-function bundleImageCard(bundle) {
-
-  const image =
-    bundle.image_url || "";
-
-  const name =
-    current(bundle.name) ||
-    bundle.id ||
-    "Rancho";
-
-  return `
-
-    <div class="border rounded-2xl overflow-hidden">
-
-      <div class="h-44 bg-[#eef5f7]">
-
-        ${
-          image
-            ? `
-              <img
-                data-bundle-preview="${esc(bundle.id)}"
-                src="${esc(image)}"
-                class="w-full h-full object-cover"
-                alt="${esc(name)}"
-              >
-            `
-            : `
-              <div
-                data-bundle-preview="${esc(bundle.id)}"
-                class="w-full h-full flex items-center
-                       justify-center text-[#717971]"
-              >
-                <span class="material-symbols-outlined text-4xl">
-                  image
-                </span>
-              </div>
-            `
-        }
-
-      </div>
-
-      <div class="p-4">
-
-        <h3 class="font-bold text-lg">
-          ${esc(name)}
-        </h3>
-
-        <p class="text-sm text-[#717971] mt-1">
-          ${formatMoney(bundle.price)}
-        </p>
-
-        <input
-          data-bundle-image="${esc(bundle.id)}"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          class="mt-4 block w-full text-sm"
-        >
-
-        <button
-          data-save-bundle="${esc(bundle.id)}"
-          class="mt-4 w-full px-4 py-3
-                 bg-[#00361a] text-white
-                 rounded-xl font-bold"
-        >
-          Guardar imagem
-        </button>
-
-      </div>
-
-    </div>
-  `;
-}
-
-/* ============================================================
-   CARD — CATEGORIA
-============================================================ */
-
-function categoryImageCard(category) {
-
-  const image =
-    category.image_url || "";
-
-  const name =
-    current(category.name) ||
-    "Categoria";
-
-  return `
-
-    <div class="border rounded-2xl overflow-hidden">
-
-      <div class="h-40 bg-[#eef5f7]">
-
-        ${
-          image
-            ? `
-              <img
-                data-category-preview="${esc(category.id)}"
-                src="${esc(image)}"
-                class="w-full h-full object-cover"
-                alt="${esc(name)}"
-              >
-            `
-            : `
-              <div
-                data-category-preview="${esc(category.id)}"
-                class="w-full h-full flex items-center
-                       justify-center text-[#717971]"
-              >
-                <span class="material-symbols-outlined text-4xl">
-                  image
-                </span>
-              </div>
-            `
-        }
-
-      </div>
-
-      <div class="p-4">
-
-        <h3 class="font-bold">
-          ${esc(name)}
-        </h3>
-
-        <input
-          data-category-image="${esc(category.id)}"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          class="mt-4 block w-full text-sm"
-        >
-
-        <button
-          data-save-category="${esc(category.id)}"
-          class="mt-4 w-full px-4 py-3
-                 bg-[#00361a] text-white
-                 rounded-xl font-bold"
-        >
-          Guardar imagem
-        </button>
-
-      </div>
-
-    </div>
-  `;
-}
-
-/* ============================================================
-   GUARDAR CONFIGURAÇÃO
-============================================================ */
-
-async function saveSetting(key, value) {
-
-  const {
-    error
-  } = await supabase
-    .from("site_settings")
-    .upsert({
-      key,
-      value,
-      updated_at:
-        new Date().toISOString()
-    });
-
-  if (error) {
-
-    toast(
-      "Erro ao guardar: " +
-      error.message
-    );
-
-    return false;
-  }
-
-  return true;
 }
 
 /* ============================================================
