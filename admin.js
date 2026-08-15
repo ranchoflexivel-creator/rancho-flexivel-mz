@@ -1,13 +1,34 @@
 import { supabase } from "./data.js";
 
-const $ = (s) => document.querySelector(s);
+const $ = (selector) => document.querySelector(selector);
 
-const toast = (message) => {
-  const t = $("#toast");
+let session = null;
+let products = [];
+let categories = [];
+
+/* =========================
+   UTILITÁRIOS
+========================= */
+
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (m) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[m]));
+}
+
+function toast(message) {
+  let t = $("#toast");
 
   if (!t) {
-    alert(message);
-    return;
+    t = document.createElement("div");
+    t.id = "toast";
+    t.className =
+      "fixed bottom-5 right-5 z-50 bg-[#00361a] text-white px-5 py-3 rounded-xl shadow-lg";
+    document.body.appendChild(t);
   }
 
   t.textContent = message;
@@ -15,147 +36,86 @@ const toast = (message) => {
 
   setTimeout(() => {
     t.classList.add("hidden");
-  }, 2500);
-};
-
-let session = null;
-let products = [];
-let categories = [];
-
-
-/* =========================================================
-   ESCAPE HTML
-========================================================= */
-
-function esc(value) {
-  return String(value ?? "").replace(
-    /[&<>"']/g,
-    (m) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      })[m]
-  );
+  }, 3000);
 }
 
-
-/* =========================================================
-   INICIALIZAÇÃO
-========================================================= */
+/* =========================
+   AUTENTICAÇÃO
+========================= */
 
 async function boot() {
-  try {
+  if (!supabase) {
+    login("Supabase não está configurado.");
+    return;
+  }
 
-    if (!supabase) {
-      login(
-        "Configure o Supabase para ativar a administração real."
-      );
-      return;
-    }
+  const {
+    data: sessionData,
+    error: sessionError
+  } = await supabase.auth.getSession();
 
-    const {
-      data,
-      error
-    } = await supabase.auth.getSession();
+  if (sessionError) {
+    login("Erro ao obter a sessão: " + sessionError.message);
+    return;
+  }
 
-    if (error) {
-      console.error("Erro ao obter sessão:", error);
+  session = sessionData?.session;
 
-      login(
-        "Erro ao verificar a sessão: " +
-        error.message
-      );
+  if (!session) {
+    login();
+    return;
+  }
 
-      return;
-    }
+  /*
+   * VERIFICA ADMIN
+   */
+  const {
+    data: profile,
+    error: profileError
+  } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", session.user.id)
+    .maybeSingle();
 
-    session = data.session;
-
-    if (!session) {
-      login();
-      return;
-    }
-
-
-    /* VERIFICAR ADMIN */
-
-    const {
-      data: profile,
-      error: profileError
-    } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", session.user.id)
-      .single();
-
-
-    if (profileError) {
-
-      console.error(
-        "Erro ao verificar conta:",
-        profileError
-      );
-
-      login(
-        "Erro ao verificar a conta de administrador: " +
-        profileError.message
-      );
-
-      return;
-    }
-
-
-    if (
-      !profile ||
-      String(profile.role).toLowerCase() !== "admin"
-    ) {
-
-      await supabase.auth.signOut();
-
-      login(
-        "Esta conta não tem permissão de administrador."
-      );
-
-      return;
-    }
-
-
-    /* CARREGAR DADOS */
-
-    await load();
-
-    render();
-
-  } catch (error) {
-
-    console.error(
-      "Erro ao iniciar administração:",
-      error
+  if (profileError) {
+    login(
+      "Erro ao verificar a conta de administrador: " +
+      profileError.message
     );
+    return;
+  }
+
+  if (!profile || profile.role !== "admin") {
+    await supabase.auth.signOut();
 
     login(
-      "Ocorreu um erro ao iniciar a área administrativa."
+      "Esta conta não tem permissão de administrador."
     );
+
+    return;
   }
+
+  /*
+   * CARREGAR DADOS
+   */
+  await load();
+
+  render();
 }
 
-
-/* =========================================================
+/* =========================
    LOGIN
-========================================================= */
+========================= */
 
-function login(msg = "") {
-
+function login(message = "") {
   document.body.innerHTML = `
-
     <main class="min-h-screen flex items-center justify-center p-4">
 
       <section class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
 
-        <div class="w-14 h-14 bg-[#00361a] text-white rounded-2xl flex items-center justify-center mx-auto">
+        <div class="w-14 h-14 bg-[#00361a] text-white rounded-2xl
+                    flex items-center justify-center mx-auto">
 
           <span class="material-symbols-outlined">
             admin_panel_settings
@@ -163,35 +123,28 @@ function login(msg = "") {
 
         </div>
 
-
         <h1 class="font-[Montserrat] text-2xl font-bold text-center mt-5">
           Rancho Flexível
         </h1>
-
 
         <p class="text-center text-sm text-[#414942] mt-2">
           Área administrativa
         </p>
 
-
         ${
-          msg
+          message
             ? `
-              <div class="mt-4 bg-[#fff4e5] text-[#673b00] p-3 rounded-xl text-sm">
-                ${esc(msg)}
+              <div class="mt-4 bg-[#fff4e5] text-[#673b00]
+                          p-3 rounded-xl text-sm">
+                ${esc(message)}
               </div>
             `
             : ""
         }
 
-
-        <form
-          id="login"
-          class="mt-6 space-y-4"
-        >
+        <form id="login" class="mt-6 space-y-4">
 
           <label class="block text-sm font-semibold">
-
             E-mail
 
             <input
@@ -200,12 +153,9 @@ function login(msg = "") {
               required
               class="mt-1 w-full border rounded-xl p-3"
             >
-
           </label>
 
-
           <label class="block text-sm font-semibold">
-
             Senha
 
             <input
@@ -214,18 +164,17 @@ function login(msg = "") {
               required
               class="mt-1 w-full border rounded-xl p-3"
             >
-
           </label>
 
-
           <button
-            class="w-full py-3 bg-[#00361a] text-white rounded-xl font-bold"
+            type="submit"
+            class="w-full py-3 bg-[#00361a]
+                   text-white rounded-xl font-bold"
           >
             Entrar
           </button>
 
         </form>
-
 
         <p class="text-xs text-[#717971] mt-5">
           A autenticação é feita pelo Supabase.
@@ -237,18 +186,11 @@ function login(msg = "") {
     </main>
   `;
 
-
   $("#login").onsubmit = async (e) => {
-
     e.preventDefault();
 
-
-    const email =
-      $("#email").value.trim();
-
-    const password =
-      $("#password").value;
-
+    const email = $("#email").value;
+    const password = $("#password").value;
 
     const {
       error
@@ -257,105 +199,106 @@ function login(msg = "") {
       password
     });
 
-
     if (error) {
       login(error.message);
       return;
     }
 
-
     location.reload();
   };
 }
 
-
-/* =========================================================
-   CARREGAR PRODUTOS E CATEGORIAS
-========================================================= */
+/* =========================
+   CARREGAR DADOS
+========================= */
 
 async function load() {
 
-  /* PRODUTOS */
+  /*
+   * PRODUTOS
+   */
 
-  const productsResult =
-    await supabase
-      .from("products")
-      .select("*")
-      .order("sort_order");
+  const {
+    data: productData,
+    error: productError
+  } = await supabase
+    .from("products")
+    .select("*")
+    .order("sort_order", {
+      ascending: true,
+      nullsFirst: false
+    });
 
-
-  if (productsResult.error) {
-
+  if (productError) {
     console.error(
       "Erro ao carregar produtos:",
-      productsResult.error
+      productError
     );
 
     toast(
       "Erro ao carregar produtos: " +
-      productsResult.error.message
+      productError.message
     );
 
+    products = [];
   } else {
-
-    products =
-      productsResult.data || [];
+    products = productData || [];
   }
 
+  /*
+   * CATEGORIAS
+   *
+   * IMPORTANTE:
+   * Não usamos demoCategories.
+   * As categorias vêm diretamente do Supabase.
+   */
 
-  /* CATEGORIAS */
+  const {
+    data: categoryData,
+    error: categoryError
+  } = await supabase
+    .from("categories")
+    .select("*")
+    .order("sort_order", {
+      ascending: true,
+      nullsFirst: false
+    });
 
-  const categoriesResult =
-    await supabase
-      .from("categories")
-      .select("*")
-      .order("sort_order");
-
-
-  if (categoriesResult.error) {
-
+  if (categoryError) {
     console.error(
       "Erro ao carregar categorias:",
-      categoriesResult.error
-    );
-
-    toast(
-      "Erro ao carregar categorias: " +
-      categoriesResult.error.message
+      categoryError
     );
 
     categories = [];
 
+    toast(
+      "Erro ao carregar categorias: " +
+      categoryError.message
+    );
   } else {
+    categories = categoryData || [];
 
-    categories =
-      categoriesResult.data || [];
+    console.log(
+      "Categorias carregadas:",
+      categories
+    );
   }
-
-
-  console.log(
-    "Categorias carregadas:",
-    categories
-  );
-
-  console.log(
-    "Quantidade de categorias:",
-    categories.length
-  );
 }
 
-
-/* =========================================================
+/* =========================
    ESTRUTURA DO PAINEL
-========================================================= */
+========================= */
 
 function shell(content) {
 
   document.body.innerHTML = `
-
     <div class="min-h-screen flex">
 
-      <aside class="hidden md:flex w-64 bg-[#00361a] text-white p-5 flex-col">
+      <aside
+        class="hidden md:flex w-64 bg-[#00361a]
+               text-white p-5 flex-col"
+      >
 
         <a
           href="index.html"
@@ -364,77 +307,70 @@ function shell(content) {
           Rancho Flexível
         </a>
 
-
         <nav class="space-y-1 text-sm">
 
           <button
             data-tab="dashboard"
-            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
+            class="w-full text-left px-3 py-3
+                   rounded-lg hover:bg-white/10"
           >
             Dashboard
           </button>
 
-
           <button
             data-tab="products"
-            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
+            class="w-full text-left px-3 py-3
+                   rounded-lg hover:bg-white/10"
           >
             Produtos
           </button>
 
-
           <button
             data-tab="orders"
-            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
+            class="w-full text-left px-3 py-3
+                   rounded-lg hover:bg-white/10"
           >
             Pedidos
           </button>
 
-
           <button
             data-tab="settings"
-            class="w-full text-left px-3 py-3 rounded-lg hover:bg-white/10"
+            class="w-full text-left px-3 py-3
+                   rounded-lg hover:bg-white/10"
           >
             Configurações
           </button>
 
         </nav>
 
-
         <button
           id="logout"
-          class="mt-auto text-left px-3 py-3 rounded-lg hover:bg-white/10"
+          class="mt-auto text-left px-3 py-3
+                 rounded-lg hover:bg-white/10"
         >
           Terminar sessão
         </button>
 
       </aside>
 
-
       <main class="flex-1 p-4 lg:p-8">
-
         ${content}
-
       </main>
 
     </div>
+
+    <div
+      id="toast"
+      class="hidden fixed bottom-5 right-5 z-50
+             bg-[#00361a] text-white px-5 py-3
+             rounded-xl shadow-lg"
+    ></div>
   `;
 
-
-  const logout =
-    $("#logout");
-
-
-  if (logout) {
-
-    logout.onclick = async () => {
-
-      await supabase.auth.signOut();
-
-      location.reload();
-    };
-  }
-
+  $("#logout").onclick = async () => {
+    await supabase.auth.signOut();
+    location.reload();
+  };
 
   document
     .querySelectorAll("[data-tab]")
@@ -442,43 +378,42 @@ function shell(content) {
 
       button.onclick = () => {
 
-        const tab =
-          button.dataset.tab;
-
+        const tab = button.dataset.tab;
 
         if (tab === "products") {
-
           renderProducts();
+        }
 
-        } else if (tab === "dashboard") {
-
+        else if (tab === "dashboard") {
           render();
+        }
 
-        } else if (tab === "orders") {
-
+        else if (tab === "orders") {
           renderOrders();
+        }
 
-        } else {
-
+        else if (tab === "settings") {
           renderSettings();
         }
+
       };
+
     });
 }
 
-
-/* =========================================================
+/* =========================
    DASHBOARD
-========================================================= */
+========================= */
 
 function render() {
 
   shell(`
-
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div
+      class="flex flex-col md:flex-row
+             md:items-center justify-between gap-4"
+    >
 
       <div>
-
         <p class="text-sm text-[#717971]">
           Painel administrativo
         </p>
@@ -486,9 +421,7 @@ function render() {
         <h1 class="font-[Montserrat] text-3xl font-bold">
           Dashboard
         </h1>
-
       </div>
-
 
       <a
         href="index.html"
@@ -499,82 +432,78 @@ function render() {
 
     </div>
 
+    <div
+      class="grid sm:grid-cols-2 lg:grid-cols-4
+             gap-4 mt-7"
+    >
 
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-7">
-
-      ${
+      ${[
         [
-          [
-            "Produtos",
-            products.length,
-            "inventory_2"
-          ],
-
-          [
-            "Ativos",
-            products.filter(
-              p => p.active !== false
-            ).length,
-            "check_circle"
-          ],
-
-          [
-            "Stock baixo",
-            products.filter(
-              p => (p.stock ?? 0) < 5
-            ).length,
-            "warning"
-          ],
-
-          [
-            "Conta",
-            "Admin",
-            "admin_panel_settings"
-          ]
+          "Produtos",
+          products.length,
+          "inventory_2"
+        ],
+        [
+          "Ativos",
+          products.filter(
+            p => p.active !== false
+          ).length,
+          "check_circle"
+        ],
+        [
+          "Stock baixo",
+          products.filter(
+            p => (p.stock ?? 0) < 5
+          ).length,
+          "warning"
+        ],
+        [
+          "Conta",
+          "Admin",
+          "admin_panel_settings"
         ]
-        .map(
-          x => `
+      ].map(x => `
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
 
-            <div class="bg-white rounded-2xl p-5 shadow-sm">
+          <span
+            class="material-symbols-outlined
+                   text-[#00361a]"
+          >
+            ${x[2]}
+          </span>
 
-              <span class="material-symbols-outlined text-[#00361a]">
-                ${x[2]}
-              </span>
+          <p class="text-sm text-[#717971] mt-4">
+            ${x[0]}
+          </p>
 
-              <p class="text-sm text-[#717971] mt-4">
-                ${x[0]}
-              </p>
+          <b class="text-2xl">
+            ${x[1]}
+          </b>
 
-              <b class="text-2xl">
-                ${x[1]}
-              </b>
-
-            </div>
-
-          `
-        )
-        .join("")
-      }
+        </div>
+      `).join("")}
 
     </div>
 
+    <div
+      class="mt-8 bg-white rounded-2xl p-5"
+    >
 
-    <div class="mt-8 bg-white rounded-2xl p-5">
-
-      <h2 class="font-[Montserrat] text-xl font-bold">
+      <h2
+        class="font-[Montserrat] text-xl font-bold"
+      >
         Gestão rápida
       </h2>
-
 
       <div class="flex flex-wrap gap-3 mt-4">
 
         <button
           id="goProducts"
-          class="px-4 py-2 rounded-xl bg-[#00361a] text-white"
+          class="px-4 py-2 rounded-xl
+                 bg-[#00361a] text-white"
         >
           Gerir produtos
         </button>
-
 
         <button
           id="goOrders"
@@ -582,7 +511,6 @@ function render() {
         >
           Pedidos
         </button>
-
 
         <button
           id="goSettings"
@@ -594,55 +522,54 @@ function render() {
       </div>
 
     </div>
-
   `);
 
-
-  $("#goProducts").onclick =
-    renderProducts;
-
-  $("#goOrders").onclick =
-    renderOrders;
-
-  $("#goSettings").onclick =
-    renderSettings;
+  $("#goProducts").onclick = renderProducts;
+  $("#goOrders").onclick = renderOrders;
+  $("#goSettings").onclick = renderSettings;
 }
 
-
-/* =========================================================
+/* =========================
    PRODUTOS
-========================================================= */
+========================= */
 
 function renderProducts() {
 
   shell(`
 
-    <div class="flex items-center justify-between gap-4">
+    <div
+      class="flex items-center justify-between gap-4"
+    >
 
       <div>
 
-        <h1 class="font-[Montserrat] text-3xl font-bold">
+        <h1
+          class="font-[Montserrat]
+                 text-3xl font-bold"
+        >
           Produtos
         </h1>
 
         <p class="text-sm text-[#717971]">
-          Adicione, edite preços, nomes, stock e imagens.
+          Adicione e edite produtos.
         </p>
 
       </div>
 
-
       <button
         id="new"
-        class="px-4 py-2 bg-[#fd9d27] text-white rounded-xl font-bold"
+        class="px-4 py-2 bg-[#fd9d27]
+               text-white rounded-xl font-bold"
       >
         + Adicionar produto
       </button>
 
     </div>
 
-
-    <div class="bg-white rounded-2xl shadow-sm overflow-x-auto mt-6">
+    <div
+      class="bg-white rounded-2xl shadow-sm
+             overflow-x-auto mt-6"
+    >
 
       <table class="w-full text-sm">
 
@@ -674,136 +601,83 @@ function renderProducts() {
 
         </thead>
 
-
         <tbody>
 
-          ${
-            products.length
+          ${products.map(p => `
 
-              ? products.map(p => {
+            <tr class="border-t">
 
-                  const category =
-                    categories.find(
-                      c =>
-                        String(c.id) ===
-                        String(p.category_id)
-                    );
+              <td
+                class="p-4 flex items-center gap-3"
+              >
 
+                ${
+                  p.image_url
+                    ? `
+                      <img
+                        src="${esc(p.image_url)}"
+                        class="w-12 h-12
+                               object-cover rounded-lg"
+                      >
+                    `
+                    : `
+                      <div
+                        class="w-12 h-12
+                               bg-gray-100
+                               rounded-lg"
+                      ></div>
+                    `
+                }
 
-                  const categoryName =
-                    category?.name?.pt ||
-                    category?.name ||
-                    "—";
+                <div>
 
+                  <b>
+                    ${esc(p.name?.pt || p.name || "")}
+                  </b>
 
-                  return `
-
-                    <tr class="border-t">
-
-                      <td class="p-4 flex items-center gap-3">
-
-                        ${
-                          p.image_url
-
-                            ? `
-                              <img
-                                src="${esc(p.image_url)}"
-                                class="w-12 h-12 object-cover rounded-lg"
-                              >
-                            `
-
-                            : `
-                              <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-
-                                <span class="material-symbols-outlined text-gray-400">
-                                  image
-                                </span>
-
-                              </div>
-                            `
-                        }
-
-
-                        <div>
-
-                          <b>
-                            ${esc(
-                              p.name?.pt ||
-                              p.name ||
-                              ""
-                            )}
-                          </b>
-
-
-                          <div class="text-xs text-[#717971]">
-                            ${esc(
-                              p.sku ||
-                              p.id
-                            )}
-                          </div>
-
-                        </div>
-
-                      </td>
-
-
-                      <td class="p-4">
-                        ${esc(categoryName)}
-                      </td>
-
-
-                      <td class="p-4 font-bold">
-
-                        ${Number(
-                          p.price || 0
-                        ).toLocaleString(
-                          "pt-MZ",
-                          {
-                            minimumFractionDigits: 2
-                          }
-                        )}
-
-                        MZN
-
-                      </td>
-
-
-                      <td class="p-4">
-                        ${p.stock ?? 0}
-                      </td>
-
-
-                      <td class="p-4 text-right">
-
-                        <button
-                          data-edit="${esc(p.id)}"
-                          class="px-3 py-2 rounded-lg bg-[#e8eff1]"
-                        >
-                          Editar
-                        </button>
-
-                      </td>
-
-                    </tr>
-
-                  `;
-                }).join("")
-
-              : `
-
-                <tr>
-
-                  <td
-                    colspan="5"
-                    class="p-8 text-center text-gray-500"
+                  <div
+                    class="text-xs text-[#717971]"
                   >
-                    Ainda não existem produtos.
-                  </td>
+                    ${esc(p.sku || p.id)}
+                  </div>
 
-                </tr>
+                </div>
 
-              `
-          }
+              </td>
+
+              <td class="p-4">
+                ${getCategoryName(p.category_id)}
+              </td>
+
+              <td class="p-4 font-bold">
+                ${Number(p.price || 0).toLocaleString(
+                  "pt-MZ",
+                  {
+                    minimumFractionDigits: 2
+                  }
+                )}
+                MZN
+              </td>
+
+              <td class="p-4">
+                ${p.stock ?? 0}
+              </td>
+
+              <td class="p-4 text-right">
+
+                <button
+                  data-edit="${esc(p.id)}"
+                  class="px-3 py-2 rounded-lg
+                         bg-[#e8eff1]"
+                >
+                  Editar
+                </button>
+
+              </td>
+
+            </tr>
+
+          `).join("")}
 
         </tbody>
 
@@ -813,54 +687,70 @@ function renderProducts() {
 
   `);
 
-
-  /*
-    IMPORTANTE:
-
-    Recarrega os dados antes de abrir
-    o formulário de novo produto.
-  */
-
-  $("#new").onclick = async () => {
-
-    await load();
-
-    form();
-  };
-
-
-  /*
-    EDITAR PRODUTO
-  */
+  $("#new").onclick = () => form();
 
   document
     .querySelectorAll("[data-edit]")
     .forEach(button => {
 
-      button.onclick = async () => {
+      button.onclick = () => {
 
-        await load();
+        const product = products.find(
+          p =>
+            String(p.id) ===
+            String(button.dataset.edit)
+        );
 
+        form(product);
 
-        const product =
-          products.find(
-            p =>
-              String(p.id) ===
-              String(button.dataset.edit)
-          );
-
-
-        if (product) {
-          form(product);
-        }
       };
+
     });
 }
 
+/* =========================
+   NOME DA CATEGORIA
+========================= */
 
-/* =========================================================
-   CAMPO
-========================================================= */
+function getCategoryName(categoryId) {
+
+  const category = categories.find(
+    c =>
+      String(c.id) ===
+      String(categoryId)
+  );
+
+  if (!category) {
+    return "—";
+  }
+
+  /*
+   * A sua coluna name é JSON:
+   *
+   * {
+   *   "pt": "Arroz e cereais",
+   *   "en": "Rice & cereals",
+   *   ...
+   * }
+   */
+
+  if (
+    category.name &&
+    typeof category.name === "object"
+  ) {
+    return esc(
+      category.name.pt ||
+      category.name.en ||
+      ""
+    );
+  }
+
+  return esc(category.name || "");
+}
+
+/* =========================
+   CAMPO DO FORMULÁRIO
+========================= */
 
 function field(
   label,
@@ -870,8 +760,9 @@ function field(
 ) {
 
   return `
-
-    <label class="block text-sm font-semibold">
+    <label
+      class="block text-sm font-semibold"
+    >
 
       ${label}
 
@@ -879,142 +770,90 @@ function field(
         id="${id}"
         type="${type}"
         value="${esc(value)}"
-        class="mt-1 w-full border rounded-xl p-3"
+        class="mt-1 w-full border
+               rounded-xl p-3"
       >
 
     </label>
-
   `;
 }
 
-
-/* =========================================================
-   FORMULÁRIO
-========================================================= */
+/* =========================
+   FORMULÁRIO DO PRODUTO
+========================= */
 
 function form(product = null) {
 
-  const isNew =
-    !product;
+  const isNew = !product;
 
-
-  product =
-    product ||
-    {
-
-      id:
-        "RF-" +
-        Date.now(),
-
-      name: {
-        pt: ""
-      },
-
-      description: {
-        pt: ""
-      },
-
-      price: 0,
-
-      old_price: "",
-
-      stock: 0,
-
-      sku: "",
-
-      unit: "",
-
-      tag: {
-        pt: ""
-      },
-
-      category_id: "",
-
-      image_url: null,
-
-      active: true,
-
-      featured: false
-
-    };
-
+  const p = product || {
+    id: crypto.randomUUID(),
+    name: {
+      pt: ""
+    },
+    description: {
+      pt: ""
+    },
+    price: 0,
+    old_price: "",
+    stock: 0,
+    sku: "",
+    unit: "",
+    tag: {
+      pt: ""
+    },
+    active: true,
+    featured: false,
+    category_id: ""
+  };
 
   /*
-    CRIAR OPÇÕES DAS CATEGORIAS
+   * CATEGORIAS
+   */
 
-    O Supabase pode devolver:
-    name como objeto JSON:
-      { pt, en, fr, zh, chg }
+  const categoryOptions = categories.length
+    ? `
+      <option value="">
+        Selecione a categoria
+      </option>
 
-    Por isso usamos name.pt.
-  */
+      ${categories.map(category => {
 
-  let categoryOptions = "";
+        let name = "";
 
+        if (
+          category.name &&
+          typeof category.name === "object"
+        ) {
+          name =
+            category.name.pt ||
+            category.name.en ||
+            "";
+        } else {
+          name = category.name || "";
+        }
 
-  if (categories.length > 0) {
+        return `
+          <option
+            value="${esc(category.id)}"
+            ${
+              String(category.id) ===
+              String(p.category_id)
+                ? "selected"
+                : ""
+            }
+          >
+            ${esc(name)}
+          </option>
+        `;
 
-    categoryOptions =
-      categories
-        .map(category => {
-
-          let categoryName = "";
-
-
-          if (
-            category.name &&
-            typeof category.name === "object"
-          ) {
-
-            categoryName =
-              category.name.pt ||
-              category.name.en ||
-              category.name.fr ||
-              category.name.zh ||
-              category.name.chg ||
-              "Categoria";
-
-          } else {
-
-            categoryName =
-              category.name ||
-              "Categoria";
-          }
-
-
-          return `
-
-            <option
-              value="${esc(category.id)}"
-              ${
-                String(category.id) ===
-                String(product.category_id)
-                  ? "selected"
-                  : ""
-              }
-            >
-              ${esc(categoryName)}
-            </option>
-
-          `;
-        })
-        .join("");
-
-  } else {
-
-    categoryOptions = `
-
+      }).join("")}
+    `
+    : `
       <option value="">
         Nenhuma categoria encontrada
       </option>
-
     `;
-  }
-
-
-  /*
-    FORMULÁRIO
-  */
 
   shell(`
 
@@ -1027,114 +866,92 @@ function form(product = null) {
         ← Voltar
       </button>
 
-
-      <h1 class="font-[Montserrat] text-3xl font-bold mt-3">
-
-        ${
-          isNew
-            ? "Adicionar produto"
-            : "Editar produto"
-        }
-
+      <h1
+        class="font-[Montserrat]
+               text-3xl font-bold mt-3"
+      >
+        ${isNew
+          ? "Adicionar produto"
+          : "Editar produto"}
       </h1>
-
 
       <form
         id="productForm"
-        class="bg-white rounded-2xl p-6 shadow-sm mt-6 space-y-5"
+        class="bg-white rounded-2xl
+               p-6 shadow-sm mt-6 space-y-5"
       >
 
-
-        <!-- PORTUGUÊS -->
-
-        ${field(
-          "Nome do produto",
-          "name_pt",
-          product.name?.pt || ""
-        )}
-
-
-        <label class="block text-sm font-semibold">
-
-          Descrição
-
-          <textarea
-            id="desc_pt"
-            rows="4"
-            class="mt-1 w-full border rounded-xl p-3"
-          >${esc(
-            product.description?.pt || ""
-          )}</textarea>
-
-        </label>
-
-
-        <!-- DADOS DO PRODUTO -->
+        <!-- SOMENTE PORTUGUÊS -->
 
         <div class="grid md:grid-cols-2 gap-4">
 
           ${field(
-            "Preço (MZN)",
-            "price",
-            product.price,
-            "number"
+            "Nome (Português)",
+            "name_pt",
+            p.name?.pt || ""
           )}
 
+          ${field(
+            "Descrição (Português)",
+            "desc_pt",
+            p.description?.pt || ""
+          )}
+
+          ${field(
+            "Preço (MZN)",
+            "price",
+            p.price,
+            "number"
+          )}
 
           ${field(
             "Preço anterior",
             "old_price",
-            product.old_price || "",
+            p.old_price || "",
             "number"
           )}
-
 
           ${field(
             "Stock",
             "stock",
-            product.stock,
+            p.stock || 0,
             "number"
           )}
-
 
           ${field(
             "SKU",
             "sku",
-            product.sku || ""
+            p.sku || ""
           )}
-
 
           ${field(
             "Unidade",
             "unit",
-            product.unit || ""
+            p.unit || ""
           )}
-
 
           ${field(
             "Tag",
             "tag_pt",
-            product.tag?.pt || ""
+            p.tag?.pt || ""
           )}
 
         </div>
 
-
         <!-- CATEGORIA -->
 
-        <label class="block text-sm font-semibold">
+        <label
+          class="block text-sm font-semibold"
+        >
 
           Categoria
 
           <select
             id="category_id"
-            class="mt-1 w-full border rounded-xl p-3"
+            class="mt-1 w-full border
+                   rounded-xl p-3"
             required
           >
-
-            <option value="">
-              Selecione uma categoria
-            </option>
 
             ${categoryOptions}
 
@@ -1142,39 +959,16 @@ function form(product = null) {
 
         </label>
 
-
-        ${
-          categories.length > 0
-
-            ? `
-
-              <p class="text-xs text-gray-500">
-
-                ${categories.length}
-                categorias disponíveis.
-
-              </p>
-
-            `
-
-            : `
-
-              <p class="text-sm text-red-600">
-
-                Nenhuma categoria foi encontrada
-                no Supabase.
-
-              </p>
-
-            `
-        }
-
-
         <!-- IMAGEM -->
 
-        <div class="border-2 border-dashed rounded-2xl p-5">
+        <div
+          class="border-2 border-dashed
+                 rounded-2xl p-5"
+        >
 
-          <label class="block text-sm font-semibold">
+          <label
+            class="block text-sm font-semibold"
+          >
 
             Imagem do produto
 
@@ -1187,21 +981,17 @@ function form(product = null) {
 
           </label>
 
-
           <img
             id="preview"
-            src="${esc(
-              product.image_url || ""
-            )}"
-            class="mt-4 w-40 h-40 object-cover rounded-xl ${
-              product.image_url
-                ? ""
-                : "hidden"
-            }"
+            src="${esc(p.image_url || "")}"
+            class="mt-4 w-40 h-40
+                   object-cover rounded-xl
+                   ${p.image_url
+                     ? ""
+                     : "hidden"}"
           >
 
         </div>
-
 
         <!-- ESTADO -->
 
@@ -1213,7 +1003,7 @@ function form(product = null) {
               id="active"
               type="checkbox"
               ${
-                product.active !== false
+                p.active !== false
                   ? "checked"
                   : ""
               }
@@ -1223,14 +1013,13 @@ function form(product = null) {
 
           </label>
 
-
           <label>
 
             <input
               id="featured"
               type="checkbox"
               ${
-                product.featured
+                p.featured
                   ? "checked"
                   : ""
               }
@@ -1242,34 +1031,34 @@ function form(product = null) {
 
         </div>
 
-
         <!-- BOTÕES -->
 
         <div class="flex gap-3">
 
           <button
             type="submit"
-            class="px-5 py-3 bg-[#00361a] text-white rounded-xl font-bold"
+            class="px-5 py-3
+                   bg-[#00361a]
+                   text-white
+                   rounded-xl font-bold"
           >
             Guardar
           </button>
 
-
           ${
             !isNew
-
               ? `
-
                 <button
                   type="button"
                   id="delete"
-                  class="px-5 py-3 bg-red-50 text-red-700 rounded-xl"
+                  class="px-5 py-3
+                         bg-red-50
+                         text-red-700
+                         rounded-xl"
                 >
                   Excluir
                 </button>
-
               `
-
               : ""
           }
 
@@ -1281,50 +1070,45 @@ function form(product = null) {
 
   `);
 
+  $("#back").onclick = renderProducts;
 
-  /* VOLTAR */
+  /*
+   * PREVIEW DA IMAGEM
+   */
 
-  $("#back").onclick =
-    renderProducts;
+  $("#image").onchange = (event) => {
 
+    const file = event.target.files[0];
 
-  /* PREVIEW */
+    if (!file) {
+      return;
+    }
 
-  $("#image").onchange =
-    e => {
+    const previewUrl =
+      URL.createObjectURL(file);
 
-      const file =
-        e.target.files[0];
+    $("#preview").src = previewUrl;
 
+    $("#preview")
+      .classList
+      .remove("hidden");
+  };
 
-      if (!file) return;
-
-
-      $("#preview").src =
-        URL.createObjectURL(file);
-
-
-      $("#preview")
-        .classList
-        .remove("hidden");
-    };
-
-
-  /* GUARDAR */
+  /*
+   * GUARDAR
+   */
 
   $("#productForm").onsubmit =
-    async e => {
+    async (event) => {
 
-      e.preventDefault();
+      event.preventDefault();
 
-      await saveProduct(
-        product,
-        isNew
-      );
+      await saveProduct(p, isNew);
     };
 
-
-  /* EXCLUIR */
+  /*
+   * EXCLUIR
+   */
 
   if (!isNew) {
 
@@ -1339,14 +1123,12 @@ function form(product = null) {
           return;
         }
 
-
         const {
           error
         } = await supabase
           .from("products")
           .delete()
-          .eq("id", product.id);
-
+          .eq("id", p.id);
 
         if (error) {
 
@@ -1358,11 +1140,9 @@ function form(product = null) {
           return;
         }
 
-
         toast(
           "Produto excluído."
         );
-
 
         await load();
 
@@ -1371,311 +1151,210 @@ function form(product = null) {
   }
 }
 
-
-/* =========================================================
+/* =========================
    GUARDAR PRODUTO
-========================================================= */
+========================= */
 
 async function saveProduct(
-  product,
+  p,
   isNew
 ) {
 
-  try {
+  /*
+   * CATEGORIA
+   */
 
-    const namePT =
-      $("#name_pt")
-        .value
-        .trim();
+  const categoryId =
+    $("#category_id").value;
 
-
-    const descriptionPT =
-      $("#desc_pt")
-        .value
-        .trim();
-
-
-    if (!namePT) {
-
-      toast(
-        "Digite o nome do produto."
-      );
-
-      return;
-    }
-
-
-    const categoryId =
-      $("#category_id")
-        .value;
-
-
-    if (!categoryId) {
-
-      toast(
-        "Selecione uma categoria."
-      );
-
-      return;
-    }
-
-
-    /*
-      O ADMIN SÓ PREENCHE PORTUGUÊS.
-
-      O restante é preenchido
-      automaticamente.
-    */
-
-    const name = {
-
-      pt: namePT,
-
-      en: namePT,
-
-      zh: namePT,
-
-      fr: namePT,
-
-      chg: namePT
-
-    };
-
-
-    const description = {
-
-      pt: descriptionPT,
-
-      en: descriptionPT,
-
-      zh: descriptionPT,
-
-      fr: descriptionPT,
-
-      chg: descriptionPT
-
-    };
-
-
-    const tagPT =
-      $("#tag_pt")
-        .value
-        .trim();
-
-
-    const tag = {
-
-      pt: tagPT,
-
-      en: tagPT,
-
-      zh: tagPT,
-
-      fr: tagPT,
-
-      chg: tagPT
-
-    };
-
-
-    /* IMAGEM */
-
-    let image_url =
-      product.image_url ||
-      null;
-
-
-    const file =
-      $("#image")
-        .files[0];
-
-
-    if (file) {
-
-      const ext =
-        file.name
-          .split(".")
-          .pop()
-          .toLowerCase();
-
-
-      const path =
-        `products/${crypto.randomUUID()}.${ext}`;
-
-
-      const {
-        error: uploadError
-      } = await supabase
-        .storage
-        .from("site-images")
-        .upload(
-          path,
-          file,
-          {
-            upsert: false
-          }
-        );
-
-
-      if (uploadError) {
-
-        console.error(
-          "Erro no upload:",
-          uploadError
-        );
-
-        toast(
-          "Erro no upload: " +
-          uploadError.message
-        );
-
-        return;
-      }
-
-
-      image_url =
-        supabase
-          .storage
-          .from("site-images")
-          .getPublicUrl(path)
-          .data
-          .publicUrl;
-    }
-
-
-    /* DADOS */
-
-    const row = {
-
-      id:
-        product.id,
-
-      name,
-
-      description,
-
-      category_id:
-        categoryId,
-
-      price:
-        Number(
-          $("#price").value || 0
-        ),
-
-      old_price:
-        Number(
-          $("#old_price").value || 0
-        ) || null,
-
-      stock:
-        Number(
-          $("#stock").value || 0
-        ),
-
-      sku:
-        $("#sku")
-          .value
-          .trim(),
-
-      unit:
-        $("#unit")
-          .value
-          .trim(),
-
-      tag,
-
-      image_url,
-
-      active:
-        $("#active")
-          .checked,
-
-      featured:
-        $("#featured")
-          .checked,
-
-      updated_at:
-        new Date()
-          .toISOString()
-    };
-
-
-    /* INSERT / UPDATE */
-
-    let result;
-
-
-    if (isNew) {
-
-      result =
-        await supabase
-          .from("products")
-          .insert(row);
-
-    } else {
-
-      result =
-        await supabase
-          .from("products")
-          .update(row)
-          .eq(
-            "id",
-            product.id
-          );
-    }
-
-
-    if (result.error) {
-
-      console.error(
-        "Erro ao guardar produto:",
-        result.error
-      );
-
-      toast(
-        "Erro ao guardar produto: " +
-        result.error.message
-      );
-
-      return;
-    }
-
+  if (!categoryId) {
 
     toast(
-      isNew
-        ? "Produto adicionado com sucesso."
-        : "Produto atualizado com sucesso."
+      "Selecione uma categoria."
     );
 
+    $("#category_id").focus();
 
-    await load();
+    return;
+  }
 
-    renderProducts();
+  /*
+   * DADOS EM PORTUGUÊS
+   */
 
+  const name = {
+    pt: $("#name_pt").value.trim()
+  };
 
-  } catch (error) {
+  const description = {
+    pt: $("#desc_pt").value.trim()
+  };
+
+  /*
+   * IMAGEM
+   */
+
+  let image_url =
+    p.image_url || null;
+
+  const file =
+    $("#image").files[0];
+
+  if (file) {
+
+    const ext =
+      file.name
+        .split(".")
+        .pop()
+        .toLowerCase();
+
+    const path =
+      `products/${crypto.randomUUID()}.${ext}`;
+
+    const {
+      error: uploadError
+    } = await supabase
+      .storage
+      .from("site-images")
+      .upload(
+        path,
+        file,
+        {
+          upsert: false
+        }
+      );
+
+    if (uploadError) {
+
+      toast(
+        "Erro no upload: " +
+        uploadError.message
+      );
+
+      return;
+    }
+
+    const {
+      data: publicData
+    } = supabase
+      .storage
+      .from("site-images")
+      .getPublicUrl(path);
+
+    image_url =
+      publicData.publicUrl;
+  }
+
+  /*
+   * DADOS DO PRODUTO
+   */
+
+  const row = {
+
+    id: p.id,
+
+    name,
+
+    description,
+
+    category_id: categoryId,
+
+    price:
+      Number(
+        $("#price").value || 0
+      ),
+
+    old_price:
+      Number(
+        $("#old_price").value || 0
+      ) || null,
+
+    stock:
+      Number(
+        $("#stock").value || 0
+      ),
+
+    sku:
+      $("#sku").value.trim(),
+
+    unit:
+      $("#unit").value.trim(),
+
+    tag: {
+      pt:
+        $("#tag_pt").value.trim()
+    },
+
+    image_url,
+
+    active:
+      $("#active").checked,
+
+    featured:
+      $("#featured").checked,
+
+    updated_at:
+      new Date().toISOString()
+  };
+
+  /*
+   * INSERT / UPDATE
+   */
+
+  let result;
+
+  if (isNew) {
+
+    result = await supabase
+      .from("products")
+      .insert(row);
+
+  } else {
+
+    result = await supabase
+      .from("products")
+      .update(row)
+      .eq("id", p.id);
+  }
+
+  if (result.error) {
+
+    toast(
+      "Erro ao guardar: " +
+      result.error.message
+    );
 
     console.error(
-      "Erro inesperado:",
-      error
+      "Erro Supabase:",
+      result.error
     );
 
-    toast(
-      "Erro ao guardar produto."
-    );
+    return;
   }
+
+  toast(
+    isNew
+      ? "Produto adicionado com sucesso."
+      : "Produto atualizado com sucesso."
+  );
+
+  await load();
+
+  renderProducts();
 }
 
-
-/* =========================================================
+/* =========================
    PEDIDOS
-========================================================= */
+========================= */
 
 function renderOrders() {
 
   shell(`
 
-    <h1 class="font-[Montserrat] text-3xl font-bold">
+    <h1
+      class="font-[Montserrat]
+             text-3xl font-bold"
+    >
       Pedidos
     </h1>
 
@@ -1686,10 +1365,8 @@ function renderOrders() {
 
   `);
 
-
   loadOrders();
 }
-
 
 async function loadOrders() {
 
@@ -1706,24 +1383,26 @@ async function loadOrders() {
       }
     );
 
-
   if (error) {
 
-    $("#orders")
-      .textContent =
+    $("#orders").textContent =
       error.message;
 
     return;
   }
 
-
   $("#orders").innerHTML = `
 
-    <div class="bg-white rounded-2xl overflow-x-auto">
+    <div
+      class="bg-white rounded-2xl
+             overflow-x-auto"
+    >
 
       <table class="w-full text-sm">
 
-        <thead class="bg-[#eef5f7]">
+        <thead
+          class="bg-[#eef5f7]"
+        >
 
           <tr>
 
@@ -1747,94 +1426,76 @@ async function loadOrders() {
 
         </thead>
 
-
         <tbody>
 
-          ${
-            (data || [])
-              .map(
-                order => `
+          ${(data || []).map(o => `
 
-                  <tr class="border-t">
+            <tr class="border-t">
 
-                    <td class="p-4 font-bold">
-                      ${esc(
-                        order.order_number
-                      )}
-                    </td>
+              <td class="p-4 font-bold">
+                ${esc(o.order_number)}
+              </td>
 
+              <td class="p-4">
 
-                    <td class="p-4">
+                ${esc(o.customer_name)}
 
-                      ${esc(
-                        order.customer_name
-                      )}
+                <br>
 
-                      <br>
+                <span class="text-xs">
+                  ${esc(o.customer_phone)}
+                </span>
 
-                      <span class="text-xs">
-                        ${esc(
-                          order.customer_phone
-                        )}
-                      </span>
+              </td>
 
-                    </td>
+              <td class="p-4 font-bold">
 
+                ${Number(
+                  o.total || 0
+                ).toLocaleString("pt-MZ")}
 
-                    <td class="p-4 font-bold">
+                MZN
 
-                      ${Number(
-                        order.total || 0
-                      ).toLocaleString(
-                        "pt-MZ"
-                      )}
+              </td>
 
-                      MZN
+              <td class="p-4">
 
-                    </td>
+                <select
+                  data-status="${esc(o.id)}"
+                  class="border rounded-lg p-2"
+                >
 
+                  <option value="new">
+                    Novo
+                  </option>
 
-                    <td class="p-4">
+                  <option value="confirmed">
+                    Confirmado
+                  </option>
 
-                      <select
-                        data-status="${esc(order.id)}"
-                        class="border rounded-lg p-2"
-                      >
+                  <option value="preparing">
+                    Em preparação
+                  </option>
 
-                        <option value="new">
-                          Novo
-                        </option>
+                  <option value="ready">
+                    Pronto
+                  </option>
 
-                        <option value="confirmed">
-                          Confirmado
-                        </option>
+                  <option value="delivered">
+                    Entregue
+                  </option>
 
-                        <option value="preparing">
-                          Em preparação
-                        </option>
+                  <option value="cancelled">
+                    Cancelado
+                  </option>
 
-                        <option value="ready">
-                          Pronto
-                        </option>
+                </select>
 
-                        <option value="delivered">
-                          Entregue
-                        </option>
+              </td>
 
-                        <option value="cancelled">
-                          Cancelado
-                        </option>
+            </tr>
 
-                      </select>
-
-                    </td>
-
-                  </tr>
-
-                `
-              )
-              .join("")
-          }
+          `).join("")}
 
         </tbody>
 
@@ -1843,7 +1504,6 @@ async function loadOrders() {
     </div>
 
   `;
-
 
   for (
     const select
@@ -1854,20 +1514,17 @@ async function loadOrders() {
 
     const row =
       data.find(
-        item =>
-          String(item.id) ===
-          String(
-            select.dataset.status
-          )
+        x =>
+          String(x.id) ===
+          String(select.dataset.status)
       );
 
-
-    if (!row) continue;
-
+    if (!row) {
+      continue;
+    }
 
     select.value =
       row.status;
-
 
     select.onchange =
       async () => {
@@ -1879,16 +1536,10 @@ async function loadOrders() {
           .update({
             status:
               select.value,
-
             updated_at:
-              new Date()
-                .toISOString()
+              new Date().toISOString()
           })
-          .eq(
-            "id",
-            row.id
-          );
-
+          .eq("id", row.id);
 
         toast(
           error
@@ -1899,27 +1550,32 @@ async function loadOrders() {
   }
 }
 
-
-/* =========================================================
+/* =========================
    CONFIGURAÇÕES
-========================================================= */
+========================= */
 
 function renderSettings() {
 
   shell(`
 
-    <h1 class="font-[Montserrat] text-3xl font-bold">
+    <h1
+      class="font-[Montserrat]
+             text-3xl font-bold"
+    >
       Configurações
     </h1>
 
+    <div
+      class="bg-white rounded-2xl
+             p-6 mt-6 max-w-3xl"
+    >
 
-    <div class="bg-white rounded-2xl p-6 mt-6 max-w-3xl">
-
-      <p class="text-sm text-[#414942]">
-        As configurações gerais são armazenadas
-        no Supabase.
+      <p
+        class="text-sm text-[#414942]"
+      >
+        As configurações gerais são
+        armazenadas no Supabase.
       </p>
-
 
       <form
         id="settings"
@@ -1932,50 +1588,36 @@ function renderSettings() {
           "+258840000000"
         )}
 
-
         ${field(
           "E-mail",
           "email",
           "contato@ranchoflexivel.co.mz"
         )}
 
-
-        <label class="block text-sm font-semibold">
+        <label
+          class="block text-sm font-semibold"
+        >
 
           Idioma padrão
 
           <select
             id="defaultLang"
-            class="mt-1 w-full border rounded-xl p-3"
+            class="mt-1 w-full border
+                   rounded-xl p-3"
           >
 
             <option value="pt">
               Português
             </option>
 
-            <option value="en">
-              English
-            </option>
-
-            <option value="zh">
-              Mandarim (中文)
-            </option>
-
-            <option value="fr">
-              Français
-            </option>
-
-            <option value="chg">
-              Changana
-            </option>
-
           </select>
 
         </label>
 
-
         <button
-          class="px-5 py-3 bg-[#00361a] text-white rounded-xl"
+          class="px-5 py-3
+                 bg-[#00361a]
+                 text-white rounded-xl"
         >
           Guardar configurações
         </button>
@@ -1986,32 +1628,25 @@ function renderSettings() {
 
   `);
 
-
   $("#settings").onsubmit =
-    async e => {
+    async (e) => {
 
       e.preventDefault();
 
-
       const settings = [
-
         [
           "whatsapp",
           $("#wa").value
         ],
-
         [
           "contact_email",
           $("#email").value
         ],
-
         [
           "default_language",
           $("#defaultLang").value
         ]
-
       ];
-
 
       for (
         const [key, value]
@@ -2027,7 +1662,6 @@ function renderSettings() {
             value
           });
 
-
         if (error) {
 
           toast(
@@ -2039,16 +1673,14 @@ function renderSettings() {
         }
       }
 
-
       toast(
         "Configurações guardadas."
       );
     };
 }
 
-
-/* =========================================================
+/* =========================
    INICIAR
-========================================================= */
+========================= */
 
 boot();
