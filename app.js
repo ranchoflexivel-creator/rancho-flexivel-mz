@@ -279,6 +279,7 @@ function tr(path) {
 
 
 function applyI18n() {
+
   document.querySelectorAll("[data-i18n]").forEach(element => {
     element.textContent = tr(element.dataset.i18n);
   });
@@ -288,6 +289,7 @@ function applyI18n() {
 
 
 function current(value) {
+
   if (typeof value === "string") {
     return value;
   }
@@ -302,6 +304,7 @@ function current(value) {
 
 
 function toast(message) {
+
   const element = $("#toast");
 
   if (!element) return;
@@ -316,14 +319,11 @@ function toast(message) {
 
 
 /* ============================================================
-   IMAGENS
+   IMAGENS DOS PRODUTOS
 ============================================================ */
 
-/*
-   IMAGEM DOS PRODUTOS
-*/
-
 function imgForProduct(product) {
+
   return (
     product?.image_url ||
     product?.image ||
@@ -332,11 +332,12 @@ function imgForProduct(product) {
 }
 
 
-/*
+/* ============================================================
    IMAGEM DO RANCHO DO MÊS
-*/
+============================================================ */
 
 function imgForKit(kit) {
+
   return (
     kit?.image_url ||
     kit?.image ||
@@ -345,14 +346,9 @@ function imgForKit(kit) {
 }
 
 
-/*
+/* ============================================================
    IMAGEM DA CATEGORIA
-
-   Agora o sistema procura:
-   1. image_url
-   2. image
-   3. imagem padrão baseada no índice
-*/
+============================================================ */
 
 function imgForCategory(category, index) {
 
@@ -431,11 +427,13 @@ function renderCategories() {
   if (!element) return;
 
   if (!state.categories.length) {
+
     element.innerHTML = `
       <div class="col-span-full text-center py-10 text-on-surface-variant">
         Nenhuma categoria encontrada.
       </div>
     `;
+
     return;
   }
 
@@ -450,12 +448,14 @@ function renderCategories() {
       >
 
         <div class="w-20 h-20 rounded-2xl overflow-hidden bg-surface-container-low">
+
           <img
             src="${image}"
             alt="${current(category.name)}"
             class="w-full h-full object-cover group-hover:scale-105 transition"
             onerror="this.style.display='none'"
           >
+
         </div>
 
         <span class="font-semibold text-sm mt-3">
@@ -466,6 +466,7 @@ function renderCategories() {
     `;
 
   }).join("");
+
 
   element.querySelectorAll("[data-cat]").forEach(button => {
 
@@ -481,19 +482,23 @@ function renderCategories() {
       const productsSection = $("#produtos");
 
       if (productsSection) {
+
         productsSection.scrollIntoView({
           behavior: "smooth"
         });
+
       }
 
     };
 
   });
+
 }
 
 
 /* ============================================================
    RANCHO DO MÊS
+   MOSTRA TAMBÉM OS PRODUTOS QUE O COMPÕEM
 ============================================================ */
 
 function renderKits() {
@@ -503,20 +508,130 @@ function renderKits() {
   if (!element) return;
 
   if (!state.kits.length) {
+
     element.innerHTML = `
       <div class="col-span-full text-center py-10 text-on-surface-variant">
         Nenhum Rancho do Mês disponível.
       </div>
     `;
+
     return;
   }
+
 
   element.innerHTML = state.kits.map(kit => {
 
     const image = imgForKit(kit);
 
+
+    /*
+       Procura os produtos associados ao Rancho.
+
+       O Rancho deve possuir:
+       product_ids: [id1, id2, id3]
+    */
+
+    const kitProducts = Array.isArray(kit.product_ids)
+      ? kit.product_ids
+          .map(id =>
+            state.products.find(
+              product => String(product.id) === String(id)
+            )
+          )
+          .filter(Boolean)
+      : [];
+
+
+    /*
+       Composição do Rancho
+    */
+
+    const productsHtml = kitProducts.length
+
+      ? `
+        <div class="mt-5">
+
+          <div class="flex items-center gap-2 mb-3">
+
+            <span class="material-symbols-outlined text-primary text-[20px]">
+              inventory_2
+            </span>
+
+            <h4 class="text-sm font-bold text-primary">
+              Composição do Rancho
+            </h4>
+
+          </div>
+
+
+          <div class="space-y-2">
+
+            ${kitProducts.map(product => `
+
+              <div
+                class="flex items-center gap-3 bg-surface-container-low rounded-xl p-2"
+              >
+
+                <img
+                  src="${imgForProduct(product)}"
+                  alt="${current(product.name)}"
+                  class="w-11 h-11 rounded-lg object-cover shrink-0"
+                  onerror="this.style.display='none'"
+                >
+
+
+                <div class="min-w-0 flex-1">
+
+                  <div class="text-sm font-semibold truncate">
+                    ${current(product.name)}
+                  </div>
+
+                  ${
+                    product.unit
+                      ? `
+                        <div class="text-xs text-on-surface-variant">
+                          ${product.unit}
+                        </div>
+                      `
+                      : ""
+                  }
+
+                </div>
+
+              </div>
+
+            `).join("")}
+
+          </div>
+
+        </div>
+      `
+
+      : `
+        <div class="mt-5 p-3 rounded-xl bg-surface-container-low">
+
+          <div class="flex items-center gap-2 text-on-surface-variant">
+
+            <span class="material-symbols-outlined text-[20px]">
+              inventory_2
+            </span>
+
+            <span class="text-sm">
+              Este Rancho ainda não tem produtos associados.
+            </span>
+
+          </div>
+
+        </div>
+      `;
+
+
     return `
-      <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition flex flex-col overflow-hidden">
+      <div
+        class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition flex flex-col overflow-hidden"
+      >
+
+        <!-- IMAGEM -->
 
         <div class="h-48 bg-surface-container relative overflow-hidden">
 
@@ -529,11 +644,15 @@ function renderKits() {
 
           <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
+
           <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
 
-            <span class="bg-white text-on-surface text-xs font-bold px-2 py-1 rounded">
+            <span
+              class="bg-white text-on-surface text-xs font-bold px-2 py-1 rounded"
+            >
               ${current(kit.badge) || "Destaque"}
             </span>
+
 
             <span class="text-white font-bold">
               ${money(kit.price)}
@@ -543,19 +662,37 @@ function renderKits() {
 
         </div>
 
+
+        <!-- CONTEÚDO -->
+
         <div class="p-4 flex flex-col flex-1">
 
           <h3 class="text-xl font-semibold">
             ${current(kit.name)}
           </h3>
 
-          <p class="text-sm text-on-surface-variant mt-2 flex-1">
-            ${current(kit.description)}
-          </p>
+
+          ${
+            current(kit.description)
+              ? `
+                <p class="text-sm text-on-surface-variant mt-2">
+                  ${current(kit.description)}
+                </p>
+              `
+              : ""
+          }
+
+
+          <!-- PRODUTOS QUE COMPÕEM O RANCHO -->
+
+          ${productsHtml}
+
+
+          <!-- BOTÃO -->
 
           <button
             data-kit="${kit.id}"
-            class="mt-4 w-full py-2.5 rounded-lg bg-surface-container-highest hover:bg-secondary hover:text-white font-semibold"
+            class="mt-5 w-full py-2.5 rounded-lg bg-surface-container-highest hover:bg-secondary hover:text-white font-semibold transition"
           >
             Adicionar ao carrinho
           </button>
@@ -568,6 +705,10 @@ function renderKits() {
   }).join("");
 
 
+  /*
+     BOTÕES DOS RANCHOS
+  */
+
   element.querySelectorAll("[data-kit]").forEach(button => {
 
     button.onclick = () => {
@@ -578,14 +719,26 @@ function renderKits() {
 
       if (!kit) return;
 
-      (kit.product_ids || []).forEach(id => {
-        add(id);
-      });
+
+      /*
+         Adiciona todos os produtos do Rancho ao carrinho
+      */
+
+      if (Array.isArray(kit.product_ids)) {
+
+        kit.product_ids.forEach(id => {
+          add(id);
+        });
+
+      }
+
 
       toast(`${current(kit.name)} adicionado`);
+
     };
 
   });
+
 }
 
 
@@ -621,13 +774,16 @@ function renderProducts() {
 
   if (!element) return;
 
+
   let products = [...state.products].filter(
     product => product.active !== false
   );
 
+
   const searchInput = $("#searchInput");
   const categoryFilter = $("#categoryFilter");
   const sortFilter = $("#sortFilter");
+
 
   const query = searchInput?.value?.toLowerCase() || "";
   const category = categoryFilter?.value || "";
@@ -664,14 +820,18 @@ function renderProducts() {
     products.sort((a, b) => a.price - b.price);
   }
 
+
   if (sort === "priceDesc") {
     products.sort((a, b) => b.price - a.price);
   }
 
+
   if (sort === "name") {
+
     products.sort((a, b) =>
       current(a.name).localeCompare(current(b.name))
     );
+
   }
 
 
@@ -705,22 +865,28 @@ function renderProducts() {
             onerror="this.style.display='none'"
           >
 
+
           <div class="absolute top-2 left-2 flex gap-1">
 
             ${
               product.tag
                 ? `
-                  <span class="bg-secondary text-white text-[10px] font-bold px-2 py-1 rounded">
+                  <span
+                    class="bg-secondary text-white text-[10px] font-bold px-2 py-1 rounded"
+                  >
                     ${current(product.tag)}
                   </span>
                 `
                 : ""
             }
 
+
             ${
               product.featured
                 ? `
-                  <span class="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded">
+                  <span
+                    class="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded"
+                  >
                     ★
                   </span>
                 `
@@ -738,6 +904,7 @@ function renderProducts() {
             ${current(product.name)}
           </h3>
 
+
           <p class="text-xs text-on-surface-variant mt-1">
             ${current(product.description) || ""}
           </p>
@@ -751,9 +918,11 @@ function renderProducts() {
                 ${product.unit || ""}
               </span>
 
+
               <div class="text-lg font-bold text-primary">
                 ${money(product.price)}
               </div>
+
 
               ${
                 product.old_price
@@ -772,9 +941,11 @@ function renderProducts() {
               data-add="${product.id}"
               class="w-10 h-10 rounded-full bg-secondary-container text-white flex items-center justify-center hover:bg-secondary"
             >
+
               <span class="material-symbols-outlined">
                 add_shopping_cart
               </span>
+
             </button>
 
           </div>
@@ -794,6 +965,7 @@ function renderProducts() {
     };
 
   });
+
 }
 
 
@@ -816,23 +988,33 @@ function add(id) {
 
 
   if (row) {
+
     row.qty++;
+
   } else {
+
     state.cart.push({
       id: product.id,
       qty: 1
     });
+
   }
 
 
   saveCart();
   renderCart();
 
+
   toast(
     `${current(product.name)} adicionado ao carrinho`
   );
+
 }
 
+
+/* ============================================================
+   REMOVER
+============================================================ */
 
 function remove(id) {
 
@@ -845,6 +1027,10 @@ function remove(id) {
 }
 
 
+/* ============================================================
+   ALTERAR QUANTIDADE
+============================================================ */
+
 function change(id, difference) {
 
   const item = state.cart.find(
@@ -853,17 +1039,27 @@ function change(id, difference) {
 
   if (!item) return;
 
+
   item.qty += difference;
 
+
   if (item.qty <= 0) {
+
     remove(id);
+
     return;
+
   }
+
 
   saveCart();
   renderCart();
 }
 
+
+/* ============================================================
+   GUARDAR CARRINHO
+============================================================ */
 
 function saveCart() {
 
@@ -872,24 +1068,32 @@ function saveCart() {
     JSON.stringify(state.cart)
   );
 
+
   const count = state.cart.reduce(
     (sum, item) => sum + item.qty,
     0
   );
+
 
   const cartCount = $("#cartCount");
 
   if (cartCount) {
     cartCount.textContent = count;
   }
+
 }
 
+
+/* ============================================================
+   RENDERIZAR CARRINHO
+============================================================ */
 
 function renderCart() {
 
   const element = $("#cartItems");
 
   if (!element) return;
+
 
   let total = 0;
 
@@ -900,10 +1104,12 @@ function renderCart() {
       p => String(p.id) === String(item.id)
     );
 
+
     if (!product) return "";
 
 
     total += product.price * item.qty;
+
 
     return `
       <div class="flex gap-3 border-b pb-3">
@@ -914,11 +1120,13 @@ function renderCart() {
           alt="${current(product.name)}"
         >
 
+
         <div class="flex-1">
 
           <div class="font-semibold text-sm">
             ${current(product.name)}
           </div>
+
 
           <div class="text-primary font-bold text-sm">
             ${money(product.price * item.qty)}
@@ -934,7 +1142,9 @@ function renderCart() {
               −
             </button>
 
+
             <span>${item.qty}</span>
+
 
             <button
               data-plus="${product.id}"
@@ -942,6 +1152,7 @@ function renderCart() {
             >
               +
             </button>
+
 
             <button
               data-remove="${product.id}"
@@ -979,24 +1190,30 @@ function renderCart() {
   element
     .querySelectorAll("[data-minus]")
     .forEach(button => {
+
       button.onclick = () =>
         change(button.dataset.minus, -1);
+
     });
 
 
   element
     .querySelectorAll("[data-plus]")
     .forEach(button => {
+
       button.onclick = () =>
         change(button.dataset.plus, 1);
+
     });
 
 
   element
     .querySelectorAll("[data-remove]")
     .forEach(button => {
+
       button.onclick = () =>
         remove(button.dataset.remove);
+
     });
 
 
@@ -1013,6 +1230,7 @@ function renderSteps() {
   const element = $("#steps");
 
   if (!element) return;
+
 
   const labels = {
     pt: [
@@ -1046,13 +1264,15 @@ function renderSteps() {
     chg: [
       "Hlawula",
       "Lunghisa cart",
-      "Rhumela oda",
+      "Yisa oda",
       "Landzelela"
     ]
+
   }[state.lang];
 
 
   const descriptions = {
+
     pt: [
       "Pesquise produtos e compare preços.",
       "Ajuste quantidades e veja o total.",
@@ -1087,26 +1307,34 @@ function renderSteps() {
       "Oda yi nga rhumeriwa hi WhatsApp.",
       "Ntlawa wu tiyisisa naswona wu landzelela oda."
     ]
+
   }[state.lang];
 
 
   element.innerHTML = labels.map((label, index) => `
+
     <div class="text-center p-5 bg-white/10 rounded-2xl">
 
-      <div class="w-12 h-12 mx-auto rounded-full bg-secondary-container flex items-center justify-center text-white font-bold">
+      <div
+        class="w-12 h-12 mx-auto rounded-full bg-secondary-container flex items-center justify-center text-white font-bold"
+      >
         ${index + 1}
       </div>
+
 
       <h3 class="font-semibold mt-3">
         ${label}
       </h3>
+
 
       <p class="text-sm opacity-80 mt-1">
         ${descriptions[index]}
       </p>
 
     </div>
+
   `).join("");
+
 }
 
 
@@ -1120,54 +1348,70 @@ function renderFaq() {
 
   if (!element) return;
 
+
   const faq = [
+
     [
       "Preciso criar uma conta?",
       "Não para fazer o pedido. O cliente pode comprar sem registo."
     ],
+
     [
       "Quando o pedido fica confirmado?",
       "Depois de a equipa verificar stock, zona de entrega e forma de pagamento."
     ],
+
     [
       "Posso alterar um pedido?",
       "Sim, contacte o Rancho Flexível pelo WhatsApp o mais cedo possível."
     ],
+
     [
       "Como acompanho o pedido?",
       "O administrador pode actualizar o estado do pedido."
     ]
+
   ];
 
 
   element.innerHTML = faq.map(item => `
+
     <details class="bg-surface-container-low rounded-xl p-4">
 
       <summary class="font-semibold cursor-pointer">
         ${item[0]}
       </summary>
 
+
       <p class="text-sm text-on-surface-variant mt-2">
         ${item[1]}
       </p>
 
     </details>
+
   `).join("");
+
 }
 
 
 /* ============================================================
-   APLICA TODAS AS ALTERAÇÕES
+   RENDERIZAR TUDO
 ============================================================ */
 
 function renderAll() {
 
   renderCategories();
+
   renderFilters();
+
   renderKits();
+
   renderProducts();
+
   renderCart();
+
   renderSteps();
+
   renderFaq();
 
 
@@ -1179,7 +1423,7 @@ function renderAll() {
 
 
   /* ========================================================
-     IMAGEM GRANDE DO TOPO
+     IMAGEM DO TOPO
   ======================================================== */
 
   if (state.settings?.hero_image) {
@@ -1220,7 +1464,7 @@ function renderAll() {
 
 
 /* ============================================================
-   EVENTOS
+   EVENTOS — PESQUISA
 ============================================================ */
 
 const searchInput = $("#searchInput");
@@ -1230,12 +1474,20 @@ if (searchInput) {
 }
 
 
+/* ============================================================
+   EVENTOS — CATEGORIA
+============================================================ */
+
 const categoryFilter = $("#categoryFilter");
 
 if (categoryFilter) {
   categoryFilter.onchange = renderProducts;
 }
 
+
+/* ============================================================
+   EVENTOS — ORDENAÇÃO
+============================================================ */
 
 const sortFilter = $("#sortFilter");
 
@@ -1245,7 +1497,7 @@ if (sortFilter) {
 
 
 /* ============================================================
-   CARRINHO
+   CARRINHO — ABRIR
 ============================================================ */
 
 const cartButton = $("#cartBtn");
@@ -1265,6 +1517,10 @@ if (cartButton) {
 }
 
 
+/* ============================================================
+   CARRINHO — FECHAR
+============================================================ */
+
 const closeCart = $("#closeCart");
 
 if (closeCart) {
@@ -1281,6 +1537,10 @@ if (closeCart) {
 
 }
 
+
+/* ============================================================
+   CARRINHO — OVERLAY
+============================================================ */
 
 const cartOverlay = $("#cartOverlay");
 
@@ -1316,7 +1576,9 @@ if (checkoutButton) {
       return;
     }
 
+
     location.href = "checkout.html";
+
   };
 
 }
@@ -1332,16 +1594,20 @@ if (languageSelect) {
 
   languageSelect.value = state.lang;
 
+
   languageSelect.onchange = event => {
 
     state.lang = event.target.value;
+
 
     localStorage.setItem(
       "rf_lang",
       state.lang
     );
 
+
     renderAll();
+
     applyI18n();
 
   };
