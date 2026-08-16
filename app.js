@@ -1,4 +1,3 @@
-```javascript
 import {
   getProducts,
   getCategories,
@@ -6,17 +5,20 @@ import {
   getSettings
 } from "./data.js";
 
+
 /* ============================================================
    TRADUÇÕES
 ============================================================ */
 
 const I18N = {
+
   pt: {
     nav: {
       products: "Produtos",
       kits: "Rancho do mês",
       admin: "Administração"
     },
+
     hero: {
       badge: "Novo: Compras pelo WhatsApp",
       titleEnd: "sem sair de casa.",
@@ -26,28 +28,35 @@ const I18N = {
       delivery: "Entrega Hoje",
       quality: "Qualidade"
     },
+
     categories: {
       subtitle: "Encontre tudo o que precisa para a sua despensa."
     },
+
     kits: {
       badge: "Destaques",
       text: "Kits pré-montados pensados para facilitar a sua rotina e garantir economia."
     },
+
     products: {
       title: "Produtos",
       text: "Escolha os produtos para o seu rancho."
     },
+
     how: {
       title: "Como funciona"
     },
+
     faq: {
       title: "Perguntas frequentes"
     },
+
     cart: {
       title: "Seu carrinho",
       total: "Total",
       checkout: "Finalizar pedido"
     },
+
     footer: {
       desc: "Qualidade do campo direto para a sua mesa, com a flexibilidade que o seu dia a dia pede.",
       links: "Links Úteis",
@@ -57,12 +66,14 @@ const I18N = {
     }
   },
 
+
   en: {
     nav: {
       products: "Products",
       kits: "Monthly bundle",
       admin: "Administration"
     },
+
     hero: {
       badge: "New: Order by WhatsApp",
       titleEnd: "without leaving home.",
@@ -72,28 +83,35 @@ const I18N = {
       delivery: "Delivery Today",
       quality: "Quality"
     },
+
     categories: {
       subtitle: "Find everything you need for your pantry."
     },
+
     kits: {
       badge: "Highlights",
       text: "Pre-built bundles designed to simplify your routine and save money."
     },
+
     products: {
       title: "Products",
       text: "Choose products for your household."
     },
+
     how: {
       title: "How it works"
     },
+
     faq: {
       title: "Frequently asked questions"
     },
+
     cart: {
       title: "Your cart",
       total: "Total",
       checkout: "Checkout"
     },
+
     footer: {
       desc: "Quality from the field to your table, with flexibility for your everyday life.",
       links: "Useful links",
@@ -103,12 +121,14 @@ const I18N = {
     }
   },
 
+
   zh: {
     nav: {
       products: "产品",
       kits: "本月套餐",
       admin: "管理"
     },
+
     hero: {
       badge: "新功能：WhatsApp 下单",
       titleEnd: "足不出户完成采购。",
@@ -118,28 +138,35 @@ const I18N = {
       delivery: "今日配送",
       quality: "品质保证"
     },
+
     categories: {
       subtitle: "找到您的家庭储藏所需的一切。"
     },
+
     kits: {
       badge: "精选",
       text: "预先搭配的套餐，帮助您轻松生活并节省开支。"
     },
+
     products: {
       title: "产品",
       text: "为您的家庭选择商品。"
     },
+
     how: {
       title: "购买流程"
     },
+
     faq: {
       title: "常见问题"
     },
+
     cart: {
       title: "购物车",
       total: "总计",
       checkout: "结算"
     },
+
     footer: {
       desc: "从农场到餐桌，为您的日常生活提供灵活选择。",
       links: "有用链接",
@@ -149,12 +176,14 @@ const I18N = {
     }
   },
 
+
   fr: {
     nav: {
       products: "Produits",
       kits: "Panier du mois",
       admin: "Administration"
     },
+
     hero: {
       badge: "Nouveau : commande WhatsApp",
       titleEnd: "sans quitter la maison.",
@@ -164,28 +193,35 @@ const I18N = {
       delivery: "Livraison aujourd'hui",
       quality: "Qualité"
     },
+
     categories: {
       subtitle: "Trouvez tout ce dont vous avez besoin pour votre garde-manger."
     },
+
     kits: {
       badge: "Sélection",
       text: "Des paniers prêts à l'emploi pour simplifier votre quotidien et économiser."
     },
+
     products: {
       title: "Produits",
       text: "Choisissez les produits pour votre foyer."
     },
+
     how: {
       title: "Comment ça marche"
     },
+
     faq: {
       title: "Questions fréquentes"
     },
+
     cart: {
       title: "Votre panier",
       total: "Total",
       checkout: "Passer la commande"
     },
+
     footer: {
       desc: "La qualité du champ directement à votre table, avec flexibilité.",
       links: "Liens utiles",
@@ -195,12 +231,14 @@ const I18N = {
     }
   },
 
+
   chg: {
     nav: {
       products: "Swilo",
       kits: "Rancho wa n'weti",
       admin: "Ulawuri"
     },
+
     hero: {
       badge: "Swa nyuwani: oda hi WhatsApp",
       titleEnd: "u nga humi kaya.",
@@ -210,28 +248,35 @@ const I18N = {
       delivery: "Ku yisa namuntlha",
       quality: "Nkoka"
     },
+
     categories: {
       subtitle: "Kuma swilo leswi u swi lavaka endlwini."
     },
+
     kits: {
       badge: "Swikombiso",
       text: "Tikhithi leti lunghisiweke ku olovisa siku ni siku."
     },
+
     products: {
       title: "Swilo",
       text: "Hlawula swilo swa ndyangu wa wena."
     },
+
     how: {
       title: "Ndlela leyi swi tirhaka ha yona"
     },
+
     faq: {
       title: "Swivutiso leswi talaka ku vutisiwa"
     },
+
     cart: {
       title: "Cart ya wena",
       total: "Ntsengo",
       checkout: "Hetisa oda"
     },
+
     footer: {
       desc: "Nkoka wa le masikwini wu fika etafuleni ra wena hi ku olova.",
       links: "Swihlanganisi",
@@ -240,6 +285,7 @@ const I18N = {
       rights: "Timfanelo hinkwato ti hlayisiwile."
     }
   }
+
 };
 
 
@@ -248,12 +294,21 @@ const I18N = {
 ============================================================ */
 
 const state = {
+
   lang: localStorage.getItem("rf_lang") || "pt",
+
   products: [],
+
   categories: [],
+
   kits: [],
+
   settings: {},
-  cart: JSON.parse(localStorage.getItem("rf_cart") || "[]")
+
+  cart: JSON.parse(
+    localStorage.getItem("rf_cart") || "[]"
+  )
+
 };
 
 
@@ -261,7 +316,9 @@ const state = {
    HELPERS
 ============================================================ */
 
-const $ = selector => document.querySelector(selector);
+const $ = selector =>
+  document.querySelector(selector);
+
 
 const money = number =>
   `${Number(number || 0).toLocaleString("pt-MZ", {
@@ -270,43 +327,14 @@ const money = number =>
   })} MZN`;
 
 
-function tr(path) {
-  return (
-    path
-      .split(".")
-      .reduce((obj, key) => obj?.[key], I18N[state.lang]) || path
-  );
-}
+/* ============================================================
+   NORMALIZAR PESQUISA
+   Remove acentos e ignora maiúsculas/minúsculas
+============================================================ */
 
+function normalizeSearch(value) {
 
-function applyI18n() {
-
-  document.querySelectorAll("[data-i18n]").forEach(element => {
-    element.textContent = tr(element.dataset.i18n);
-  });
-
-  document.documentElement.lang = state.lang;
-}
-
-
-function current(value) {
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  return (
-    value?.[state.lang] ||
-    value?.pt ||
-    Object.values(value || {})[0] ||
-    ""
-  );
-}
-
-
-function normalizeText(value) {
-
-  return String(value || "")
+  return String(value ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
@@ -315,46 +343,142 @@ function normalizeText(value) {
 }
 
 
+/* ============================================================
+   TRADUÇÃO
+============================================================ */
+
+function tr(path) {
+
+  return (
+
+    path
+      .split(".")
+      .reduce(
+        (obj, key) => obj?.[key],
+        I18N[state.lang]
+      )
+
+    || path
+
+  );
+
+}
+
+
+/* ============================================================
+   APLICAR TRADUÇÕES
+============================================================ */
+
+function applyI18n() {
+
+  document
+    .querySelectorAll("[data-i18n]")
+    .forEach(element => {
+
+      element.textContent =
+        tr(element.dataset.i18n);
+
+    });
+
+
+  document.documentElement.lang =
+    state.lang;
+
+}
+
+
+/* ============================================================
+   VALOR MULTILÍNGUE
+============================================================ */
+
+function current(value) {
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+
+  return (
+
+    value?.[state.lang] ||
+
+    value?.pt ||
+
+    Object.values(value || {})[0] ||
+
+    ""
+
+  );
+
+}
+
+
+/* ============================================================
+   TOAST
+============================================================ */
+
 function toast(message) {
 
   const element = $("#toast");
 
   if (!element) return;
 
+
   element.textContent = message;
+
   element.classList.remove("hidden");
 
+
   setTimeout(() => {
+
     element.classList.add("hidden");
+
   }, 2500);
+
 }
 
 
 /* ============================================================
-   IMAGENS
+   IMAGEM DOS PRODUTOS
 ============================================================ */
 
 function imgForProduct(product) {
 
   return (
+
     product?.image_url ||
+
     product?.image ||
+
     "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=700&q=80"
+
   );
 
 }
 
+
+/* ============================================================
+   IMAGEM DOS KITS
+============================================================ */
 
 function imgForKit(kit) {
 
   return (
+
     kit?.image_url ||
+
     kit?.image ||
+
     "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80"
+
   );
 
 }
 
+
+/* ============================================================
+   IMAGEM DAS CATEGORIAS
+============================================================ */
 
 function imgForCategory(category, index) {
 
@@ -362,24 +486,41 @@ function imgForCategory(category, index) {
     return category.image_url;
   }
 
+
   if (category?.image) {
     return category.image;
   }
 
+
   const fallbackImages = [
+
     "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80",
+
     "https://images.unsplash.com/photo-1551892374-ecf8754cf8b0?auto=format&fit=crop&w=600&q=80",
+
     "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=600&q=80",
+
     "https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?auto=format&fit=crop&w=600&q=80",
+
     "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80",
+
     "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=600&q=80",
+
     "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=600&q=80",
+
     "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80",
+
     "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=600&q=80",
+
     "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=600&q=80"
+
   ];
 
-  return fallbackImages[index % fallbackImages.length];
+
+  return fallbackImages[
+    index % fallbackImages.length
+  ];
+
 }
 
 
@@ -390,39 +531,81 @@ function imgForCategory(category, index) {
 async function load() {
 
   try {
-    state.products = await getProducts();
-    console.log("Produtos carregados:", state.products);
+
+    state.products =
+      await getProducts();
+
   } catch (error) {
-    console.error("Erro ao carregar produtos:", error);
+
+    console.error(
+      "Erro ao carregar produtos:",
+      error
+    );
+
     state.products = [];
+
   }
 
 
   try {
-    state.categories = await getCategories();
+
+    state.categories =
+      await getCategories();
+
   } catch (error) {
-    console.error("Erro ao carregar categorias:", error);
+
+    console.error(
+      "Erro ao carregar categorias:",
+      error
+    );
+
     state.categories = [];
+
   }
 
 
   try {
-    state.kits = await getKits();
+
+    state.kits =
+      await getKits();
+
   } catch (error) {
-    console.error("Erro ao carregar Rancho do Mês:", error);
+
+    console.error(
+      "Erro ao carregar Rancho do Mês:",
+      error
+    );
+
     state.kits = [];
+
   }
 
 
   try {
-    state.settings = await getSettings();
+
+    state.settings =
+      await getSettings();
+
   } catch (error) {
-    console.error("Erro ao carregar configurações:", error);
+
+    console.error(
+      "Erro ao carregar configurações:",
+      error
+    );
+
     state.settings = {};
+
   }
+
+
+  console.log(
+    "Produtos carregados:",
+    state.products.length
+  );
 
 
   renderAll();
+
   applyI18n();
 
 }
@@ -434,7 +617,8 @@ async function load() {
 
 function renderCategories() {
 
-  const element = $("#categories");
+  const element =
+    $("#categories");
 
   if (!element) return;
 
@@ -442,71 +626,98 @@ function renderCategories() {
   if (!state.categories.length) {
 
     element.innerHTML = `
+
       <div class="col-span-full text-center py-10 text-on-surface-variant">
+
         Nenhuma categoria encontrada.
+
       </div>
+
     `;
 
     return;
+
   }
 
 
-  element.innerHTML = state.categories.map((category, index) => {
+  element.innerHTML =
+    state.categories.map(
+      (category, index) => {
 
-    const image = imgForCategory(category, index);
+        const image =
+          imgForCategory(
+            category,
+            index
+          );
 
-    return `
-      <button
-        data-cat="${category.id}"
-        class="group flex flex-col items-center justify-center p-3 rounded-[2rem] bg-white hover:bg-surface-container shadow-sm hover:shadow-md transition min-h-[160px] text-center overflow-hidden"
-      >
 
-        <div class="w-20 h-20 rounded-2xl overflow-hidden bg-surface-container-low">
+        return `
 
-          <img
-            src="${image}"
-            alt="${current(category.name)}"
-            class="w-full h-full object-cover group-hover:scale-105 transition"
-            onerror="this.style.display='none'"
+          <button
+            data-cat="${category.id}"
+            class="group flex flex-col items-center justify-center p-3 rounded-[2rem] bg-white hover:bg-surface-container shadow-sm hover:shadow-md transition min-h-[160px] text-center overflow-hidden"
           >
 
-        </div>
+            <div class="w-20 h-20 rounded-2xl overflow-hidden bg-surface-container-low">
 
-        <span class="font-semibold text-sm mt-3">
-          ${current(category.name)}
-        </span>
+              <img
+                src="${image}"
+                alt="${current(category.name)}"
+                class="w-full h-full object-cover group-hover:scale-105 transition"
+                onerror="this.style.display='none'"
+              >
 
-      </button>
-    `;
+            </div>
 
-  }).join("");
+            <span class="font-semibold text-sm mt-3">
 
+              ${current(category.name)}
 
-  element.querySelectorAll("[data-cat]").forEach(button => {
+            </span>
 
-    button.onclick = () => {
+          </button>
 
-      const filter = $("#categoryFilter");
-
-      if (filter) {
-        filter.value = button.dataset.cat;
-        renderProducts();
-      }
-
-
-      const productsSection = $("#produtos");
-
-      if (productsSection) {
-
-        productsSection.scrollIntoView({
-          behavior: "smooth"
-        });
+        `;
 
       }
+    ).join("");
 
-    };
 
-  });
+  element
+    .querySelectorAll("[data-cat]")
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        const filter =
+          $("#categoryFilter");
+
+
+        if (filter) {
+
+          filter.value =
+            button.dataset.cat;
+
+          renderProducts();
+
+        }
+
+
+        const productsSection =
+          $("#produtos");
+
+
+        if (productsSection) {
+
+          productsSection.scrollIntoView({
+            behavior: "smooth"
+          });
+
+        }
+
+      };
+
+    });
 
 }
 
@@ -517,7 +728,8 @@ function renderCategories() {
 
 function renderKits() {
 
-  const element = $("#kitsGrid");
+  const element =
+    $("#kitsGrid");
 
   if (!element) return;
 
@@ -525,251 +737,313 @@ function renderKits() {
   if (!state.kits.length) {
 
     element.innerHTML = `
+
       <div class="col-span-full text-center py-10 text-on-surface-variant">
+
         Nenhum Rancho do Mês disponível.
+
       </div>
+
     `;
 
     return;
+
   }
 
 
-  element.innerHTML = state.kits.map(kit => {
+  element.innerHTML =
+    state.kits.map(kit => {
 
-    const image = imgForKit(kit);
-
-
-    const kitProducts = Array.isArray(kit.product_ids)
-      ? kit.product_ids
-          .map(id =>
-            state.products.find(
-              product => String(product.id) === String(id)
-            )
-          )
-          .filter(Boolean)
-      : [];
+      const image =
+        imgForKit(kit);
 
 
-    const productsHtml = kitProducts.length
+      const kitProducts =
+        Array.isArray(kit.product_ids)
 
-      ? `
-        <div class="mt-5">
+          ? kit.product_ids
+              .map(id =>
+                state.products.find(
+                  product =>
+                    String(product.id) ===
+                    String(id)
+                )
+              )
+              .filter(Boolean)
 
-          <div class="flex items-center gap-2 mb-3">
+          : [];
 
-            <span class="material-symbols-outlined text-primary text-[20px]">
-              inventory_2
-            </span>
 
-            <h4 class="text-sm font-bold text-primary">
-              Composição do Rancho
-            </h4>
+      const productsHtml =
+        kitProducts.length
 
-          </div>
+          ? `
 
-          <div class="space-y-2">
+            <div class="mt-5">
 
-            ${kitProducts.map(product => `
+              <div class="flex items-center gap-2 mb-3">
 
-              <div class="flex items-center gap-3 bg-surface-container-low rounded-xl p-2">
+                <span class="material-symbols-outlined text-primary text-[20px]">
+                  inventory_2
+                </span>
 
-                <img
-                  src="${imgForProduct(product)}"
-                  alt="${current(product.name)}"
-                  class="w-11 h-11 rounded-lg object-cover shrink-0"
-                  onerror="this.style.display='none'"
-                >
-
-                <div class="min-w-0 flex-1">
-
-                  <div class="text-sm font-semibold truncate">
-                    ${current(product.name)}
-                  </div>
-
-                  ${
-                    product.unit
-                      ? `
-                        <div class="text-xs text-on-surface-variant">
-                          ${product.unit}
-                        </div>
-                      `
-                      : ""
-                  }
-
-                </div>
+                <h4 class="text-sm font-bold text-primary">
+                  Composição do Rancho
+                </h4>
 
               </div>
 
-            `).join("")}
+
+              <div class="space-y-2">
+
+                ${kitProducts.map(product => `
+
+                  <div
+                    class="flex items-center gap-3 bg-surface-container-low rounded-xl p-2"
+                  >
+
+                    <img
+                      src="${imgForProduct(product)}"
+                      alt="${current(product.name)}"
+                      class="w-11 h-11 rounded-lg object-cover shrink-0"
+                      onerror="this.style.display='none'"
+                    >
+
+
+                    <div class="min-w-0 flex-1">
+
+                      <div class="text-sm font-semibold truncate">
+
+                        ${current(product.name)}
+
+                      </div>
+
+
+                      ${
+                        product.unit
+                          ? `
+
+                            <div class="text-xs text-on-surface-variant">
+
+                              ${product.unit}
+
+                            </div>
+
+                          `
+                          : ""
+                      }
+
+                    </div>
+
+                  </div>
+
+                `).join("")}
+
+              </div>
+
+            </div>
+
+          `
+
+          : `
+
+            <div class="mt-5 p-3 rounded-xl bg-surface-container-low">
+
+              <div class="flex items-center gap-2 text-on-surface-variant">
+
+                <span class="material-symbols-outlined text-[20px]">
+                  inventory_2
+                </span>
+
+                <span class="text-sm">
+
+                  Este Rancho ainda não tem produtos associados.
+
+                </span>
+
+              </div>
+
+            </div>
+
+          `;
+
+
+      return `
+
+        <div
+          class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition flex flex-col overflow-hidden"
+        >
+
+          <div class="h-48 bg-surface-container relative overflow-hidden">
+
+            <img
+              src="${image}"
+              class="w-full h-full object-cover"
+              alt="${current(kit.name)}"
+              onerror="this.style.display='none'"
+            >
+
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+
+
+            <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+
+              <span
+                class="bg-white text-on-surface text-xs font-bold px-2 py-1 rounded"
+              >
+
+                ${current(kit.badge) || "Destaque"}
+
+              </span>
+
+
+              <span class="text-white font-bold">
+
+                ${money(kit.price)}
+
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <div class="p-4 flex flex-col flex-1">
+
+            <h3 class="text-xl font-semibold">
+
+              ${current(kit.name)}
+
+            </h3>
+
+
+            ${
+              current(kit.description)
+                ? `
+
+                  <p class="text-sm text-on-surface-variant mt-2">
+
+                    ${current(kit.description)}
+
+                  </p>
+
+                `
+                : ""
+            }
+
+
+            ${productsHtml}
+
+
+            <button
+              data-kit="${kit.id}"
+              class="mt-5 w-full py-2.5 rounded-lg bg-surface-container-highest hover:bg-secondary hover:text-white font-semibold transition"
+            >
+
+              Adicionar ao carrinho
+
+            </button>
 
           </div>
 
         </div>
-      `
 
-      : `
-        <div class="mt-5 p-3 rounded-xl bg-surface-container-low">
-
-          <div class="flex items-center gap-2 text-on-surface-variant">
-
-            <span class="material-symbols-outlined text-[20px]">
-              inventory_2
-            </span>
-
-            <span class="text-sm">
-              Este Rancho ainda não tem produtos associados.
-            </span>
-
-          </div>
-
-        </div>
       `;
 
-
-    return `
-      <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition flex flex-col overflow-hidden">
-
-        <div class="h-48 bg-surface-container relative overflow-hidden">
-
-          <img
-            src="${image}"
-            class="w-full h-full object-cover"
-            alt="${current(kit.name)}"
-            onerror="this.style.display='none'"
-          >
-
-          <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-
-          <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
-
-            <span class="bg-white text-on-surface text-xs font-bold px-2 py-1 rounded">
-              ${current(kit.badge) || "Destaque"}
-            </span>
-
-            <span class="text-white font-bold">
-              ${money(kit.price)}
-            </span>
-
-          </div>
-
-        </div>
+    }).join("");
 
 
-        <div class="p-4 flex flex-col flex-1">
+  element
+    .querySelectorAll("[data-kit]")
+    .forEach(button => {
 
-          <h3 class="text-xl font-semibold">
-            ${current(kit.name)}
-          </h3>
+      button.onclick = () => {
 
-
-          ${
-            current(kit.description)
-              ? `
-                <p class="text-sm text-on-surface-variant mt-2">
-                  ${current(kit.description)}
-                </p>
-              `
-              : ""
-          }
+        const kit =
+          state.kits.find(
+            item =>
+              String(item.id) ===
+              String(button.dataset.kit)
+          );
 
 
-          ${productsHtml}
+        if (!kit) return;
 
 
-          <button
-            data-kit="${kit.id}"
-            class="mt-5 w-full py-2.5 rounded-lg bg-surface-container-highest hover:bg-secondary hover:text-white font-semibold transition"
-          >
-            Adicionar ao carrinho
-          </button>
+        if (Array.isArray(kit.product_ids)) {
 
-        </div>
+          kit.product_ids.forEach(id => {
 
-      </div>
-    `;
+            add(id);
 
-  }).join("");
+          });
+
+        }
 
 
-  element.querySelectorAll("[data-kit]").forEach(button => {
+        toast(
+          `${current(kit.name)} adicionado`
+        );
 
-    button.onclick = () => {
+      };
 
-      const kit = state.kits.find(
-        item => String(item.id) === String(button.dataset.kit)
-      );
-
-      if (!kit) return;
-
-
-      if (Array.isArray(kit.product_ids)) {
-
-        kit.product_ids.forEach(id => {
-          add(id);
-        });
-
-      }
-
-
-      toast(`${current(kit.name)} adicionado`);
-
-    };
-
-  });
+    });
 
 }
 
 
 /* ============================================================
-   FILTRO
+   FILTROS
 ============================================================ */
 
 function renderFilters() {
 
-  const select = $("#categoryFilter");
+  const select =
+    $("#categoryFilter");
 
   if (!select) return;
 
 
   select.innerHTML =
-    `<option value="">Todas as categorias</option>` +
+
+    `<option value="">
+      Todas as categorias
+    </option>`
+
+    +
+
     state.categories
-      .map(category =>
-        `<option value="${category.id}">
+      .map(category => `
+
+        <option value="${category.id}">
+
           ${current(category.name)}
-        </option>`
-      )
+
+        </option>
+
+      `)
       .join("");
 
 }
 
 
 /* ============================================================
-   PESQUISA
+   TEXTO PESQUISÁVEL DO PRODUTO
 ============================================================ */
 
-function searchProducts(products, query) {
+function getSearchText(product) {
 
-  const normalizedQuery = normalizeText(query);
-
-  if (!normalizedQuery) {
-    return products;
-  }
-
-
-  const words = normalizedQuery
-    .split(/\s+/)
-    .filter(Boolean);
-
-
-  return products.filter(product => {
-
-    const category = state.categories.find(
-      cat => String(cat.id) === String(product.category_id)
+  const category =
+    state.categories.find(
+      category =>
+        String(category.id) ===
+        String(product.category_id)
     );
 
 
-    const searchableText = [
+  return normalizeSearch(
+
+    [
 
       current(product.name),
 
@@ -779,28 +1053,17 @@ function searchProducts(products, query) {
 
       product.unit,
 
-      current(category?.name),
+      category
+        ? current(category.name)
+        : "",
 
       product.sku,
 
       product.code
 
-    ]
-      .filter(Boolean)
-      .map(normalizeText)
-      .join(" ");
+    ].join(" ")
 
-
-    /*
-       Todas as palavras digitadas devem existir
-       no texto do produto.
-    */
-
-    return words.every(word =>
-      searchableText.includes(word)
-    );
-
-  });
+  );
 
 }
 
@@ -811,50 +1074,80 @@ function searchProducts(products, query) {
 
 function renderProducts() {
 
-  const element = $("#productGrid");
+  const element =
+    $("#productGrid");
 
   if (!element) return;
 
 
-  let products = [...state.products].filter(
-    product => product.active !== false
-  );
-
-
-  const searchInput = $("#searchInput");
-  const categoryFilter = $("#categoryFilter");
-  const sortFilter = $("#sortFilter");
-
-
-  const query = searchInput?.value || "";
-  const category = categoryFilter?.value || "";
-  const sort = sortFilter?.value || "default";
-
-
-  /*
-     PESQUISA
-  */
-
-  products = searchProducts(products, query);
-
-
-  /*
-     CATEGORIA
-  */
-
-  if (category) {
-
-    products = products.filter(
+  let products =
+    [...state.products].filter(
       product =>
-        String(product.category_id) === String(category)
+        product.active !== false
     );
+
+
+  const searchInput =
+    $("#searchInput");
+
+  const categoryFilter =
+    $("#categoryFilter");
+
+  const sortFilter =
+    $("#sortFilter");
+
+
+  const query =
+    normalizeSearch(
+      searchInput?.value || ""
+    );
+
+
+  const category =
+    categoryFilter?.value || "";
+
+
+  const sort =
+    sortFilter?.value || "default";
+
+
+  /* ========================================================
+     PESQUISA
+  ======================================================== */
+
+  if (query) {
+
+    products =
+      products.filter(product => {
+
+        return getSearchText(
+          product
+        ).includes(query);
+
+      });
 
   }
 
 
-  /*
+  /* ========================================================
+     CATEGORIA
+  ======================================================== */
+
+  if (category) {
+
+    products =
+      products.filter(
+        product =>
+          String(product.category_id) ===
+          String(category)
+      );
+
+  }
+
+
+  /* ========================================================
      ORDENAÇÃO
-  */
+  ======================================================== */
 
   if (sort === "priceAsc") {
 
@@ -880,199 +1173,328 @@ function renderProducts() {
 
   if (sort === "name") {
 
-    products.sort((a, b) =>
-      current(a.name).localeCompare(
-        current(b.name),
-        state.lang
-      )
+    products.sort(
+      (a, b) =>
+        current(a.name).localeCompare(
+          current(b.name)
+        )
     );
 
   }
 
 
-  /*
+  /* ========================================================
      NENHUM RESULTADO
-  */
+  ======================================================== */
 
   if (!products.length) {
 
     element.innerHTML = `
+
       <div class="col-span-full text-center py-12">
 
-        <span class="material-symbols-outlined text-5xl text-outline">
+        <span
+          class="material-symbols-outlined text-5xl text-outline opacity-50"
+        >
           search_off
         </span>
 
-        <p class="text-on-surface-variant mt-3">
-          Nenhum produto encontrado.
+        <p class="mt-3 text-on-surface-variant">
+
+          ${
+            query
+              ? `Nenhum produto encontrado para "${searchInput?.value || query}".`
+              : "Nenhum produto encontrado."
+          }
+
         </p>
 
-        ${
-          query
-            ? `
-              <p class="text-xs text-outline mt-1">
-                Pesquisa: "${query}"
-              </p>
-            `
-            : ""
-        }
-
       </div>
+
     `;
 
     return;
+
   }
 
 
-  /*
+  /* ========================================================
      PRODUTOS
-  */
+  ======================================================== */
 
-  element.innerHTML = products.map(product => {
+  element.innerHTML =
+    products.map(product => {
 
-    const image = imgForProduct(product);
-
-    return `
-      <article
-        class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition overflow-hidden group"
-      >
-
-        <div class="h-44 bg-surface-container relative overflow-hidden">
-
-          <img
-            src="${image}"
-            class="w-full h-full object-cover group-hover:scale-105 transition"
-            alt="${current(product.name)}"
-            onerror="this.style.display='none'"
-          >
+      const image =
+        imgForProduct(product);
 
 
-          <div class="absolute top-2 left-2 flex gap-1">
+      return `
 
-            ${
-              product.tag
-                ? `
-                  <span
-                    class="bg-secondary text-white text-[10px] font-bold px-2 py-1 rounded"
-                  >
-                    ${current(product.tag)}
-                  </span>
-                `
-                : ""
-            }
+        <article
+          class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition overflow-hidden group"
+        >
 
+          <div class="h-44 bg-surface-container relative overflow-hidden">
 
-            ${
-              product.featured
-                ? `
-                  <span
-                    class="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded"
-                  >
-                    ★
-                  </span>
-                `
-                : ""
-            }
-
-          </div>
-
-        </div>
+            <img
+              src="${image}"
+              class="w-full h-full object-cover group-hover:scale-105 transition"
+              alt="${current(product.name)}"
+              onerror="this.style.display='none'"
+            >
 
 
-        <div class="p-4">
+            <div class="absolute top-2 left-2 flex gap-1">
 
-          <h3 class="font-semibold">
-            ${current(product.name)}
-          </h3>
+              ${
+                product.tag
+                  ? `
 
+                    <span
+                      class="bg-secondary text-white text-[10px] font-bold px-2 py-1 rounded"
+                    >
 
-          <p class="text-xs text-on-surface-variant mt-1">
-            ${current(product.description) || ""}
-          </p>
+                      ${current(product.tag)}
 
+                    </span>
 
-          <div class="flex items-end justify-between mt-4">
-
-            <div>
-
-              <span class="text-xs text-on-surface-variant">
-                ${product.unit || ""}
-              </span>
-
-
-              <div class="text-lg font-bold text-primary">
-                ${money(product.price)}
-              </div>
+                  `
+                  : ""
+              }
 
 
               ${
-                product.old_price
+                product.featured
                   ? `
-                    <del class="text-xs text-outline">
-                      ${money(product.old_price)}
-                    </del>
+
+                    <span
+                      class="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded"
+                    >
+
+                      ★
+
+                    </span>
+
                   `
                   : ""
               }
 
             </div>
 
+          </div>
 
-            <button
-              data-add="${product.id}"
-              class="w-10 h-10 rounded-full bg-secondary-container text-white flex items-center justify-center hover:bg-secondary"
-              aria-label="Adicionar ${current(product.name)}"
-            >
 
-              <span class="material-symbols-outlined">
-                add_shopping_cart
-              </span>
+          <div class="p-4">
 
-            </button>
+            <h3 class="font-semibold">
+
+              ${current(product.name)}
+
+            </h3>
+
+
+            <p class="text-xs text-on-surface-variant mt-1">
+
+              ${current(product.description) || ""}
+
+            </p>
+
+
+            <div class="flex items-end justify-between mt-4">
+
+              <div>
+
+                <span class="text-xs text-on-surface-variant">
+
+                  ${product.unit || ""}
+
+                </span>
+
+
+                <div class="text-lg font-bold text-primary">
+
+                  ${money(product.price)}
+
+                </div>
+
+
+                ${
+                  product.old_price
+                    ? `
+
+                      <del class="text-xs text-outline">
+
+                        ${money(product.old_price)}
+
+                      </del>
+
+                    `
+                    : ""
+                }
+
+              </div>
+
+
+              <button
+                data-add="${product.id}"
+                class="w-10 h-10 rounded-full bg-secondary-container text-white flex items-center justify-center hover:bg-secondary"
+                aria-label="Adicionar ${current(product.name)} ao carrinho"
+              >
+
+                <span class="material-symbols-outlined">
+
+                  add_shopping_cart
+
+                </span>
+
+              </button>
+
+            </div>
 
           </div>
 
-        </div>
+        </article>
 
-      </article>
-    `;
+      `;
 
-  }).join("");
+    }).join("");
 
 
-  /*
+  /* ========================================================
      BOTÕES ADICIONAR
-  */
+  ======================================================== */
 
-  element.querySelectorAll("[data-add]").forEach(button => {
+  element
+    .querySelectorAll("[data-add]")
+    .forEach(button => {
 
-    button.onclick = () => {
+      button.onclick = () => {
 
-      add(button.dataset.add);
+        add(
+          button.dataset.add
+        );
 
-    };
+      };
 
-  });
+    });
 
 }
 
 
 /* ============================================================
-   CARRINHO
+   CONFIGURAR PESQUISA
+============================================================ */
+
+function setupSearch() {
+
+  const input =
+    document.getElementById(
+      "searchInput"
+    );
+
+
+  if (!input) {
+
+    console.warn(
+      "Campo #searchInput não encontrado."
+    );
+
+    return;
+
+  }
+
+
+  console.log(
+    "Pesquisa inicializada."
+  );
+
+
+  /* Pesquisa enquanto escreve */
+
+  input.addEventListener(
+    "input",
+    () => {
+
+      renderProducts();
+
+    }
+  );
+
+
+  /* Também funciona ao pressionar teclas */
+
+  input.addEventListener(
+    "keyup",
+    () => {
+
+      renderProducts();
+
+    }
+  );
+
+
+  /* Enter leva para os produtos */
+
+  input.addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key === "Enter"
+      ) {
+
+        event.preventDefault();
+
+
+        renderProducts();
+
+
+        const section =
+          document.getElementById(
+            "produtos"
+          );
+
+
+        if (section) {
+
+          section.scrollIntoView({
+            behavior: "smooth"
+          });
+
+        }
+
+      }
+
+    }
+  );
+
+}
+
+
+/* ============================================================
+   CARRINHO — ADICIONAR
 ============================================================ */
 
 function add(id) {
 
-  const product = state.products.find(
-    item => String(item.id) === String(id)
-  );
+  const product =
+    state.products.find(
+      item =>
+        String(item.id) ===
+        String(id)
+    );
+
 
   if (!product) return;
 
 
-  const row = state.cart.find(
-    item => String(item.id) === String(id)
-  );
+  const row =
+    state.cart.find(
+      item =>
+        String(item.id) ===
+        String(id)
+    );
 
 
   if (row) {
@@ -1082,14 +1504,18 @@ function add(id) {
   } else {
 
     state.cart.push({
+
       id: product.id,
+
       qty: 1
+
     });
 
   }
 
 
   saveCart();
+
   renderCart();
 
 
@@ -1100,23 +1526,43 @@ function add(id) {
 }
 
 
+/* ============================================================
+   REMOVER
+============================================================ */
+
 function remove(id) {
 
-  state.cart = state.cart.filter(
-    item => String(item.id) !== String(id)
-  );
+  state.cart =
+    state.cart.filter(
+      item =>
+        String(item.id) !==
+        String(id)
+    );
+
 
   saveCart();
+
   renderCart();
 
 }
 
 
-function change(id, difference) {
+/* ============================================================
+   ALTERAR QUANTIDADE
+============================================================ */
 
-  const item = state.cart.find(
-    x => String(x.id) === String(id)
-  );
+function change(
+  id,
+  difference
+) {
+
+  const item =
+    state.cart.find(
+      x =>
+        String(x.id) ===
+        String(id)
+    );
+
 
   if (!item) return;
 
@@ -1134,29 +1580,43 @@ function change(id, difference) {
 
 
   saveCart();
+
   renderCart();
 
 }
 
 
+/* ============================================================
+   GUARDAR CARRINHO
+============================================================ */
+
 function saveCart() {
 
   localStorage.setItem(
     "rf_cart",
-    JSON.stringify(state.cart)
+    JSON.stringify(
+      state.cart
+    )
   );
 
 
-  const count = state.cart.reduce(
-    (sum, item) => sum + item.qty,
-    0
-  );
+  const count =
+    state.cart.reduce(
+      (sum, item) =>
+        sum + Number(item.qty || 0),
+      0
+    );
 
 
-  const cartCount = $("#cartCount");
+  const cartCount =
+    $("#cartCount");
+
 
   if (cartCount) {
-    cartCount.textContent = count;
+
+    cartCount.textContent =
+      count;
+
   }
 
 }
@@ -1168,7 +1628,8 @@ function saveCart() {
 
 function renderCart() {
 
-  const element = $("#cartItems");
+  const element =
+    $("#cartItems");
 
   if (!element) return;
 
@@ -1176,117 +1637,167 @@ function renderCart() {
   let total = 0;
 
 
-  const html = state.cart.map(item => {
+  const html =
+    state.cart.map(item => {
 
-    const product = state.products.find(
-      p => String(p.id) === String(item.id)
-    );
-
-
-    if (!product) return "";
-
-
-    total += Number(product.price || 0) * item.qty;
+      const product =
+        state.products.find(
+          p =>
+            String(p.id) ===
+            String(item.id)
+        );
 
 
-    return `
-      <div class="flex gap-3 border-b pb-3">
-
-        <img
-          src="${imgForProduct(product)}"
-          class="w-16 h-16 rounded-lg object-cover"
-          alt="${current(product.name)}"
-        >
+      if (!product) return "";
 
 
-        <div class="flex-1">
-
-          <div class="font-semibold text-sm">
-            ${current(product.name)}
-          </div>
+      total +=
+        Number(product.price || 0) *
+        Number(item.qty || 0);
 
 
-          <div class="text-primary font-bold text-sm">
-            ${money(product.price * item.qty)}
-          </div>
+      return `
+
+        <div class="flex gap-3 border-b pb-3">
+
+          <img
+            src="${imgForProduct(product)}"
+            class="w-16 h-16 rounded-lg object-cover"
+            alt="${current(product.name)}"
+          >
 
 
-          <div class="flex items-center gap-2 mt-2">
+          <div class="flex-1">
 
-            <button
-              data-minus="${product.id}"
-              class="w-7 h-7 rounded bg-surface-container"
-            >
-              −
-            </button>
+            <div class="font-semibold text-sm">
 
+              ${current(product.name)}
 
-            <span>${item.qty}</span>
+            </div>
 
 
-            <button
-              data-plus="${product.id}"
-              class="w-7 h-7 rounded bg-surface-container"
-            >
-              +
-            </button>
+            <div class="text-primary font-bold text-sm">
+
+              ${money(
+                Number(product.price || 0) *
+                Number(item.qty || 0)
+              )}
+
+            </div>
 
 
-            <button
-              data-remove="${product.id}"
-              class="ml-auto text-error text-xs"
-            >
-              Remover
-            </button>
+            <div class="flex items-center gap-2 mt-2">
+
+              <button
+                data-minus="${product.id}"
+                class="w-7 h-7 rounded bg-surface-container"
+              >
+                −
+              </button>
+
+
+              <span>
+
+                ${item.qty}
+
+              </span>
+
+
+              <button
+                data-plus="${product.id}"
+                class="w-7 h-7 rounded bg-surface-container"
+              >
+                +
+              </button>
+
+
+              <button
+                data-remove="${product.id}"
+                class="ml-auto text-error text-xs"
+              >
+                Remover
+              </button>
+
+            </div>
 
           </div>
 
         </div>
 
-      </div>
-    `;
+      `;
 
-  }).join("");
+    }).join("");
 
 
   element.innerHTML =
+
     html ||
+
     `
+
       <div class="text-center py-10 text-on-surface-variant">
+
         Carrinho vazio.
+
       </div>
+
     `;
 
 
-  const cartTotal = $("#cartTotal");
+  const cartTotal =
+    $("#cartTotal");
+
 
   if (cartTotal) {
-    cartTotal.textContent = money(total);
+
+    cartTotal.textContent =
+      money(total);
+
   }
 
 
-  element.querySelectorAll("[data-minus]").forEach(button => {
+  element
+    .querySelectorAll(
+      "[data-minus]"
+    )
+    .forEach(button => {
 
-    button.onclick = () =>
-      change(button.dataset.minus, -1);
+      button.onclick = () =>
+        change(
+          button.dataset.minus,
+          -1
+        );
 
-  });
-
-
-  element.querySelectorAll("[data-plus]").forEach(button => {
-
-    button.onclick = () =>
-      change(button.dataset.plus, 1);
-
-  });
+    });
 
 
-  element.querySelectorAll("[data-remove]").forEach(button => {
+  element
+    .querySelectorAll(
+      "[data-plus]"
+    )
+    .forEach(button => {
 
-    button.onclick = () =>
-      remove(button.dataset.remove);
+      button.onclick = () =>
+        change(
+          button.dataset.plus,
+          1
+        );
 
-  });
+    });
+
+
+  element
+    .querySelectorAll(
+      "[data-remove]"
+    )
+    .forEach(button => {
+
+      button.onclick = () =>
+        remove(
+          button.dataset.remove
+        );
+
+    });
 
 
   saveCart();
@@ -1300,7 +1811,8 @@ function renderCart() {
 
 function renderSteps() {
 
-  const element = $("#steps");
+  const element =
+    $("#steps");
 
   if (!element) return;
 
@@ -1342,7 +1854,7 @@ function renderSteps() {
       "Landzelela"
     ]
 
-  }[state.lang] || [];
+  }[state.lang];
 
 
   const descriptions = {
@@ -1382,28 +1894,41 @@ function renderSteps() {
       "Ntlawa wu tiyisisa naswona wu landzelela oda."
     ]
 
-  }[state.lang] || [];
+  }[state.lang];
 
 
-  element.innerHTML = labels.map((label, index) => `
+  element.innerHTML =
+    labels.map(
+      (label, index) => `
 
-    <div class="text-center p-5 bg-white/10 rounded-2xl">
+        <div class="text-center p-5 bg-white/10 rounded-2xl">
 
-      <div class="w-12 h-12 mx-auto rounded-full bg-secondary-container flex items-center justify-center text-white font-bold">
-        ${index + 1}
-      </div>
+          <div
+            class="w-12 h-12 mx-auto rounded-full bg-secondary-container flex items-center justify-center text-white font-bold"
+          >
 
-      <h3 class="font-semibold mt-3">
-        ${label}
-      </h3>
+            ${index + 1}
 
-      <p class="text-sm opacity-80 mt-1">
-        ${descriptions[index] || ""}
-      </p>
+          </div>
 
-    </div>
 
-  `).join("");
+          <h3 class="font-semibold mt-3">
+
+            ${label}
+
+          </h3>
+
+
+          <p class="text-sm opacity-80 mt-1">
+
+            ${descriptions[index]}
+
+          </p>
+
+        </div>
+
+      `
+    ).join("");
 
 }
 
@@ -1414,7 +1939,8 @@ function renderSteps() {
 
 function renderFaq() {
 
-  const element = $("#faq");
+  const element =
+    $("#faq");
 
   if (!element) return;
 
@@ -1444,21 +1970,29 @@ function renderFaq() {
   ];
 
 
-  element.innerHTML = faq.map(item => `
+  element.innerHTML =
+    faq.map(
+      item => `
 
-    <details class="bg-surface-container-low rounded-xl p-4">
+        <details class="bg-surface-container-low rounded-xl p-4">
 
-      <summary class="font-semibold cursor-pointer">
-        ${item[0]}
-      </summary>
+          <summary class="font-semibold cursor-pointer">
 
-      <p class="text-sm text-on-surface-variant mt-2">
-        ${item[1]}
-      </p>
+            ${item[0]}
 
-    </details>
+          </summary>
 
-  `).join("");
+
+          <p class="text-sm text-on-surface-variant mt-2">
+
+            ${item[1]}
+
+          </p>
+
+        </details>
+
+      `
+    ).join("");
 
 }
 
@@ -1470,45 +2004,80 @@ function renderFaq() {
 function renderAll() {
 
   renderCategories();
+
   renderFilters();
+
   renderKits();
+
   renderProducts();
+
   renderCart();
+
   renderSteps();
+
   renderFaq();
 
 
-  const year = $("#year");
+  const year =
+    $("#year");
+
 
   if (year) {
-    year.textContent = new Date().getFullYear();
+
+    year.textContent =
+      new Date().getFullYear();
+
   }
 
 
-  if (state.settings?.hero_image) {
+  /* ========================================================
+     IMAGEM DO TOPO
+  ======================================================== */
 
-    const heroImage = $("#heroImage");
+  if (
+    state.settings?.hero_image
+  ) {
+
+    const heroImage =
+      $("#heroImage");
+
 
     if (heroImage) {
-      heroImage.src = state.settings.hero_image;
+
+      heroImage.src =
+        state.settings.hero_image;
+
     }
 
   }
 
 
+  /* ========================================================
+     CONTACTO
+  ======================================================== */
+
   if (
+
     state.settings?.contact_email ||
+
     state.settings?.whatsapp
+
   ) {
 
-    const footerContact = $("#footerContact");
+    const footerContact =
+      $("#footerContact");
+
 
     if (footerContact) {
 
       footerContact.innerHTML = `
+
         ${state.settings.contact_email || ""}
+
         <br>
+
         ${state.settings.whatsapp || ""}
+
       `;
 
     }
@@ -1519,101 +2088,71 @@ function renderAll() {
 
 
 /* ============================================================
-   EVENTOS
+   EVENTOS — CATEGORIA
 ============================================================ */
 
-function setupEvents() {
+function setupCategoryFilter() {
 
-  /*
-     PESQUISA
-
-     É importante procurar o elemento aqui,
-     depois de o DOM estar carregado.
-  */
-
-  const searchInput = $("#searchInput");
-
-  if (searchInput) {
-
-    searchInput.addEventListener("input", () => {
-
-      renderProducts();
-
-    });
+  const categoryFilter =
+    $("#categoryFilter");
 
 
-    searchInput.addEventListener("keydown", event => {
-
-      if (event.key === "Enter") {
-
-        event.preventDefault();
-
-        renderProducts();
-
-        const productsSection = $("#produtos");
-
-        if (productsSection) {
-
-          productsSection.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-          });
-
-        }
-
-      }
-
-    });
-
-  }
+  if (!categoryFilter) return;
 
 
-  /*
-     CATEGORIA
-  */
+  categoryFilter.addEventListener(
+    "change",
+    renderProducts
+  );
 
-  const categoryFilter = $("#categoryFilter");
-
-  if (categoryFilter) {
-
-    categoryFilter.addEventListener(
-      "change",
-      renderProducts
-    );
-
-  }
+}
 
 
-  /*
-     ORDENAÇÃO
-  */
+/* ============================================================
+   EVENTOS — ORDENAÇÃO
+============================================================ */
 
-  const sortFilter = $("#sortFilter");
+function setupSortFilter() {
 
-  if (sortFilter) {
-
-    sortFilter.addEventListener(
-      "change",
-      renderProducts
-    );
-
-  }
+  const sortFilter =
+    $("#sortFilter");
 
 
-  /*
-     CARRINHO
-  */
+  if (!sortFilter) return;
 
-  const cartButton = $("#cartBtn");
+
+  sortFilter.addEventListener(
+    "change",
+    renderProducts
+  );
+
+}
+
+
+/* ============================================================
+   CARRINHO — ABRIR
+============================================================ */
+
+function setupCart() {
+
+  const cartButton =
+    $("#cartBtn");
+
 
   if (cartButton) {
 
     cartButton.onclick = () => {
 
-      const drawer = $("#cartDrawer");
+      const drawer =
+        $("#cartDrawer");
+
 
       if (drawer) {
-        drawer.classList.remove("hidden");
+
+        drawer.classList.remove(
+          "hidden"
+        );
+
       }
 
     };
@@ -1621,16 +2160,28 @@ function setupEvents() {
   }
 
 
-  const closeCart = $("#closeCart");
+  /* ========================================================
+     FECHAR
+  ======================================================== */
+
+  const closeCart =
+    $("#closeCart");
+
 
   if (closeCart) {
 
     closeCart.onclick = () => {
 
-      const drawer = $("#cartDrawer");
+      const drawer =
+        $("#cartDrawer");
+
 
       if (drawer) {
-        drawer.classList.add("hidden");
+
+        drawer.classList.add(
+          "hidden"
+        );
+
       }
 
     };
@@ -1638,16 +2189,28 @@ function setupEvents() {
   }
 
 
-  const cartOverlay = $("#cartOverlay");
+  /* ========================================================
+     OVERLAY
+  ======================================================== */
+
+  const cartOverlay =
+    $("#cartOverlay");
+
 
   if (cartOverlay) {
 
     cartOverlay.onclick = () => {
 
-      const drawer = $("#cartDrawer");
+      const drawer =
+        $("#cartDrawer");
+
 
       if (drawer) {
-        drawer.classList.add("hidden");
+
+        drawer.classList.add(
+          "hidden"
+        );
+
       }
 
     };
@@ -1655,11 +2218,13 @@ function setupEvents() {
   }
 
 
-  /*
+  /* ========================================================
      CHECKOUT
-  */
+  ======================================================== */
 
-  const checkoutButton = $("#checkoutBtn");
+  const checkoutButton =
+    $("#checkoutBtn");
+
 
   if (checkoutButton) {
 
@@ -1667,45 +2232,62 @@ function setupEvents() {
 
       if (!state.cart.length) {
 
-        toast("Adicione produtos primeiro.");
+        toast(
+          "Adicione produtos primeiro."
+        );
 
         return;
 
       }
 
-      location.href = "checkout.html";
+
+      location.href =
+        "checkout.html";
 
     };
 
   }
 
-
-  /*
-     IDIOMA
-  */
-
-  const languageSelect = $("#languageSelect");
-
-  if (languageSelect) {
-
-    languageSelect.value = state.lang;
+}
 
 
-    languageSelect.onchange = event => {
+/* ============================================================
+   IDIOMA
+============================================================ */
 
-      state.lang = event.target.value;
+function setupLanguage() {
+
+  const languageSelect =
+    $("#languageSelect");
+
+
+  if (!languageSelect) return;
+
+
+  languageSelect.value =
+    state.lang;
+
+
+  languageSelect.addEventListener(
+    "change",
+    event => {
+
+      state.lang =
+        event.target.value;
+
 
       localStorage.setItem(
         "rf_lang",
         state.lang
       );
 
+
       renderAll();
+
       applyI18n();
 
-    };
-
-  }
+    }
+  );
 
 }
 
@@ -1716,50 +2298,50 @@ function setupEvents() {
 
 async function init() {
 
-  console.log("Rancho Flexível: iniciando...");
+  console.log(
+    "Rancho Flexível — iniciando..."
+  );
 
-  setupEvents();
+
+  /*
+     Primeiro carregamos os elementos
+     e configuramos os eventos.
+  */
+
+  setupSearch();
+
+  setupCategoryFilter();
+
+  setupSortFilter();
+
+  setupCart();
+
+  setupLanguage();
+
+
+  /*
+     Depois carregamos os dados.
+  */
 
   await load();
 
+
   /*
-     Garante que o contador do carrinho
-     aparece correctamente logo no início.
+     Atualiza contador do carrinho.
   */
 
   saveCart();
 
+
   console.log(
-    "Rancho Flexível: aplicação iniciada.",
-    {
-      produtos: state.products.length,
-      categorias: state.categories.length,
-      kits: state.kits.length
-    }
+    "Rancho Flexível — carregado."
   );
 
 }
 
 
-/*
-   Como este arquivo é carregado como:
-   <script type="module" src="app.js"></script>
+/* ============================================================
+   INICIAR
+============================================================ */
 
-   ainda assim usamos DOMContentLoaded para garantir
-   que todos os elementos HTML existem antes de ligar
-   os eventos.
-*/
-
-if (document.readyState === "loading") {
-
-  document.addEventListener(
-    "DOMContentLoaded",
-    init
-  );
-
-} else {
-
-  init();
-
-}
-```
+init();
