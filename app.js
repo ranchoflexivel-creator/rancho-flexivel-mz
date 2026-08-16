@@ -1,4 +1,4 @@
-```js
+```javascript
 import {
   getProducts,
   getCategories,
@@ -304,6 +304,17 @@ function current(value) {
 }
 
 
+function normalizeText(value) {
+
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+}
+
+
 function toast(message) {
 
   const element = $("#toast");
@@ -330,6 +341,7 @@ function imgForProduct(product) {
     product?.image ||
     "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=700&q=80"
   );
+
 }
 
 
@@ -340,6 +352,7 @@ function imgForKit(kit) {
     kit?.image ||
     "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80"
   );
+
 }
 
 
@@ -378,10 +391,12 @@ async function load() {
 
   try {
     state.products = await getProducts();
+    console.log("Produtos carregados:", state.products);
   } catch (error) {
     console.error("Erro ao carregar produtos:", error);
     state.products = [];
   }
+
 
   try {
     state.categories = await getCategories();
@@ -390,12 +405,14 @@ async function load() {
     state.categories = [];
   }
 
+
   try {
     state.kits = await getKits();
   } catch (error) {
     console.error("Erro ao carregar Rancho do Mês:", error);
     state.kits = [];
   }
+
 
   try {
     state.settings = await getSettings();
@@ -404,8 +421,10 @@ async function load() {
     state.settings = {};
   }
 
+
   renderAll();
   applyI18n();
+
 }
 
 
@@ -419,6 +438,7 @@ function renderCategories() {
 
   if (!element) return;
 
+
   if (!state.categories.length) {
 
     element.innerHTML = `
@@ -429,6 +449,7 @@ function renderCategories() {
 
     return;
   }
+
 
   element.innerHTML = state.categories.map((category, index) => {
 
@@ -472,12 +493,15 @@ function renderCategories() {
         renderProducts();
       }
 
+
       const productsSection = $("#produtos");
 
       if (productsSection) {
+
         productsSection.scrollIntoView({
           behavior: "smooth"
         });
+
       }
 
     };
@@ -497,6 +521,7 @@ function renderKits() {
 
   if (!element) return;
 
+
   if (!state.kits.length) {
 
     element.innerHTML = `
@@ -512,6 +537,7 @@ function renderKits() {
   element.innerHTML = state.kits.map(kit => {
 
     const image = imgForKit(kit);
+
 
     const kitProducts = Array.isArray(kit.product_ids)
       ? kit.product_ids
@@ -545,9 +571,7 @@ function renderKits() {
 
             ${kitProducts.map(product => `
 
-              <div
-                class="flex items-center gap-3 bg-surface-container-low rounded-xl p-2"
-              >
+              <div class="flex items-center gap-3 bg-surface-container-low rounded-xl p-2">
 
                 <img
                   src="${imgForProduct(product)}"
@@ -603,9 +627,7 @@ function renderKits() {
 
 
     return `
-      <div
-        class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition flex flex-col overflow-hidden"
-      >
+      <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition flex flex-col overflow-hidden">
 
         <div class="h-48 bg-surface-container relative overflow-hidden">
 
@@ -620,9 +642,7 @@ function renderKits() {
 
           <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
 
-            <span
-              class="bg-white text-on-surface text-xs font-bold px-2 py-1 rounded"
-            >
+            <span class="bg-white text-on-surface text-xs font-bold px-2 py-1 rounded">
               ${current(kit.badge) || "Destaque"}
             </span>
 
@@ -634,11 +654,13 @@ function renderKits() {
 
         </div>
 
+
         <div class="p-4 flex flex-col flex-1">
 
           <h3 class="text-xl font-semibold">
             ${current(kit.name)}
           </h3>
+
 
           ${
             current(kit.description)
@@ -650,7 +672,9 @@ function renderKits() {
               : ""
           }
 
+
           ${productsHtml}
+
 
           <button
             data-kit="${kit.id}"
@@ -677,16 +701,15 @@ function renderKits() {
 
       if (!kit) return;
 
+
       if (Array.isArray(kit.product_ids)) {
 
         kit.product_ids.forEach(id => {
-          add(id, false);
+          add(id);
         });
 
-        saveCart();
-        renderCart();
-
       }
+
 
       toast(`${current(kit.name)} adicionado`);
 
@@ -698,7 +721,7 @@ function renderKits() {
 
 
 /* ============================================================
-   FILTRO DE CATEGORIAS
+   FILTRO
 ============================================================ */
 
 function renderFilters() {
@@ -706,6 +729,7 @@ function renderFilters() {
   const select = $("#categoryFilter");
 
   if (!select) return;
+
 
   select.innerHTML =
     `<option value="">Todas as categorias</option>` +
@@ -716,6 +740,68 @@ function renderFilters() {
         </option>`
       )
       .join("");
+
+}
+
+
+/* ============================================================
+   PESQUISA
+============================================================ */
+
+function searchProducts(products, query) {
+
+  const normalizedQuery = normalizeText(query);
+
+  if (!normalizedQuery) {
+    return products;
+  }
+
+
+  const words = normalizedQuery
+    .split(/\s+/)
+    .filter(Boolean);
+
+
+  return products.filter(product => {
+
+    const category = state.categories.find(
+      cat => String(cat.id) === String(product.category_id)
+    );
+
+
+    const searchableText = [
+
+      current(product.name),
+
+      current(product.description),
+
+      current(product.tag),
+
+      product.unit,
+
+      current(category?.name),
+
+      product.sku,
+
+      product.code
+
+    ]
+      .filter(Boolean)
+      .map(normalizeText)
+      .join(" ");
+
+
+    /*
+       Todas as palavras digitadas devem existir
+       no texto do produto.
+    */
+
+    return words.every(word =>
+      searchableText.includes(word)
+    );
+
+  });
+
 }
 
 
@@ -740,87 +826,35 @@ function renderProducts() {
   const sortFilter = $("#sortFilter");
 
 
-  const query =
-    searchInput?.value?.trim().toLowerCase() || "";
-
-  const category =
-    categoryFilter?.value || "";
-
-  const sort =
-    sortFilter?.value || "default";
+  const query = searchInput?.value || "";
+  const category = categoryFilter?.value || "";
+  const sort = sortFilter?.value || "default";
 
 
-  /* ========================================================
+  /*
      PESQUISA
-  ======================================================== */
+  */
 
-  if (query) {
-
-    products = products.filter(product => {
-
-      const name =
-        current(product.name);
-
-      const description =
-        current(product.description);
-
-      const unit =
-        product.unit || "";
-
-      const tag =
-        current(product.tag);
+  products = searchProducts(products, query);
 
 
-      const productCategory =
-        state.categories.find(
-          cat =>
-            String(cat.id) ===
-            String(product.category_id)
-        );
-
-
-      const categoryName =
-        productCategory
-          ? current(productCategory.name)
-          : "";
-
-
-      const searchableText = [
-        name,
-        description,
-        unit,
-        tag,
-        categoryName
-      ]
-        .join(" ")
-        .toLowerCase();
-
-
-      return searchableText.includes(query);
-
-    });
-
-  }
-
-
-  /* ========================================================
-     FILTRO DE CATEGORIA
-  ======================================================== */
+  /*
+     CATEGORIA
+  */
 
   if (category) {
 
     products = products.filter(
       product =>
-        String(product.category_id) ===
-        String(category)
+        String(product.category_id) === String(category)
     );
 
   }
 
 
-  /* ========================================================
+  /*
      ORDENAÇÃO
-  ======================================================== */
+  */
 
   if (sort === "priceAsc") {
 
@@ -856,9 +890,9 @@ function renderProducts() {
   }
 
 
-  /* ========================================================
+  /*
      NENHUM RESULTADO
-  ======================================================== */
+  */
 
   if (!products.length) {
 
@@ -876,7 +910,7 @@ function renderProducts() {
         ${
           query
             ? `
-              <p class="text-sm text-outline mt-1">
+              <p class="text-xs text-outline mt-1">
                 Pesquisa: "${query}"
               </p>
             `
@@ -890,9 +924,9 @@ function renderProducts() {
   }
 
 
-  /* ========================================================
-     MOSTRAR PRODUTOS
-  ======================================================== */
+  /*
+     PRODUTOS
+  */
 
   element.innerHTML = products.map(product => {
 
@@ -912,6 +946,7 @@ function renderProducts() {
             onerror="this.style.display='none'"
           >
 
+
           <div class="absolute top-2 left-2 flex gap-1">
 
             ${
@@ -925,6 +960,7 @@ function renderProducts() {
                 `
                 : ""
             }
+
 
             ${
               product.featured
@@ -963,9 +999,11 @@ function renderProducts() {
                 ${product.unit || ""}
               </span>
 
+
               <div class="text-lg font-bold text-primary">
                 ${money(product.price)}
               </div>
+
 
               ${
                 product.old_price
@@ -983,7 +1021,7 @@ function renderProducts() {
             <button
               data-add="${product.id}"
               class="w-10 h-10 rounded-full bg-secondary-container text-white flex items-center justify-center hover:bg-secondary"
-              aria-label="Adicionar ${current(product.name)} ao carrinho"
+              aria-label="Adicionar ${current(product.name)}"
             >
 
               <span class="material-symbols-outlined">
@@ -1002,44 +1040,38 @@ function renderProducts() {
   }).join("");
 
 
-  /* ========================================================
+  /*
      BOTÕES ADICIONAR
-  ======================================================== */
+  */
 
-  element
-    .querySelectorAll("[data-add]")
-    .forEach(button => {
+  element.querySelectorAll("[data-add]").forEach(button => {
 
-      button.onclick = () => {
+    button.onclick = () => {
 
-        add(button.dataset.add);
+      add(button.dataset.add);
 
-      };
+    };
 
-    });
+  });
 
 }
 
 
 /* ============================================================
-   CARRINHO — ADICIONAR
+   CARRINHO
 ============================================================ */
 
-function add(id, showToast = true) {
+function add(id) {
 
   const product = state.products.find(
-    item =>
-      String(item.id) ===
-      String(id)
+    item => String(item.id) === String(id)
   );
 
   if (!product) return;
 
 
   const row = state.cart.find(
-    item =>
-      String(item.id) ===
-      String(id)
+    item => String(item.id) === String(id)
   );
 
 
@@ -1061,47 +1093,30 @@ function add(id, showToast = true) {
   renderCart();
 
 
-  if (showToast) {
-
-    toast(
-      `${current(product.name)} adicionado ao carrinho`
-    );
-
-  }
+  toast(
+    `${current(product.name)} adicionado ao carrinho`
+  );
 
 }
 
-
-/* ============================================================
-   CARRINHO — REMOVER
-============================================================ */
 
 function remove(id) {
 
-  state.cart =
-    state.cart.filter(
-      item =>
-        String(item.id) !==
-        String(id)
-    );
+  state.cart = state.cart.filter(
+    item => String(item.id) !== String(id)
+  );
 
   saveCart();
   renderCart();
+
 }
 
 
-/* ============================================================
-   CARRINHO — ALTERAR QUANTIDADE
-============================================================ */
-
 function change(id, difference) {
 
-  const item =
-    state.cart.find(
-      x =>
-        String(x.id) ===
-        String(id)
-    );
+  const item = state.cart.find(
+    x => String(x.id) === String(id)
+  );
 
   if (!item) return;
 
@@ -1120,12 +1135,9 @@ function change(id, difference) {
 
   saveCart();
   renderCart();
+
 }
 
-
-/* ============================================================
-   CARRINHO — GUARDAR
-============================================================ */
 
 function saveCart() {
 
@@ -1135,35 +1147,28 @@ function saveCart() {
   );
 
 
-  const count =
-    state.cart.reduce(
-      (sum, item) =>
-        sum + Number(item.qty || 0),
-      0
-    );
+  const count = state.cart.reduce(
+    (sum, item) => sum + item.qty,
+    0
+  );
 
 
-  const cartCount =
-    $("#cartCount");
+  const cartCount = $("#cartCount");
 
   if (cartCount) {
-
-    cartCount.textContent =
-      count;
-
+    cartCount.textContent = count;
   }
 
 }
 
 
 /* ============================================================
-   CARRINHO — RENDERIZAR
+   RENDERIZAR CARRINHO
 ============================================================ */
 
 function renderCart() {
 
-  const element =
-    $("#cartItems");
+  const element = $("#cartItems");
 
   if (!element) return;
 
@@ -1171,88 +1176,77 @@ function renderCart() {
   let total = 0;
 
 
-  const html =
-    state.cart.map(item => {
+  const html = state.cart.map(item => {
 
-      const product =
-        state.products.find(
-          p =>
-            String(p.id) ===
-            String(item.id)
-        );
+    const product = state.products.find(
+      p => String(p.id) === String(item.id)
+    );
 
 
-      if (!product) return "";
+    if (!product) return "";
 
 
-      total +=
-        Number(product.price || 0) *
-        Number(item.qty || 0);
+    total += Number(product.price || 0) * item.qty;
 
 
-      return `
-        <div class="flex gap-3 border-b pb-3">
+    return `
+      <div class="flex gap-3 border-b pb-3">
 
-          <img
-            src="${imgForProduct(product)}"
-            class="w-16 h-16 rounded-lg object-cover"
-            alt="${current(product.name)}"
-          >
-
-
-          <div class="flex-1">
-
-            <div class="font-semibold text-sm">
-              ${current(product.name)}
-            </div>
+        <img
+          src="${imgForProduct(product)}"
+          class="w-16 h-16 rounded-lg object-cover"
+          alt="${current(product.name)}"
+        >
 
 
-            <div class="text-primary font-bold text-sm">
-              ${money(
-                Number(product.price || 0) *
-                Number(item.qty || 0)
-              )}
-            </div>
+        <div class="flex-1">
+
+          <div class="font-semibold text-sm">
+            ${current(product.name)}
+          </div>
 
 
-            <div class="flex items-center gap-2 mt-2">
-
-              <button
-                data-minus="${product.id}"
-                class="w-7 h-7 rounded bg-surface-container"
-              >
-                −
-              </button>
+          <div class="text-primary font-bold text-sm">
+            ${money(product.price * item.qty)}
+          </div>
 
 
-              <span>
-                ${item.qty}
-              </span>
+          <div class="flex items-center gap-2 mt-2">
+
+            <button
+              data-minus="${product.id}"
+              class="w-7 h-7 rounded bg-surface-container"
+            >
+              −
+            </button>
 
 
-              <button
-                data-plus="${product.id}"
-                class="w-7 h-7 rounded bg-surface-container"
-              >
-                +
-              </button>
+            <span>${item.qty}</span>
 
 
-              <button
-                data-remove="${product.id}"
-                class="ml-auto text-error text-xs"
-              >
-                Remover
-              </button>
+            <button
+              data-plus="${product.id}"
+              class="w-7 h-7 rounded bg-surface-container"
+            >
+              +
+            </button>
 
-            </div>
+
+            <button
+              data-remove="${product.id}"
+              class="ml-auto text-error text-xs"
+            >
+              Remover
+            </button>
 
           </div>
 
         </div>
-      `;
 
-    }).join("");
+      </div>
+    `;
+
+  }).join("");
 
 
   element.innerHTML =
@@ -1264,53 +1258,35 @@ function renderCart() {
     `;
 
 
-  const cartTotal =
-    $("#cartTotal");
+  const cartTotal = $("#cartTotal");
 
   if (cartTotal) {
-
-    cartTotal.textContent =
-      money(total);
-
+    cartTotal.textContent = money(total);
   }
 
 
-  element
-    .querySelectorAll("[data-minus]")
-    .forEach(button => {
+  element.querySelectorAll("[data-minus]").forEach(button => {
 
-      button.onclick = () =>
-        change(
-          button.dataset.minus,
-          -1
-        );
+    button.onclick = () =>
+      change(button.dataset.minus, -1);
 
-    });
+  });
 
 
-  element
-    .querySelectorAll("[data-plus]")
-    .forEach(button => {
+  element.querySelectorAll("[data-plus]").forEach(button => {
 
-      button.onclick = () =>
-        change(
-          button.dataset.plus,
-          1
-        );
+    button.onclick = () =>
+      change(button.dataset.plus, 1);
 
-    });
+  });
 
 
-  element
-    .querySelectorAll("[data-remove]")
-    .forEach(button => {
+  element.querySelectorAll("[data-remove]").forEach(button => {
 
-      button.onclick = () =>
-        remove(
-          button.dataset.remove
-        );
+    button.onclick = () =>
+      remove(button.dataset.remove);
 
-    });
+  });
 
 
   saveCart();
@@ -1324,8 +1300,7 @@ function renderCart() {
 
 function renderSteps() {
 
-  const element =
-    $("#steps");
+  const element = $("#steps");
 
   if (!element) return;
 
@@ -1410,32 +1385,25 @@ function renderSteps() {
   }[state.lang] || [];
 
 
-  element.innerHTML =
-    labels.map(
-      (label, index) => `
+  element.innerHTML = labels.map((label, index) => `
 
-        <div class="text-center p-5 bg-white/10 rounded-2xl">
+    <div class="text-center p-5 bg-white/10 rounded-2xl">
 
-          <div
-            class="w-12 h-12 mx-auto rounded-full bg-secondary-container flex items-center justify-center text-white font-bold"
-          >
-            ${index + 1}
-          </div>
+      <div class="w-12 h-12 mx-auto rounded-full bg-secondary-container flex items-center justify-center text-white font-bold">
+        ${index + 1}
+      </div>
 
+      <h3 class="font-semibold mt-3">
+        ${label}
+      </h3>
 
-          <h3 class="font-semibold mt-3">
-            ${label}
-          </h3>
+      <p class="text-sm opacity-80 mt-1">
+        ${descriptions[index] || ""}
+      </p>
 
+    </div>
 
-          <p class="text-sm opacity-80 mt-1">
-            ${descriptions[index] || ""}
-          </p>
-
-        </div>
-
-      `
-    ).join("");
+  `).join("");
 
 }
 
@@ -1446,8 +1414,7 @@ function renderSteps() {
 
 function renderFaq() {
 
-  const element =
-    $("#faq");
+  const element = $("#faq");
 
   if (!element) return;
 
@@ -1477,25 +1444,21 @@ function renderFaq() {
   ];
 
 
-  element.innerHTML =
-    faq.map(
-      item => `
+  element.innerHTML = faq.map(item => `
 
-        <details class="bg-surface-container-low rounded-xl p-4">
+    <details class="bg-surface-container-low rounded-xl p-4">
 
-          <summary class="font-semibold cursor-pointer">
-            ${item[0]}
-          </summary>
+      <summary class="font-semibold cursor-pointer">
+        ${item[0]}
+      </summary>
 
+      <p class="text-sm text-on-surface-variant mt-2">
+        ${item[1]}
+      </p>
 
-          <p class="text-sm text-on-surface-variant mt-2">
-            ${item[1]}
-          </p>
+    </details>
 
-        </details>
-
-      `
-    ).join("");
+  `).join("");
 
 }
 
@@ -1507,61 +1470,38 @@ function renderFaq() {
 function renderAll() {
 
   renderCategories();
-
   renderFilters();
-
   renderKits();
-
   renderProducts();
-
   renderCart();
-
   renderSteps();
-
   renderFaq();
 
 
-  const year =
-    $("#year");
+  const year = $("#year");
 
   if (year) {
-
-    year.textContent =
-      new Date().getFullYear();
-
+    year.textContent = new Date().getFullYear();
   }
 
 
-  /* ========================================================
-     IMAGEM DO TOPO
-  ======================================================== */
-
   if (state.settings?.hero_image) {
 
-    const heroImage =
-      $("#heroImage");
+    const heroImage = $("#heroImage");
 
     if (heroImage) {
-
-      heroImage.src =
-        state.settings.hero_image;
-
+      heroImage.src = state.settings.hero_image;
     }
 
   }
 
-
-  /* ========================================================
-     CONTACTO
-  ======================================================== */
 
   if (
     state.settings?.contact_email ||
     state.settings?.whatsapp
   ) {
 
-    const footerContact =
-      $("#footerContact");
+    const footerContact = $("#footerContact");
 
     if (footerContact) {
 
@@ -1579,43 +1519,30 @@ function renderAll() {
 
 
 /* ============================================================
-   PESQUISA
+   EVENTOS
 ============================================================ */
 
-function setupSearch() {
+function setupEvents() {
 
-  const searchInput =
-    $("#searchInput");
+  /*
+     PESQUISA
 
+     É importante procurar o elemento aqui,
+     depois de o DOM estar carregado.
+  */
 
-  if (!searchInput) {
+  const searchInput = $("#searchInput");
 
-    console.warn(
-      "Campo de pesquisa #searchInput não encontrado."
-    );
+  if (searchInput) {
 
-    return;
-
-  }
-
-
-  /* Pesquisa enquanto escreve */
-
-  searchInput.addEventListener(
-    "input",
-    () => {
+    searchInput.addEventListener("input", () => {
 
       renderProducts();
 
-    }
-  );
+    });
 
 
-  /* Enter */
-
-  searchInput.addEventListener(
-    "keydown",
-    event => {
+    searchInput.addEventListener("keydown", event => {
 
       if (event.key === "Enter") {
 
@@ -1623,86 +1550,70 @@ function setupSearch() {
 
         renderProducts();
 
-
-        const productsSection =
-          $("#produtos");
+        const productsSection = $("#produtos");
 
         if (productsSection) {
 
           productsSection.scrollIntoView({
-            behavior: "smooth"
+            behavior: "smooth",
+            block: "start"
           });
 
         }
 
       }
 
-    }
-  );
+    });
 
-}
-
-
-/* ============================================================
-   CATEGORIA
-============================================================ */
-
-function setupCategoryFilter() {
-
-  const categoryFilter =
-    $("#categoryFilter");
-
-  if (!categoryFilter) return;
-
-  categoryFilter.addEventListener(
-    "change",
-    renderProducts
-  );
-
-}
+  }
 
 
-/* ============================================================
-   ORDENAÇÃO
-============================================================ */
+  /*
+     CATEGORIA
+  */
 
-function setupSortFilter() {
+  const categoryFilter = $("#categoryFilter");
 
-  const sortFilter =
-    $("#sortFilter");
+  if (categoryFilter) {
 
-  if (!sortFilter) return;
+    categoryFilter.addEventListener(
+      "change",
+      renderProducts
+    );
 
-  sortFilter.addEventListener(
-    "change",
-    renderProducts
-  );
-
-}
+  }
 
 
-/* ============================================================
-   CARRINHO — ABRIR
-============================================================ */
+  /*
+     ORDENAÇÃO
+  */
 
-function setupCart() {
+  const sortFilter = $("#sortFilter");
 
-  const cartButton =
-    $("#cartBtn");
+  if (sortFilter) {
+
+    sortFilter.addEventListener(
+      "change",
+      renderProducts
+    );
+
+  }
+
+
+  /*
+     CARRINHO
+  */
+
+  const cartButton = $("#cartBtn");
 
   if (cartButton) {
 
     cartButton.onclick = () => {
 
-      const drawer =
-        $("#cartDrawer");
+      const drawer = $("#cartDrawer");
 
       if (drawer) {
-
-        drawer.classList.remove(
-          "hidden"
-        );
-
+        drawer.classList.remove("hidden");
       }
 
     };
@@ -1710,26 +1621,16 @@ function setupCart() {
   }
 
 
-  /* ========================================================
-     FECHAR
-  ======================================================== */
-
-  const closeCart =
-    $("#closeCart");
+  const closeCart = $("#closeCart");
 
   if (closeCart) {
 
     closeCart.onclick = () => {
 
-      const drawer =
-        $("#cartDrawer");
+      const drawer = $("#cartDrawer");
 
       if (drawer) {
-
-        drawer.classList.add(
-          "hidden"
-        );
-
+        drawer.classList.add("hidden");
       }
 
     };
@@ -1737,26 +1638,16 @@ function setupCart() {
   }
 
 
-  /* ========================================================
-     OVERLAY
-  ======================================================== */
-
-  const cartOverlay =
-    $("#cartOverlay");
+  const cartOverlay = $("#cartOverlay");
 
   if (cartOverlay) {
 
     cartOverlay.onclick = () => {
 
-      const drawer =
-        $("#cartDrawer");
+      const drawer = $("#cartDrawer");
 
       if (drawer) {
-
-        drawer.classList.add(
-          "hidden"
-        );
-
+        drawer.classList.add("hidden");
       }
 
     };
@@ -1764,12 +1655,11 @@ function setupCart() {
   }
 
 
-  /* ========================================================
+  /*
      CHECKOUT
-  ======================================================== */
+  */
 
-  const checkoutButton =
-    $("#checkoutBtn");
+  const checkoutButton = $("#checkoutBtn");
 
   if (checkoutButton) {
 
@@ -1777,17 +1667,41 @@ function setupCart() {
 
       if (!state.cart.length) {
 
-        toast(
-          "Adicione produtos primeiro."
-        );
+        toast("Adicione produtos primeiro.");
 
         return;
 
       }
 
+      location.href = "checkout.html";
 
-      location.href =
-        "checkout.html";
+    };
+
+  }
+
+
+  /*
+     IDIOMA
+  */
+
+  const languageSelect = $("#languageSelect");
+
+  if (languageSelect) {
+
+    languageSelect.value = state.lang;
+
+
+    languageSelect.onchange = event => {
+
+      state.lang = event.target.value;
+
+      localStorage.setItem(
+        "rf_lang",
+        state.lang
+      );
+
+      renderAll();
+      applyI18n();
 
     };
 
@@ -1797,67 +1711,55 @@ function setupCart() {
 
 
 /* ============================================================
-   IDIOMA
+   INICIALIZAÇÃO
 ============================================================ */
 
-function setupLanguage() {
+async function init() {
 
-  const languageSelect =
-    $("#languageSelect");
+  console.log("Rancho Flexível: iniciando...");
 
-  if (!languageSelect) return;
+  setupEvents();
 
+  await load();
 
-  languageSelect.value =
-    state.lang;
+  /*
+     Garante que o contador do carrinho
+     aparece correctamente logo no início.
+  */
 
+  saveCart();
 
-  languageSelect.onchange =
-    event => {
-
-      state.lang =
-        event.target.value;
-
-
-      localStorage.setItem(
-        "rf_lang",
-        state.lang
-      );
-
-
-      renderAll();
-
-      applyI18n();
-
-    };
+  console.log(
+    "Rancho Flexível: aplicação iniciada.",
+    {
+      produtos: state.products.length,
+      categorias: state.categories.length,
+      kits: state.kits.length
+    }
+  );
 
 }
 
 
-/* ============================================================
-   INICIAR
-============================================================ */
+/*
+   Como este arquivo é carregado como:
+   <script type="module" src="app.js"></script>
 
-function init() {
+   ainda assim usamos DOMContentLoaded para garantir
+   que todos os elementos HTML existem antes de ligar
+   os eventos.
+*/
 
-  setupSearch();
+if (document.readyState === "loading") {
 
-  setupCategoryFilter();
+  document.addEventListener(
+    "DOMContentLoaded",
+    init
+  );
 
-  setupSortFilter();
+} else {
 
-  setupCart();
-
-  setupLanguage();
-
-  load();
+  init();
 
 }
-
-
-/* ============================================================
-   EXECUTAR
-============================================================ */
-
-init();
 ```
