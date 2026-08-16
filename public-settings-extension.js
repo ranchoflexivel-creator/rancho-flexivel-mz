@@ -1,18 +1,12 @@
 import { supabase } from "./data.js";
 
+const SETTINGS_CACHE = "rf_public_settings_v2";
+const SETTINGS_TTL = 10 * 60 * 1000;
 let settings = {};
-let products = [];
 let lastFaqMarkup = "";
 let lastDeliverySignature = "";
-const PRODUCT_CACHE_KEY = "rf_public_product_images_v1";
-
-async function loadSettings() {
-  const { data, error } = await supabase.from("site_settings").select("key,value");
-  if (error) console.warn("Não foi possível carregar configurações públicas:", error);
-  settings = Object.fromEntries((data || []).map(row => [row.key, row.value]));
-  try { products = JSON.parse(sessionStorage.getItem(PRODUCT_CACHE_KEY) || "[]"); } catch { products = []; }
-  applyPublicSettings();
-}
+let footerApplied = false;
+let checkoutProducts = null;
 
 const setting = (key, fallback = "") => {
   const value = settings[key];
@@ -20,6 +14,35 @@ const setting = (key, fallback = "") => {
 };
 const money = value => `${Number(value || 0).toLocaleString("pt-MZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MZN`;
 const escapeHtml = value => String(value ?? "").replace(/[&<>\"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[m]));
+
+function readSettingsCache() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(SETTINGS_CACHE) || "null");
+    if (cached?.savedAt && Date.now() - cached.savedAt < SETTINGS_TTL && cached.settings) return cached.settings;
+  } catch {}
+  return null;
+}
+function writeSettingsCache(value) {
+  try { localStorage.setItem(SETTINGS_CACHE, JSON.stringify({ savedAt: Date.now(), settings: value })); } catch {}
+}
+
+async function loadSettings() {
+  const cached = readSettingsCache();
+  if (cached) {
+    settings = cached;
+    applyPublicSettings();
+    return;
+  }
+  const { data, error } = await supabase.from("site_settings").select("key,value");
+  if (error) {
+    console.warn("Não foi possível carregar configurações públicas:", error);
+    return;
+  }
+  settings = Object.fromEntries((data || []).map(row => [row.key, row.value]));
+  writeSettingsCache(settings);
+  applyPublicSettings();
+}
+
 const deliveryFee = name => ({
   "Maputo Cidade": Number(setting("delivery_maputo", 400)),
   "Zonas Circunvizinhas": Number(setting("delivery_zonas", 700)),
@@ -42,9 +65,7 @@ function applyDeliveryCards() {
   lastDeliverySignature = signature;
   section.querySelectorAll(".delivery-card").forEach((card, index) => {
     const price = card.querySelector(".text-2xl");
-    if (!price) return;
-    const next = values[index] === 0 ? "Grátis" : money(values[index]);
-    if (price.textContent !== next) price.textContent = next;
+    if (price) price.textContent = values[index] === 0 ? "Grátis" : money(values[index]);
   });
 }
 
@@ -52,29 +73,46 @@ function applyFaq() {
   const faq = document.querySelector("#faq");
   if (!faq) return;
   const questions = [1,2,3,4].map(i => ({ q: setting(`faq_q${i}`, ""), a: setting(`faq_a${i}`, "") })).filter(x => x.q || x.a);
-  if (!questions.length) return;
   const label = document.querySelector('[data-i18n="faqLabel"]');
   const title = document.querySelector('[data-i18n="faqTitle"]');
   if (label) label.textContent = setting("faq_label", "Dúvidas frequentes");
   if (title) title.textContent = setting("faq_title", "Perguntas frequentes");
+  if (!questions.length) return;
   const markup = questions.map(item => `<details class="bg-surface-container-low rounded-xl p-4"><summary class="font-semibold cursor-pointer">${escapeHtml(item.q)}</summary><p class="text-sm text-on-surface-variant mt-2">${escapeHtml(item.a)}</p></details>`).join("");
   if (markup !== lastFaqMarkup) { lastFaqMarkup = markup; faq.innerHTML = markup; }
 }
 
-function cartTotals() {
-  const cart = JSON.parse(localStorage.getItem("rf_cart") || "[]");
-  let subtotal = 0, saving = 0;
-  cart.forEach(row => {
-    const product = products.find(p => String(p.id) === String(row.id));
-    if (!product) return;
-    const qty = Number(row.qty || 0);
-    subtotal += Number(product.price || 0) * qty;
-    if (Number(product.old_price) > Number(product.price)) saving += (Number(product.old_price) - Number(product.price)) * qty;
-  });
-  return { cart, subtotal, saving };
+function applyFooter() {
+  if (footerApplied) return;
+  const footer = document.querySelector("footer");
+  if (!footer) return;
+  const image = setting("footer_image", "");
+  const copy = setting("footer_text", "Directo para a sua mesa: qualidade, conveniência e carinho em cada compra.");
+  if (!image && !copy) return;
+  const existing = footer.querySelector("#rfFooterBrandStory");
+  if (existing) { footerApplied = true; return; }
+  const block = document.createElement("div");
+  block.id = "rfFooterBrandStory";
+  block.className = "max-w-[1280px] mx-auto px-4 lg:px-16 mb-6";
+  block.innerHTML = `<div class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-low flex flex-col sm:flex-row items-stretch"><div class="w-full sm:w-40 h-28 sm:h-auto bg-white overflow-hidden">${image ? `<img src="${escapeHtml(image)}" alt="Rancho Flexível" loading="lazy" decoding="async" class="w-full h-full object-cover">` : ""}</div><div class="p-4 sm:p-5 flex items-center"><p class="text-sm sm:text-base font-medium text-on-surface-variant leading-relaxed">${escapeHtml(copy)}</p></div></div>`;
+  footer.prepend(block);
+  footerApplied = true;
 }
 
-function patchCheckoutForm() {
+function cartRows() {
+  try { return JSON.parse(localStorage.getItem("rf_cart") || "[]"); } catch { return []; }
+}
+async function loadCheckoutProducts() {
+  if (checkoutProducts) return checkoutProducts;
+  const ids = cartRows().map(row => String(row.id));
+  if (!ids.length) return [];
+  const { data, error } = await supabase.from("products").select("id,name,price,old_price").in("id", ids);
+  if (error) { console.warn("Não foi possível preparar o resumo do pedido:", error); return []; }
+  checkoutProducts = data || [];
+  return checkoutProducts;
+}
+
+async function patchCheckoutForm() {
   const form = document.querySelector("#rfCheckoutModal #rfForm");
   if (!form || form.dataset.rfPatched === "1") return;
   const deliverySelect = form.querySelector('select[name="delivery"]');
@@ -90,10 +128,15 @@ function patchCheckoutForm() {
   summary.className = "rounded-xl bg-surface-container-low p-4 text-sm space-y-1";
   const buttons = form.querySelector("button[type=submit]")?.parentElement;
   if (buttons) buttons.parentElement.insertBefore(summary, buttons);
-  const updateSummary = () => {
-    const totals = cartTotals();
+
+  const updateSummary = async () => {
+    const rows = cartRows();
+    const products = await loadCheckoutProducts();
+    const byId = new Map(products.map(p => [String(p.id), p]));
+    let subtotal = 0;
+    rows.forEach(row => { const p = byId.get(String(row.id)); subtotal += Number(p?.price || 0) * Number(row.qty || 0); });
     const fee = deliveryFee(deliverySelect.value);
-    summary.innerHTML = `<div class="flex justify-between"><span>Subtotal</span><b>${money(totals.subtotal)}</b></div><div class="flex justify-between"><span>Entrega</span><b>${fee === 0 ? "Grátis" : money(fee)}</b></div><div class="flex justify-between text-base pt-1 border-t"><span>Total</span><b>${money(totals.subtotal + fee)}</b></div>`;
+    summary.innerHTML = `<div class="flex justify-between"><span>Subtotal</span><b>${money(subtotal)}</b></div><div class="flex justify-between"><span>Entrega</span><b>${fee === 0 ? "Grátis" : money(fee)}</b></div><div class="flex justify-between text-base pt-1 border-t"><span>Total</span><b>${money(subtotal + fee)}</b></div>`;
   };
   deliverySelect.onchange = updateSummary;
   updateSummary();
@@ -105,43 +148,21 @@ function patchCheckoutForm() {
     paymentInfo.classList.remove("hidden");
     paymentText.textContent = details || "Número/dados de pagamento a configurar no painel.";
   };
-  form.onsubmit = async event => {
-    event.preventDefault();
-    const data = new FormData(form);
-    const { cart, subtotal, saving } = cartTotals();
-    if (!cart.length) return;
-    const delivery = String(data.get("delivery") || "");
-    const fee = deliveryFee(delivery);
-    const total = subtotal + fee;
-    const method = String(data.get("payment") || "");
-    const pay = paymentDetails(method);
-    const orderNumber = `RF-${Date.now().toString().slice(-8)}`;
-    const name = String(data.get("name") || "");
-    const phone = String(data.get("phone") || "");
-    const address = String(data.get("address") || "");
-    try {
-      const { data: customer } = await supabase.from("customers").insert({ name, phone, address: address || null }).select("id").single();
-      const { data: order } = await supabase.from("orders").insert({ order_number: orderNumber, customer_id: customer?.id || null, customer_name: name, customer_phone: phone, address: address || null, delivery_zone: delivery, delivery_fee: fee, total }).select("id").single();
-      if (order?.id) await supabase.from("order_items").insert(cart.map(row => { const product = products.find(p => String(p.id) === String(row.id)); return { order_id: order.id, product_id: product?.id || null, product_name: product?.name?.pt || product?.name || "Produto", quantity: Number(row.qty || 0), unit_price: Number(product?.price || 0) }; }));
-    } catch (error) { console.warn("Não foi possível guardar o pedido no painel:", error); }
-    const lines = ["*O seu pedido — Rancho Flexível*", "", "*Produtos*", ...cart.map(row => { const product = products.find(p => String(p.id) === String(row.id)); const productName = product?.name?.pt || product?.name || "Produto"; return `• ${productName} — ${row.qty} x ${money(product?.price)} = ${money(Number(product?.price || 0) * Number(row.qty || 0))}`; }), "", `Poupança: ${money(saving)}`, `Entrega: ${fee === 0 ? "Grátis" : money(fee)}`, `*Total: ${money(total)}*`, "", "*Dados do cliente*", `Nome: ${name}`, `Telefone: ${phone}`, `Forma de entrega: ${delivery}`, `Endereço: ${address || "—"}`, `Método de pagamento: ${method}`, `Dados de pagamento: ${pay || "—"}`, `Aceita substituições: ${data.get("substitutions") || "—"}`, `Observações: ${data.get("notes") || "—"}`];
-    const whatsapp = String(setting("whatsapp", setting("whatsapp_number", "258840000000"))).replace(/\D/g, "") || "258840000000";
-    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
-    localStorage.removeItem("rf_cart");
-    document.querySelector("#rfCheckoutModal")?.remove();
-  };
 }
 
 function applyPublicSettings() {
   applyDeliveryCards();
   applyFaq();
+  applyFooter();
   patchCheckoutForm();
 }
 
-let settingsObserverTimer = null;
-const observer = new MutationObserver(() => {
-  clearTimeout(settingsObserverTimer);
-  settingsObserverTimer = setTimeout(applyPublicSettings, 80);
-});
-observer.observe(document.body, { childList: true });
-loadSettings();
+const boot = () => {
+  applyPublicSettings();
+  loadSettings().catch(error => console.warn("Erro nas configurações públicas:", error));
+  const observer = new MutationObserver(records => {
+    if (records.some(record => [...record.addedNodes].some(node => node?.id === "rfCheckoutModal" || node?.querySelector?.("#rfCheckoutModal")))) patchCheckoutForm();
+  });
+  observer.observe(document.body, { childList: true });
+};
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();
