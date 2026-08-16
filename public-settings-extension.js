@@ -26,12 +26,7 @@ function applyDeliveryCards() {
   const section = [...document.querySelectorAll("section")].find(s => s.querySelector('[data-i18n="deliveryText"]'));
   if (!section) return;
   const cards = section.querySelectorAll(".delivery-card");
-  const values = [
-    Number(setting("delivery_maputo", 400)),
-    Number(setting("delivery_zonas", 700)),
-    Number(setting("delivery_matola", 1000)),
-    Number(setting("delivery_pickup", 0))
-  ];
+  const values = [Number(setting("delivery_maputo", 400)), Number(setting("delivery_zonas", 700)), Number(setting("delivery_matola", 1000)), Number(setting("delivery_pickup", 0))];
   const signature = values.join("|");
   if (signature === lastDeliverySignature) return;
   lastDeliverySignature = signature;
@@ -46,17 +41,12 @@ function applyDeliveryCards() {
 function applyFaq() {
   const faq = document.querySelector("#faq");
   if (!faq) return;
-  const questions = [1,2,3,4].map(i => ({
-    q: setting(`faq_q${i}`, ""),
-    a: setting(`faq_a${i}`, "")
-  })).filter(x => x.q || x.a);
+  const questions = [1,2,3,4].map(i => ({ q: setting(`faq_q${i}`, ""), a: setting(`faq_a${i}`, "") })).filter(x => x.q || x.a);
   if (!questions.length) return;
-
   const label = document.querySelector('[data-i18n="faqLabel"]');
   const title = document.querySelector('[data-i18n="faqTitle"]');
   if (label) label.textContent = setting("faq_label", "Dúvidas frequentes");
   if (title) title.textContent = setting("faq_title", "Perguntas frequentes");
-
   const markup = questions.map(item => `<details class="bg-surface-container-low rounded-xl p-4"><summary class="font-semibold cursor-pointer">${escapeHtml(item.q)}</summary><p class="text-sm text-on-surface-variant mt-2">${escapeHtml(item.a)}</p></details>`).join("");
   if (markup !== lastFaqMarkup) {
     lastFaqMarkup = markup;
@@ -67,24 +57,18 @@ function applyFaq() {
 function applyCheckoutDelivery() {
   const select = document.querySelector('#rfCheckoutModal select[name="delivery"]');
   if (!select) return;
-  const values = [
-    ["Maputo Cidade", Number(setting("delivery_maputo", 400))],
-    ["Zonas Circunvizinhas", Number(setting("delivery_zonas", 700))],
-    ["Matola", Number(setting("delivery_matola", 1000))],
-    ["Levantamento Gratis", Number(setting("delivery_pickup", 0))]
-  ];
+  const values = [["Maputo Cidade", Number(setting("delivery_maputo", 400))], ["Zonas Circunvizinhas", Number(setting("delivery_zonas", 700))], ["Matola", Number(setting("delivery_matola", 1000))], ["Levantamento Gratis", Number(setting("delivery_pickup", 0))]];
   const signature = values.map(([name, fee]) => `${name}:${fee}`).join("|");
-  if (signature === lastCheckoutSignature) return;
+  if (signature === lastCheckoutSignature && select.dataset.rfDeliveryConfigured === "1") return;
   lastCheckoutSignature = signature;
   const current = select.value;
   select.innerHTML = `<option value="">Seleccione Forma de entrega *</option>` + values.map(([name, fee]) => `<option value="${name}">${name} — ${fee === 0 ? "Grátis" : money(fee)}</option>`).join("");
   if (values.some(([name]) => name === current)) select.value = current;
+  select.dataset.rfDeliveryConfigured = "1";
 }
 
 function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>\"']/g, m => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
-  }[m]));
+  return String(value ?? "").replace(/[&<>\"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[m]));
 }
 
 function applyPublicSettings() {
@@ -95,5 +79,4 @@ function applyPublicSettings() {
 
 const observer = new MutationObserver(() => applyPublicSettings());
 observer.observe(document.body, { childList: true, subtree: true });
-
 loadSettings();
