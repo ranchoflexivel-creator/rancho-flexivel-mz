@@ -9,3 +9,5 @@
   const run=()=>{enhanceCategories();makeDraggable();addFoodBadge()};run();let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}).observe(document.body,{childList:true,subtree:true});
   if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./public-sw.js').catch(()=>{}),{once:true});
 })();
+
+import('./public-catalog-v2.js').catch(error => console.warn('Falha ao carregar correção do catálogo:', error));
