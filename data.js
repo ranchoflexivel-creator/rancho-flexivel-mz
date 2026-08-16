@@ -14,7 +14,7 @@ const demoCategories = [
   { id: 7, name: { pt: "Conservas", en: "Canned foods", zh: "罐头食品", fr: "Conserves", chg: "Swakudya swa makani" }, icon: "kitchen" },
   { id: 8, name: { pt: "Molhos e temperos", en: "Sauces & seasonings", zh: "酱料和调味料", fr: "Sauces et condiments", chg: "Masosi" }, icon: "soup_kitchen" },
   { id: 9, name: { pt: "Bebidas", en: "Drinks", zh: "饮料", fr: "Boissons", chg: "Swinwelo" }, icon: "water_drop" },
-  { id: 10, name: { pt: "Higiene e limpeza", en: "Hygiene & cleaning", zh: "卫生和清洁", fr: "Hygiène et nettoyage", chg: "Ku basisa ni ku basisa" }, icon: "cleaning_services" }
+  { id: 10, name: { pt: "Higiene e limpeza", en: "Hygiene & cleaning", zh: "卫生和清洁", fr: "Hygiène et nettoyage", chg: "Ku basisa ni ku basisa" }
 ];
 
 const demoProducts = [];
@@ -28,7 +28,7 @@ const withTimeout = (promise, ms = 3500) => Promise.race([
 
 export async function getProducts() {
   const { data, error } = await withTimeout(
-    supabase.from("products").select("id,name,category_id,price,old_price,unit,image_url,image,photo_url,imageUrl,tag,stock,active,featured,description,sort_order").order("sort_order", { ascending:true }),
+    supabase.from("products").select("id,name,description,category_id,price,old_price,unit,image_url,image,tag,stock,active,featured,sort_order").order("sort_order", { ascending:true }),
     3500
   );
   if (error) throw error;
@@ -37,7 +37,7 @@ export async function getProducts() {
 
 export async function getCategories() {
   const { data, error } = await withTimeout(
-    supabase.from("categories").select("id,name,icon,active,sort_order").eq("active",true).order("sort_order"),
+    supabase.from("categories").select("id,name,description,icon,image_url,active,sort_order").eq("active",true).order("sort_order", { ascending:true }),
     3000
   );
   if (error) throw error;
@@ -46,7 +46,7 @@ export async function getCategories() {
 
 export async function getKits() {
   const { data, error } = await withTimeout(
-    supabase.from("bundles").select("id,name,description,price,product_ids,image_url,active,sort_order").eq("active",true).order("sort_order"),
+    supabase.from("bundles").select("id,name,description,price,product_ids,image_url,badge,active,sort_order").eq("active",true).order("sort_order", { ascending:true }),
     3000
   );
   if (error) throw error;
