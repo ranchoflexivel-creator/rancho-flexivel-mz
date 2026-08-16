@@ -52,3 +52,4 @@ let scheduled=false;
 function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;apply();});}
 new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
 loadProducts();
+import './public-cart-ui-fix.js';
