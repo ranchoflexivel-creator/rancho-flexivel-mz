@@ -1,18 +1,16 @@
-import { supabase, getProducts } from "./data.js";
+import { supabase } from "./data.js";
 
 let settings = {};
 let products = [];
 let lastFaqMarkup = "";
 let lastDeliverySignature = "";
+const PRODUCT_CACHE_KEY = "rf_public_product_images_v1";
 
 async function loadSettings() {
-  const [{ data, error }, loadedProducts] = await Promise.all([
-    supabase.from("site_settings").select("key,value"),
-    getProducts()
-  ]);
+  const { data, error } = await supabase.from("site_settings").select("key,value");
   if (error) console.warn("Não foi possível carregar configurações públicas:", error);
   settings = Object.fromEntries((data || []).map(row => [row.key, row.value]));
-  products = loadedProducts || [];
+  try { products = JSON.parse(sessionStorage.getItem(PRODUCT_CACHE_KEY) || "[]"); } catch { products = []; }
   applyPublicSettings();
 }
 
@@ -60,10 +58,7 @@ function applyFaq() {
   if (label) label.textContent = setting("faq_label", "Dúvidas frequentes");
   if (title) title.textContent = setting("faq_title", "Perguntas frequentes");
   const markup = questions.map(item => `<details class="bg-surface-container-low rounded-xl p-4"><summary class="font-semibold cursor-pointer">${escapeHtml(item.q)}</summary><p class="text-sm text-on-surface-variant mt-2">${escapeHtml(item.a)}</p></details>`).join("");
-  if (markup !== lastFaqMarkup) {
-    lastFaqMarkup = markup;
-    faq.innerHTML = markup;
-  }
+  if (markup !== lastFaqMarkup) { lastFaqMarkup = markup; faq.innerHTML = markup; }
 }
 
 function cartTotals() {
@@ -83,105 +78,37 @@ function patchCheckoutForm() {
   const form = document.querySelector("#rfCheckoutModal #rfForm");
   if (!form || form.dataset.rfPatched === "1") return;
   form.dataset.rfPatched = "1";
-
   const deliverySelect = form.querySelector('select[name="delivery"]');
   const paymentSelect = form.querySelector('select[name="payment"]');
   if (!deliverySelect) return;
-
   const deliveryOptions = [["Maputo Cidade", deliveryFee("Maputo Cidade")], ["Zonas Circunvizinhas", deliveryFee("Zonas Circunvizinhas")], ["Matola", deliveryFee("Matola")], ["Levantamento Gratis", deliveryFee("Levantamento Gratis")]];
   deliverySelect.innerHTML = `<option value="">Seleccione Forma de entrega *</option>` + deliveryOptions.map(([name, fee]) => `<option value="${escapeHtml(name)}">${escapeHtml(name)} — ${fee === 0 ? "Grátis" : money(fee)}</option>`).join("");
-
   const paymentInfo = form.querySelector("#rfPaymentInfo");
   const paymentText = form.querySelector("#rfPaymentText");
   const summary = document.createElement("div");
-  summary.id = "rfManagedSummary";
-  summary.className = "rounded-xl bg-surface-container-low p-4 text-sm space-y-1";
+  summary.id = "rfManagedSummary";summary.className = "rounded-xl bg-surface-container-low p-4 text-sm space-y-1";
   const buttons = form.querySelector("button[type=submit]")?.parentElement;
   if (buttons) buttons.parentElement.insertBefore(summary, buttons);
-
-  const updateSummary = () => {
-    const totals = cartTotals();
-    const fee = deliveryFee(deliverySelect.value);
-    summary.innerHTML = `<div class="flex justify-between"><span>Subtotal</span><b>${money(totals.subtotal)}</b></div><div class="flex justify-between"><span>Entrega</span><b>${fee === 0 ? "Grátis" : money(fee)}</b></div><div class="flex justify-between text-base pt-1 border-t"><span>Total</span><b>${money(totals.subtotal + fee)}</b></div>`;
-  };
-  deliverySelect.onchange = updateSummary;
-  updateSummary();
-
-  if (paymentSelect) {
-    paymentSelect.onchange = () => {
-      const method = paymentSelect.value;
-      const details = paymentDetails(method);
-      if (!paymentInfo || !paymentText) return;
-      if (!method || method === "Numerário") {
-        paymentInfo.classList.add("hidden");
-        return;
-      }
-      paymentInfo.classList.remove("hidden");
-      paymentText.textContent = details || "Número/dados de pagamento a configurar no painel.";
-    };
-  }
-
+  const updateSummary = () => { const totals = cartTotals(); const fee = deliveryFee(deliverySelect.value); summary.innerHTML = `<div class="flex justify-between"><span>Subtotal</span><b>${money(totals.subtotal)}</b></div><div class="flex justify-between"><span>Entrega</span><b>${fee === 0 ? "Grátis" : money(fee)}</b></div><div class="flex justify-between text-base pt-1 border-t"><span>Total</span><b>${money(totals.subtotal + fee)}</b></div>`; };
+  deliverySelect.onchange = updateSummary; updateSummary();
+  if (paymentSelect) paymentSelect.onchange = () => { const method = paymentSelect.value; const details = paymentDetails(method); if (!paymentInfo || !paymentText) return; if (!method || method === "Numerário") { paymentInfo.classList.add("hidden"); return; } paymentInfo.classList.remove("hidden"); paymentText.textContent = details || "Número/dados de pagamento a configurar no painel."; };
   form.onsubmit = async event => {
     event.preventDefault();
-    const data = new FormData(form);
-    const { cart, subtotal, saving } = cartTotals();
-    if (!cart.length) return;
-    const delivery = String(data.get("delivery") || "");
-    const fee = deliveryFee(delivery);
-    const total = subtotal + fee;
-    const method = String(data.get("payment") || "");
-    const pay = paymentDetails(method);
-    const orderNumber = `RF-${Date.now().toString().slice(-8)}`;
-    const name = String(data.get("name") || "");
-    const phone = String(data.get("phone") || "");
-    const address = String(data.get("address") || "");
-
+    const data = new FormData(form); const { cart, subtotal, saving } = cartTotals(); if (!cart.length) return;
+    const delivery = String(data.get("delivery") || ""); const fee = deliveryFee(delivery); const total = subtotal + fee; const method = String(data.get("payment") || ""); const pay = paymentDetails(method);
+    const orderNumber = `RF-${Date.now().toString().slice(-8)}`; const name = String(data.get("name") || ""); const phone = String(data.get("phone") || ""); const address = String(data.get("address") || "");
     try {
       const { data: customer } = await supabase.from("customers").insert({ name, phone, address: address || null }).select("id").single();
-      const { data: order } = await supabase.from("orders").insert({
-        order_number: orderNumber,
-        customer_id: customer?.id || null,
-        customer_name: name,
-        customer_phone: phone,
-        address: address || null,
-        delivery_zone: delivery,
-        delivery_fee: fee,
-        total
-      }).select("id").single();
-      if (order?.id) {
-        await supabase.from("order_items").insert(cart.map(row => {
-          const product = products.find(p => String(p.id) === String(row.id));
-          return { order_id: order.id, product_id: product?.id || null, product_name: product?.name?.pt || product?.name || "Produto", quantity: Number(row.qty || 0), unit_price: Number(product?.price || 0) };
-        }));
-      }
-    } catch (error) {
-      console.warn("Não foi possível guardar o pedido no painel:", error);
-    }
-
-    const lines = [
-      "*O seu pedido — Rancho Flexível*", "", "*Produtos*",
-      ...cart.map(row => {
-        const product = products.find(p => String(p.id) === String(row.id));
-        const productName = product?.name?.pt || product?.name || "Produto";
-        return `• ${productName} — ${row.qty} x ${money(product?.price)} = ${money(Number(product?.price || 0) * Number(row.qty || 0))}`;
-      }),
-      "", `Poupança: ${money(saving)}`, `Entrega: ${fee === 0 ? "Grátis" : money(fee)}`, `*Total: ${money(total)}*`, "",
-      "*Dados do cliente*", `Nome: ${name}`, `Telefone: ${phone}`, `Forma de entrega: ${delivery}`, `Endereço: ${address || "—"}`,
-      `Método de pagamento: ${method}`, `Dados de pagamento: ${pay || "—"}`, `Aceita substituições: ${data.get("substitutions") || "—"}`, `Observações: ${data.get("notes") || "—"}`
-    ];
+      const { data: order } = await supabase.from("orders").insert({ order_number: orderNumber, customer_id: customer?.id || null, customer_name: name, customer_phone: phone, address: address || null, delivery_zone: delivery, delivery_fee: fee, total }).select("id").single();
+      if (order?.id) await supabase.from("order_items").insert(cart.map(row => { const product = products.find(p => String(p.id) === String(row.id)); return { order_id: order.id, product_id: product?.id || null, product_name: product?.name?.pt || product?.name || "Produto", quantity: Number(row.qty || 0), unit_price: Number(product?.price || 0) }; }));
+    } catch (error) { console.warn("Não foi possível guardar o pedido no painel:", error); }
+    const lines = ["*O seu pedido — Rancho Flexível*", "", "*Produtos*", ...cart.map(row => { const product = products.find(p => String(p.id) === String(row.id)); const productName = product?.name?.pt || product?.name || "Produto"; return `• ${productName} — ${row.qty} x ${money(product?.price)} = ${money(Number(product?.price || 0) * Number(row.qty || 0))}`; }), "", `Poupança: ${money(saving)}`, `Entrega: ${fee === 0 ? "Grátis" : money(fee)}`, `*Total: ${money(total)}*`, "", "*Dados do cliente*", `Nome: ${name}`, `Telefone: ${phone}`, `Forma de entrega: ${delivery}`, `Endereço: ${address || "—"}`, `Método de pagamento: ${method}`, `Dados de pagamento: ${pay || "—"}`, `Aceita substituições: ${data.get("substitutions") || "—"}`, `Observações: ${data.get("notes") || "—"}`];
     const whatsapp = String(setting("whatsapp", setting("whatsapp_number", "258840000000"))).replace(/\D/g, "") || "258840000000";
     window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
-    localStorage.removeItem("rf_cart");
-    document.querySelector("#rfCheckoutModal")?.remove();
+    localStorage.removeItem("rf_cart"); document.querySelector("#rfCheckoutModal")?.remove();
   };
 }
-
-function applyPublicSettings() {
-  applyDeliveryCards();
-  applyFaq();
-  patchCheckoutForm();
-}
-
+function applyPublicSettings(){applyDeliveryCards();applyFaq();patchCheckoutForm();}
 const observer = new MutationObserver(() => applyPublicSettings());
-observer.observe(document.body, { childList: true, subtree: true });
+observer.observe(document.body,{childList:true,subtree:true});
 loadSettings();
