@@ -3,3 +3,4 @@
 import "./public-media-fix.js";
 import "./public-performance-fix.js";
 import "./public-cart-ui-fix.js";
+import "./public-checkout-fix.js";
