@@ -1,5 +1,3 @@
-// As imagens dos produtos já são renderizadas pelo app.js a partir dos dados
-// carregados. Evitamos uma segunda consulta ao Supabase e um MutationObserver
-// permanente, que deixavam a página pesada.
-import "./public-content-fallback.js";
+// Lightweight public-page helpers. Product rendering remains owned by app.js.
+import "./public-performance-fix.js";
 import "./public-cart-ui-fix.js";
