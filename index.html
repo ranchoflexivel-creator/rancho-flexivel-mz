@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="pt">
 <head>
@@ -86,53 +87,103 @@ body{
   }
 }
 
-/* =========================================================
-   LOGO
-========================================================= */
+/* ============================================================
+   LOGOTIPO
+============================================================ */
 
-.logo-image{
-  display:block;
-  height:56px;
-  width:auto;
-  max-width:240px;
-  object-fit:contain;
-}
-
-.logo-fallback{
-  display:none;
-  align-items:center;
-  gap:10px;
-}
-
-.logo-fallback-icon{
-  width:42px;
-  height:42px;
-  border-radius:12px;
-  background:#00361a;
-  color:white;
+.rf-logo{
   display:flex;
   align-items:center;
-  justify-content:center;
-}
-
-.logo-fallback-text{
-  font-family:Montserrat,sans-serif;
-  font-weight:700;
+  gap:10px;
+  text-decoration:none;
   color:#00361a;
-  font-size:18px;
   white-space:nowrap;
 }
 
-/* =========================================================
-   IMAGENS
-========================================================= */
-
-img{
-  max-width:100%;
+.rf-logo-mark{
+  width:48px;
+  height:48px;
+  border-radius:16px;
+  background:#00361a;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:white;
+  box-shadow:0 5px 15px rgba(0,54,26,.18);
+  flex-shrink:0;
 }
 
-.image-fallback{
-  background:#e8eff1;
+.rf-logo-mark .material-symbols-outlined{
+  font-size:29px;
+}
+
+.rf-logo-text{
+  display:flex;
+  flex-direction:column;
+  line-height:1;
+}
+
+.rf-logo-name{
+  font-family:Montserrat,sans-serif;
+  font-size:18px;
+  font-weight:700;
+  letter-spacing:-.4px;
+  color:#00361a;
+}
+
+.rf-logo-subtitle{
+  margin-top:4px;
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:#8a5100;
+}
+
+.rf-footer-logo .rf-logo-mark{
+  width:52px;
+  height:52px;
+}
+
+.rf-footer-logo .rf-logo-name{
+  font-size:20px;
+}
+
+@media(max-width:420px){
+  .rf-logo-name{
+    font-size:16px;
+  }
+
+  .rf-logo-mark{
+    width:44px;
+    height:44px;
+    border-radius:14px;
+  }
+
+  .rf-logo-subtitle{
+    font-size:8px;
+  }
+}
+
+/* ============================================================
+   IMAGENS — FALLBACK
+============================================================ */
+
+.rf-image-placeholder{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 30% 20%,rgba(253,157,39,.18),transparent 35%),
+    linear-gradient(135deg,#eef5f7,#dde4e6);
+  color:#00361a;
+}
+
+.rf-image-placeholder .material-symbols-outlined{
+  font-size:64px;
+  opacity:.25;
 }
 </style>
 </head>
@@ -147,43 +198,29 @@ img{
 
   <div class="h-20 max-w-[1280px] mx-auto px-4 lg:px-16 flex items-center gap-6">
 
-    <!-- LOGOTIPO -->
+    <!-- LOGOTIPO SEM DEPENDER DE IMAGEM -->
 
     <a
       href="index.html"
-      class="flex items-center shrink-0"
+      class="rf-logo shrink-0"
       aria-label="Rancho Flexível"
     >
 
-      <img
-        id="headerLogo"
-        src="./logo.png"
-        alt="Rancho Flexível"
-        class="logo-image"
-        onerror="
-          this.style.display='none';
-          document.getElementById('headerLogoFallback').style.display='flex';
-        "
-      >
+      <span class="rf-logo-mark">
+        <span class="material-symbols-outlined">
+          shopping_basket
+        </span>
+      </span>
 
-      <div
-        id="headerLogoFallback"
-        class="logo-fallback"
-      >
-
-        <div class="logo-fallback-icon">
-
-          <span class="material-symbols-outlined">
-            shopping_basket
-          </span>
-
-        </div>
-
-        <span class="logo-fallback-text">
+      <span class="rf-logo-text">
+        <span class="rf-logo-name">
           Rancho Flexível
         </span>
 
-      </div>
+        <span class="rf-logo-subtitle">
+          Compras simples
+        </span>
+      </span>
 
     </a>
 
@@ -236,7 +273,7 @@ img{
     </nav>
 
 
-    <!-- CONTROLOS -->
+    <!-- AÇÕES -->
 
     <div class="flex items-center gap-2 ml-auto lg:ml-0">
 
@@ -246,11 +283,25 @@ img{
         aria-label="Idioma"
       >
 
-        <option value="pt">Português</option>
-        <option value="en">English</option>
-        <option value="zh">中文</option>
-        <option value="fr">Français</option>
-        <option value="chg">Changana</option>
+        <option value="pt">
+          Português
+        </option>
+
+        <option value="en">
+          English
+        </option>
+
+        <option value="zh">
+          中文
+        </option>
+
+        <option value="fr">
+          Français
+        </option>
+
+        <option value="chg">
+          Changana
+        </option>
 
       </select>
 
@@ -378,7 +429,9 @@ img{
     </div>
 
 
-    <!-- IMAGEM PRINCIPAL -->
+    <!-- =====================================================
+         IMAGEM PRINCIPAL
+    ====================================================== -->
 
     <div class="flex-1 w-full relative min-h-[360px] lg:min-h-[480px]">
 
@@ -389,8 +442,19 @@ img{
           class="w-full h-full object-cover"
           alt="Rancho Flexível"
           src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=85"
-          onerror="this.style.display='none'"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
         >
+
+        <div
+          class="rf-image-placeholder absolute inset-0"
+          style="display:none"
+        >
+
+          <span class="material-symbols-outlined">
+            shopping_cart
+          </span>
+
+        </div>
 
       </div>
 
@@ -404,6 +468,7 @@ img{
           </span>
 
         </div>
+
 
         <div>
 
@@ -432,6 +497,7 @@ img{
           </span>
 
         </div>
+
 
         <div>
 
@@ -476,6 +542,7 @@ img{
         </span>
 
       </h2>
+
 
       <p
         class="text-on-surface-variant mt-2"
@@ -698,48 +765,44 @@ img{
   <div class="max-w-[1280px] mx-auto px-4 lg:px-16 grid md:grid-cols-4 gap-8">
 
 
-    <!-- LOGOTIPO -->
+    <!-- =====================================================
+         LOGOTIPO
+    ====================================================== -->
 
     <div>
 
-      <div class="flex items-center">
+      <a
+        href="index.html"
+        class="rf-logo rf-footer-logo"
+        aria-label="Rancho Flexível"
+      >
 
-        <img
-          id="footerImage"
-          src="./logo.png"
-          alt="Rancho Flexível"
-          class="h-16 w-auto max-w-[260px] object-contain"
-          onerror="
-            this.style.display='none';
-            document.getElementById('footerLogoFallback').style.display='flex';
-          "
-        >
+        <span class="rf-logo-mark">
+
+          <span class="material-symbols-outlined">
+            shopping_basket
+          </span>
+
+        </span>
 
 
-        <div
-          id="footerLogoFallback"
-          class="logo-fallback"
-        >
+        <span class="rf-logo-text">
 
-          <div class="logo-fallback-icon">
-
-            <span class="material-symbols-outlined">
-              shopping_basket
-            </span>
-
-          </div>
-
-          <span class="logo-fallback-text">
+          <span class="rf-logo-name">
             Rancho Flexível
           </span>
 
-        </div>
+          <span class="rf-logo-subtitle">
+            Compras simples
+          </span>
 
-      </div>
+        </span>
+
+      </a>
 
 
       <p
-        class="text-sm text-on-surface-variant mt-3 max-w-xs"
+        class="text-sm text-on-surface-variant mt-4 max-w-xs"
         data-i18n="footer.desc"
       >
         Qualidade do campo direto para a sua mesa, com a flexibilidade que o seu dia a dia pede.
@@ -748,7 +811,9 @@ img{
     </div>
 
 
-    <!-- LINKS -->
+    <!-- =====================================================
+         LINKS
+    ====================================================== -->
 
     <div>
 
@@ -790,7 +855,9 @@ img{
     </div>
 
 
-    <!-- CONTACTO -->
+    <!-- =====================================================
+         CONTACTO
+    ====================================================== -->
 
     <div>
 
@@ -814,7 +881,9 @@ img{
     </div>
 
 
-    <!-- REDES SOCIAIS -->
+    <!-- =====================================================
+         REDES SOCIAIS
+    ====================================================== -->
 
     <div>
 
@@ -850,7 +919,9 @@ img{
   >
 
     ©
+
     <span id="year"></span>
+
     Rancho Flexível.
 
     <span data-i18n="footer.rights">
@@ -959,32 +1030,9 @@ img{
 
 <script
   type="module"
-  src="./app.js"
+  src="app.js"
 ></script>
-
-
-<!-- =========================================================
-     VERIFICAÇÃO DO LOGOTIPO
-========================================================= -->
-
-<script>
-document.addEventListener("DOMContentLoaded", function(){
-
-  const headerLogo = document.getElementById("headerLogo");
-  const footerLogo = document.getElementById("footerImage");
-
-  console.log(
-    "Rancho Flexível — logo do cabeçalho:",
-    headerLogo?.src
-  );
-
-  console.log(
-    "Rancho Flexível — logo do rodapé:",
-    footerLogo?.src
-  );
-
-});
-</script>
 
 </body>
 </html>
+```
