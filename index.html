@@ -1,4 +1,3 @@
-```html
 <!doctype html>
 <html lang="pt">
 <head>
@@ -87,60 +86,53 @@ body{
   }
 }
 
-/* ============================================================
-   PLACEHOLDER DE IMAGEM
-============================================================ */
+/* =========================================================
+   LOGO
+========================================================= */
 
-.image-placeholder{
-  width:100%;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
-  gap:6px;
-  background:#eef5f7;
-  color:#717971;
+.logo-image{
+  display:block;
+  height:56px;
+  width:auto;
+  max-width:240px;
+  object-fit:contain;
 }
-
-.image-placeholder .material-symbols-outlined{
-  font-size:34px;
-}
-
-.image-placeholder span:last-child{
-  font-size:11px;
-  font-weight:600;
-}
-
-/* ============================================================
-   LOGOTIPO FALLBACK
-============================================================ */
 
 .logo-fallback{
   display:none;
   align-items:center;
-  gap:8px;
-  color:#00361a;
+  gap:10px;
 }
 
-.logo-fallback .material-symbols-outlined{
-  font-size:28px;
+.logo-fallback-icon{
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  background:#00361a;
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
 .logo-fallback-text{
   font-family:Montserrat,sans-serif;
   font-weight:700;
-  line-height:1.05;
+  color:#00361a;
+  font-size:18px;
+  white-space:nowrap;
 }
 
-.logo-fallback-text small{
-  display:block;
-  font-family:Inter,sans-serif;
-  font-size:9px;
-  font-weight:600;
-  color:#8a5100;
-  letter-spacing:.08em;
-  text-transform:uppercase;
+/* =========================================================
+   IMAGENS
+========================================================= */
+
+img{
+  max-width:100%;
+}
+
+.image-fallback{
+  background:#e8eff1;
 }
 </style>
 </head>
@@ -160,27 +152,37 @@ body{
     <a
       href="index.html"
       class="flex items-center shrink-0"
+      aria-label="Rancho Flexível"
     >
 
       <img
         id="headerLogo"
-        src="logo.png"
+        src="./logo.png"
         alt="Rancho Flexível"
-        class="h-12 sm:h-14 w-auto object-contain"
+        class="logo-image"
+        onerror="
+          this.style.display='none';
+          document.getElementById('headerLogoFallback').style.display='flex';
+        "
       >
 
       <div
         id="headerLogoFallback"
         class="logo-fallback"
       >
-        <span class="material-symbols-outlined">
-          folder
+
+        <div class="logo-fallback-icon">
+
+          <span class="material-symbols-outlined">
+            shopping_basket
+          </span>
+
+        </div>
+
+        <span class="logo-fallback-text">
+          Rancho Flexível
         </span>
 
-        <div class="logo-fallback-text">
-          Rancho Flexível
-          <small>Mercado &amp; Rancho</small>
-        </div>
       </div>
 
     </a>
@@ -234,7 +236,7 @@ body{
     </nav>
 
 
-    <!-- AÇÕES -->
+    <!-- CONTROLOS -->
 
     <div class="flex items-center gap-2 ml-auto lg:ml-0">
 
@@ -243,11 +245,13 @@ body{
         class="hidden sm:block bg-transparent border border-outline-variant rounded-full px-2 py-1 text-xs"
         aria-label="Idioma"
       >
+
         <option value="pt">Português</option>
         <option value="en">English</option>
         <option value="zh">中文</option>
         <option value="fr">Français</option>
         <option value="chg">Changana</option>
+
       </select>
 
 
@@ -256,9 +260,11 @@ body{
         class="p-2 hover:bg-surface-container-high rounded-full"
         aria-label="Favoritos"
       >
+
         <span class="material-symbols-outlined">
           favorite
         </span>
+
       </button>
 
 
@@ -289,7 +295,7 @@ body{
 
 
 <!-- =========================================================
-     CONTEÚDO
+     CONTEÚDO PRINCIPAL
 ========================================================= -->
 
 <main class="pt-20">
@@ -346,10 +352,13 @@ body{
           href="#produtos"
           class="px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-container transition shadow-md"
         >
+
           <span data-i18n="hero.cta">
             Começar a comprar
           </span>
+
           →
+
         </a>
 
 
@@ -357,9 +366,11 @@ body{
           href="#como-funciona"
           class="px-6 py-3 bg-white text-on-surface rounded-full font-semibold shadow-sm border border-outline-variant"
         >
+
           <span data-i18n="hero.how">
             Ver como funciona
           </span>
+
         </a>
 
       </div>
@@ -378,12 +389,8 @@ body{
           class="w-full h-full object-cover"
           alt="Rancho Flexível"
           src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=85"
+          onerror="this.style.display='none'"
         >
-
-        <div
-          id="heroImageFallback"
-          class="absolute inset-0 hidden"
-        ></div>
 
       </div>
 
@@ -562,6 +569,7 @@ body{
         Produtos
       </h2>
 
+
       <p
         class="text-on-surface-variant"
         data-i18n="products.text"
@@ -666,6 +674,7 @@ body{
       Perguntas frequentes
     </h2>
 
+
     <div
       id="faq"
       class="space-y-3"
@@ -693,25 +702,39 @@ body{
 
     <div>
 
-      <img
-        id="footerImage"
-        src="logo.png"
-        alt="Rancho Flexível"
-        class="h-16 w-auto object-contain"
-      >
+      <div class="flex items-center">
 
-      <div
-        id="footerLogoFallback"
-        class="logo-fallback"
-      >
-        <span class="material-symbols-outlined">
-          folder
-        </span>
+        <img
+          id="footerImage"
+          src="./logo.png"
+          alt="Rancho Flexível"
+          class="h-16 w-auto max-w-[260px] object-contain"
+          onerror="
+            this.style.display='none';
+            document.getElementById('footerLogoFallback').style.display='flex';
+          "
+        >
 
-        <div class="logo-fallback-text">
-          Rancho Flexível
-          <small>Mercado &amp; Rancho</small>
+
+        <div
+          id="footerLogoFallback"
+          class="logo-fallback"
+        >
+
+          <div class="logo-fallback-icon">
+
+            <span class="material-symbols-outlined">
+              shopping_basket
+            </span>
+
+          </div>
+
+          <span class="logo-fallback-text">
+            Rancho Flexível
+          </span>
+
         </div>
+
       </div>
 
 
@@ -736,6 +759,7 @@ body{
         Links Úteis
       </h4>
 
+
       <div class="space-y-2 text-sm text-on-surface-variant">
 
         <a
@@ -745,12 +769,14 @@ body{
           Produtos
         </a>
 
+
         <a
           href="#kits"
           class="block hover:text-primary"
         >
           Rancho do mês
         </a>
+
 
         <a
           href="#como-funciona"
@@ -775,6 +801,7 @@ body{
         Contacto
       </h4>
 
+
       <p
         id="footerContact"
         class="text-sm text-on-surface-variant"
@@ -797,6 +824,7 @@ body{
       >
         Siga-nos
       </h4>
+
 
       <div class="flex gap-3">
 
@@ -866,6 +894,7 @@ body{
       <button
         id="closeCart"
         class="p-2 rounded-full hover:bg-surface-container"
+        aria-label="Fechar carrinho"
       >
 
         <span class="material-symbols-outlined">
@@ -890,6 +919,7 @@ body{
         <span data-i18n="cart.total">
           Total
         </span>
+
 
         <span id="cartTotal">
           0 MZN
@@ -929,9 +959,32 @@ body{
 
 <script
   type="module"
-  src="app.js"
+  src="./app.js"
 ></script>
+
+
+<!-- =========================================================
+     VERIFICAÇÃO DO LOGOTIPO
+========================================================= -->
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  const headerLogo = document.getElementById("headerLogo");
+  const footerLogo = document.getElementById("footerImage");
+
+  console.log(
+    "Rancho Flexível — logo do cabeçalho:",
+    headerLogo?.src
+  );
+
+  console.log(
+    "Rancho Flexível — logo do rodapé:",
+    footerLogo?.src
+  );
+
+});
+</script>
 
 </body>
 </html>
-```
