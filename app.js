@@ -5,20 +5,17 @@ import {
   getSettings
 } from "./data.js";
 
-
 /* ============================================================
-   TRADUÇÕES
+   RANCHO FLEXÍVEL — APP.JS
 ============================================================ */
 
 const I18N = {
-
   pt: {
     nav: {
       products: "Produtos",
       kits: "Rancho do mês",
       admin: "Administração"
     },
-
     hero: {
       badge: "Novo: Compras pelo WhatsApp",
       titleEnd: "sem sair de casa.",
@@ -28,35 +25,28 @@ const I18N = {
       delivery: "Entrega Hoje",
       quality: "Qualidade"
     },
-
     categories: {
       subtitle: "Encontre tudo o que precisa para a sua despensa."
     },
-
     kits: {
       badge: "Destaques",
       text: "Kits pré-montados pensados para facilitar a sua rotina e garantir economia."
     },
-
     products: {
       title: "Produtos",
       text: "Escolha os produtos para o seu rancho."
     },
-
     how: {
       title: "Como funciona"
     },
-
     faq: {
       title: "Perguntas frequentes"
     },
-
     cart: {
       title: "Seu carrinho",
       total: "Total",
       checkout: "Finalizar pedido"
     },
-
     footer: {
       desc: "Qualidade do campo direto para a sua mesa, com a flexibilidade que o seu dia a dia pede.",
       links: "Links Úteis",
@@ -66,14 +56,12 @@ const I18N = {
     }
   },
 
-
   en: {
     nav: {
       products: "Products",
       kits: "Monthly bundle",
       admin: "Administration"
     },
-
     hero: {
       badge: "New: Order by WhatsApp",
       titleEnd: "without leaving home.",
@@ -83,35 +71,28 @@ const I18N = {
       delivery: "Delivery Today",
       quality: "Quality"
     },
-
     categories: {
       subtitle: "Find everything you need for your pantry."
     },
-
     kits: {
       badge: "Highlights",
       text: "Pre-built bundles designed to simplify your routine and save money."
     },
-
     products: {
       title: "Products",
       text: "Choose products for your household."
     },
-
     how: {
       title: "How it works"
     },
-
     faq: {
       title: "Frequently asked questions"
     },
-
     cart: {
       title: "Your cart",
       total: "Total",
       checkout: "Checkout"
     },
-
     footer: {
       desc: "Quality from the field to your table, with flexibility for your everyday life.",
       links: "Useful links",
@@ -121,14 +102,12 @@ const I18N = {
     }
   },
 
-
   zh: {
     nav: {
       products: "产品",
       kits: "本月套餐",
       admin: "管理"
     },
-
     hero: {
       badge: "新功能：WhatsApp 下单",
       titleEnd: "足不出户完成采购。",
@@ -138,35 +117,28 @@ const I18N = {
       delivery: "今日配送",
       quality: "品质保证"
     },
-
     categories: {
       subtitle: "找到您的家庭储藏所需的一切。"
     },
-
     kits: {
       badge: "精选",
       text: "预先搭配的套餐，帮助您轻松生活并节省开支。"
     },
-
     products: {
       title: "产品",
       text: "为您的家庭选择商品。"
     },
-
     how: {
       title: "购买流程"
     },
-
     faq: {
       title: "常见问题"
     },
-
     cart: {
       title: "购物车",
       total: "总计",
       checkout: "结算"
     },
-
     footer: {
       desc: "从农场到餐桌，为您的日常生活提供灵活选择。",
       links: "有用链接",
@@ -176,14 +148,12 @@ const I18N = {
     }
   },
 
-
   fr: {
     nav: {
       products: "Produits",
       kits: "Panier du mois",
       admin: "Administration"
     },
-
     hero: {
       badge: "Nouveau : commande WhatsApp",
       titleEnd: "sans quitter la maison.",
@@ -193,35 +163,28 @@ const I18N = {
       delivery: "Livraison aujourd'hui",
       quality: "Qualité"
     },
-
     categories: {
       subtitle: "Trouvez tout ce dont vous avez besoin pour votre garde-manger."
     },
-
     kits: {
       badge: "Sélection",
       text: "Des paniers prêts à l'emploi pour simplifier votre quotidien et économiser."
     },
-
     products: {
       title: "Produits",
       text: "Choisissez les produits pour votre foyer."
     },
-
     how: {
       title: "Comment ça marche"
     },
-
     faq: {
       title: "Questions fréquentes"
     },
-
     cart: {
       title: "Votre panier",
       total: "Total",
       checkout: "Passer la commande"
     },
-
     footer: {
       desc: "La qualité du champ directement à votre table, avec flexibilité.",
       links: "Liens utiles",
@@ -231,14 +194,12 @@ const I18N = {
     }
   },
 
-
   chg: {
     nav: {
       products: "Swilo",
       kits: "Rancho wa n'weti",
       admin: "Ulawuri"
     },
-
     hero: {
       badge: "Swa nyuwani: oda hi WhatsApp",
       titleEnd: "u nga humi kaya.",
@@ -248,35 +209,28 @@ const I18N = {
       delivery: "Ku yisa namuntlha",
       quality: "Nkoka"
     },
-
     categories: {
       subtitle: "Kuma swilo leswi u swi lavaka endlwini."
     },
-
     kits: {
       badge: "Swikombiso",
       text: "Tikhithi leti lunghisiweke ku olovisa siku ni siku."
     },
-
     products: {
       title: "Swilo",
       text: "Hlawula swilo swa ndyangu wa wena."
     },
-
     how: {
       title: "Ndlela leyi swi tirhaka ha yona"
     },
-
     faq: {
       title: "Swivutiso leswi talaka ku vutisiwa"
     },
-
     cart: {
       title: "Cart ya wena",
       total: "Ntsengo",
       checkout: "Hetisa oda"
     },
-
     footer: {
       desc: "Nkoka wa le masikwini wu fika etafuleni ra wena hi ku olova.",
       links: "Swihlanganisi",
@@ -285,7 +239,6 @@ const I18N = {
       rights: "Timfanelo hinkwato ti hlayisiwile."
     }
   }
-
 };
 
 
@@ -294,21 +247,12 @@ const I18N = {
 ============================================================ */
 
 const state = {
-
   lang: localStorage.getItem("rf_lang") || "pt",
-
   products: [],
-
   categories: [],
-
   kits: [],
-
   settings: {},
-
-  cart: JSON.parse(
-    localStorage.getItem("rf_cart") || "[]"
-  )
-
+  cart: JSON.parse(localStorage.getItem("rf_cart") || "[]")
 };
 
 
@@ -316,80 +260,41 @@ const state = {
    HELPERS
 ============================================================ */
 
-const $ = selector =>
-  document.querySelector(selector);
+const $ = selector => document.querySelector(selector);
 
-
-const money = number =>
-  `${Number(number || 0).toLocaleString("pt-MZ", {
+function money(number) {
+  return `${Number(number || 0).toLocaleString("pt-MZ", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })} MZN`;
+}
 
 
-/* ============================================================
-   NORMALIZAR PESQUISA
-   Remove acentos e ignora maiúsculas/minúsculas
-============================================================ */
+/*
+   Normaliza texto para pesquisa.
 
-function normalizeSearch(value) {
+   Exemplo:
+   "Açúcar" -> "acucar"
+   "ARROZ"  -> "arroz"
+*/
 
-  return String(value ?? "")
+function normalizeText(value) {
+  return String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
-
 }
 
-
-/* ============================================================
-   TRADUÇÃO
-============================================================ */
 
 function tr(path) {
-
   return (
-
     path
       .split(".")
-      .reduce(
-        (obj, key) => obj?.[key],
-        I18N[state.lang]
-      )
-
-    || path
-
+      .reduce((obj, key) => obj?.[key], I18N[state.lang]) || path
   );
-
 }
 
-
-/* ============================================================
-   APLICAR TRADUÇÕES
-============================================================ */
-
-function applyI18n() {
-
-  document
-    .querySelectorAll("[data-i18n]")
-    .forEach(element => {
-
-      element.textContent =
-        tr(element.dataset.i18n);
-
-    });
-
-
-  document.documentElement.lang =
-    state.lang;
-
-}
-
-
-/* ============================================================
-   VALOR MULTILÍNGUE
-============================================================ */
 
 function current(value) {
 
@@ -397,25 +302,14 @@ function current(value) {
     return value;
   }
 
-
   return (
-
     value?.[state.lang] ||
-
     value?.pt ||
-
     Object.values(value || {})[0] ||
-
     ""
-
   );
-
 }
 
-
-/* ============================================================
-   TOAST
-============================================================ */
 
 function toast(message) {
 
@@ -423,62 +317,50 @@ function toast(message) {
 
   if (!element) return;
 
-
   element.textContent = message;
-
   element.classList.remove("hidden");
 
+  clearTimeout(window.rfToastTimer);
 
-  setTimeout(() => {
-
+  window.rfToastTimer = setTimeout(() => {
     element.classList.add("hidden");
-
   }, 2500);
+}
 
+
+function applyI18n() {
+
+  document.querySelectorAll("[data-i18n]").forEach(element => {
+    element.textContent = tr(element.dataset.i18n);
+  });
+
+  document.documentElement.lang = state.lang;
 }
 
 
 /* ============================================================
-   IMAGEM DOS PRODUTOS
+   IMAGENS
 ============================================================ */
 
 function imgForProduct(product) {
 
   return (
-
     product?.image_url ||
-
     product?.image ||
-
     "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=700&q=80"
-
   );
-
 }
 
-
-/* ============================================================
-   IMAGEM DOS KITS
-============================================================ */
 
 function imgForKit(kit) {
 
   return (
-
     kit?.image_url ||
-
     kit?.image ||
-
     "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80"
-
   );
-
 }
 
-
-/* ============================================================
-   IMAGEM DAS CATEGORIAS
-============================================================ */
 
 function imgForCategory(category, index) {
 
@@ -486,41 +368,24 @@ function imgForCategory(category, index) {
     return category.image_url;
   }
 
-
   if (category?.image) {
     return category.image;
   }
 
-
   const fallbackImages = [
-
     "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80",
-
     "https://images.unsplash.com/photo-1551892374-ecf8754cf8b0?auto=format&fit=crop&w=600&q=80",
-
     "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=600&q=80",
-
     "https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?auto=format&fit=crop&w=600&q=80",
-
     "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80",
-
     "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=600&q=80",
-
     "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=600&q=80",
-
     "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80",
-
     "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=600&q=80",
-
     "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=600&q=80"
-
   ];
 
-
-  return fallbackImages[
-    index % fallbackImages.length
-  ];
-
+  return fallbackImages[index % fallbackImages.length];
 }
 
 
@@ -530,10 +395,19 @@ function imgForCategory(category, index) {
 
 async function load() {
 
-  try {
+  console.log("Rancho Flexível: a carregar dados...");
 
-    state.products =
-      await getProducts();
+  try {
+    state.products = await getProducts();
+
+    if (!Array.isArray(state.products)) {
+      state.products = [];
+    }
+
+    console.log(
+      "Produtos carregados:",
+      state.products.length
+    );
 
   } catch (error) {
 
@@ -543,14 +417,15 @@ async function load() {
     );
 
     state.products = [];
-
   }
 
 
   try {
+    state.categories = await getCategories();
 
-    state.categories =
-      await getCategories();
+    if (!Array.isArray(state.categories)) {
+      state.categories = [];
+    }
 
   } catch (error) {
 
@@ -560,14 +435,15 @@ async function load() {
     );
 
     state.categories = [];
-
   }
 
 
   try {
+    state.kits = await getKits();
 
-    state.kits =
-      await getKits();
+    if (!Array.isArray(state.kits)) {
+      state.kits = [];
+    }
 
   } catch (error) {
 
@@ -577,14 +453,15 @@ async function load() {
     );
 
     state.kits = [];
-
   }
 
 
   try {
+    state.settings = await getSettings();
 
-    state.settings =
-      await getSettings();
+    if (!state.settings) {
+      state.settings = {};
+    }
 
   } catch (error) {
 
@@ -594,20 +471,15 @@ async function load() {
     );
 
     state.settings = {};
-
   }
 
 
-  console.log(
-    "Produtos carregados:",
-    state.products.length
-  );
-
-
   renderAll();
-
   applyI18n();
 
+  console.log(
+    "Rancho Flexível: aplicação carregada."
+  );
 }
 
 
@@ -617,70 +489,57 @@ async function load() {
 
 function renderCategories() {
 
-  const element =
-    $("#categories");
+  const element = $("#categories");
 
   if (!element) return;
-
 
   if (!state.categories.length) {
 
     element.innerHTML = `
-
       <div class="col-span-full text-center py-10 text-on-surface-variant">
-
         Nenhuma categoria encontrada.
-
       </div>
-
     `;
 
     return;
-
   }
 
 
-  element.innerHTML =
-    state.categories.map(
-      (category, index) => {
+  element.innerHTML = state.categories.map(
+    (category, index) => {
 
-        const image =
-          imgForCategory(
-            category,
-            index
-          );
+      const image = imgForCategory(
+        category,
+        index
+      );
 
+      return `
+        <button
+          type="button"
+          data-cat="${category.id}"
+          class="group flex flex-col items-center justify-center p-3 rounded-[2rem] bg-white hover:bg-surface-container shadow-sm hover:shadow-md transition min-h-[160px] text-center overflow-hidden"
+        >
 
-        return `
+          <div class="w-20 h-20 rounded-2xl overflow-hidden bg-surface-container-low">
 
-          <button
-            data-cat="${category.id}"
-            class="group flex flex-col items-center justify-center p-3 rounded-[2rem] bg-white hover:bg-surface-container shadow-sm hover:shadow-md transition min-h-[160px] text-center overflow-hidden"
-          >
+            <img
+              src="${image}"
+              alt="${current(category.name)}"
+              class="w-full h-full object-cover group-hover:scale-105 transition"
+              onerror="this.style.display='none'"
+            >
 
-            <div class="w-20 h-20 rounded-2xl overflow-hidden bg-surface-container-low">
+          </div>
 
-              <img
-                src="${image}"
-                alt="${current(category.name)}"
-                class="w-full h-full object-cover group-hover:scale-105 transition"
-                onerror="this.style.display='none'"
-              >
+          <span class="font-semibold text-sm mt-3">
+            ${current(category.name)}
+          </span>
 
-            </div>
+        </button>
+      `;
 
-            <span class="font-semibold text-sm mt-3">
-
-              ${current(category.name)}
-
-            </span>
-
-          </button>
-
-        `;
-
-      }
-    ).join("");
+    }
+  ).join("");
 
 
   element
@@ -689,23 +548,16 @@ function renderCategories() {
 
       button.onclick = () => {
 
-        const filter =
-          $("#categoryFilter");
-
+        const filter = $("#categoryFilter");
 
         if (filter) {
-
-          filter.value =
-            button.dataset.cat;
-
-          renderProducts();
-
+          filter.value = button.dataset.cat;
         }
 
+        renderProducts();
 
         const productsSection =
           $("#produtos");
-
 
         if (productsSection) {
 
@@ -718,7 +570,6 @@ function renderCategories() {
       };
 
     });
-
 }
 
 
@@ -728,229 +579,178 @@ function renderCategories() {
 
 function renderKits() {
 
-  const element =
-    $("#kitsGrid");
+  const element = $("#kitsGrid");
 
   if (!element) return;
-
 
   if (!state.kits.length) {
 
     element.innerHTML = `
-
       <div class="col-span-full text-center py-10 text-on-surface-variant">
-
         Nenhum Rancho do Mês disponível.
-
       </div>
-
     `;
 
     return;
-
   }
 
 
-  element.innerHTML =
-    state.kits.map(kit => {
+  element.innerHTML = state.kits.map(kit => {
 
-      const image =
-        imgForKit(kit);
+    const image = imgForKit(kit);
 
-
-      const kitProducts =
-        Array.isArray(kit.product_ids)
-
-          ? kit.product_ids
-              .map(id =>
-                state.products.find(
-                  product =>
-                    String(product.id) ===
-                    String(id)
-                )
+    const kitProducts =
+      Array.isArray(kit.product_ids)
+        ? kit.product_ids
+            .map(id =>
+              state.products.find(
+                product =>
+                  String(product.id) ===
+                  String(id)
               )
-              .filter(Boolean)
-
-          : [];
-
-
-      const productsHtml =
-        kitProducts.length
-
-          ? `
-
-            <div class="mt-5">
-
-              <div class="flex items-center gap-2 mb-3">
-
-                <span class="material-symbols-outlined text-primary text-[20px]">
-                  inventory_2
-                </span>
-
-                <h4 class="text-sm font-bold text-primary">
-                  Composição do Rancho
-                </h4>
-
-              </div>
+            )
+            .filter(Boolean)
+        : [];
 
 
-              <div class="space-y-2">
+    const productsHtml =
+      kitProducts.length
 
-                ${kitProducts.map(product => `
+        ? `
+          <div class="mt-5">
 
-                  <div
-                    class="flex items-center gap-3 bg-surface-container-low rounded-xl p-2"
+            <div class="flex items-center gap-2 mb-3">
+
+              <span class="material-symbols-outlined text-primary text-[20px]">
+                inventory_2
+              </span>
+
+              <h4 class="text-sm font-bold text-primary">
+                Composição do Rancho
+              </h4>
+
+            </div>
+
+            <div class="space-y-2">
+
+              ${kitProducts.map(product => `
+
+                <div class="flex items-center gap-3 bg-surface-container-low rounded-xl p-2">
+
+                  <img
+                    src="${imgForProduct(product)}"
+                    alt="${current(product.name)}"
+                    class="w-11 h-11 rounded-lg object-cover shrink-0"
+                    onerror="this.style.display='none'"
                   >
 
-                    <img
-                      src="${imgForProduct(product)}"
-                      alt="${current(product.name)}"
-                      class="w-11 h-11 rounded-lg object-cover shrink-0"
-                      onerror="this.style.display='none'"
-                    >
+                  <div class="min-w-0 flex-1">
 
-
-                    <div class="min-w-0 flex-1">
-
-                      <div class="text-sm font-semibold truncate">
-
-                        ${current(product.name)}
-
-                      </div>
-
-
-                      ${
-                        product.unit
-                          ? `
-
-                            <div class="text-xs text-on-surface-variant">
-
-                              ${product.unit}
-
-                            </div>
-
-                          `
-                          : ""
-                      }
-
+                    <div class="text-sm font-semibold truncate">
+                      ${current(product.name)}
                     </div>
+
+                    ${
+                      product.unit
+                        ? `
+                          <div class="text-xs text-on-surface-variant">
+                            ${product.unit}
+                          </div>
+                        `
+                        : ""
+                    }
 
                   </div>
 
-                `).join("")}
+                </div>
 
-              </div>
-
-            </div>
-
-          `
-
-          : `
-
-            <div class="mt-5 p-3 rounded-xl bg-surface-container-low">
-
-              <div class="flex items-center gap-2 text-on-surface-variant">
-
-                <span class="material-symbols-outlined text-[20px]">
-                  inventory_2
-                </span>
-
-                <span class="text-sm">
-
-                  Este Rancho ainda não tem produtos associados.
-
-                </span>
-
-              </div>
+              `).join("")}
 
             </div>
 
-          `;
+          </div>
+        `
 
+        : `
+          <div class="mt-5 p-3 rounded-xl bg-surface-container-low">
 
-      return `
+            <div class="flex items-center gap-2 text-on-surface-variant">
 
-        <div
-          class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition flex flex-col overflow-hidden"
-        >
-
-          <div class="h-48 bg-surface-container relative overflow-hidden">
-
-            <img
-              src="${image}"
-              class="w-full h-full object-cover"
-              alt="${current(kit.name)}"
-              onerror="this.style.display='none'"
-            >
-
-            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-
-
-            <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
-
-              <span
-                class="bg-white text-on-surface text-xs font-bold px-2 py-1 rounded"
-              >
-
-                ${current(kit.badge) || "Destaque"}
-
+              <span class="material-symbols-outlined text-[20px]">
+                inventory_2
               </span>
 
-
-              <span class="text-white font-bold">
-
-                ${money(kit.price)}
-
+              <span class="text-sm">
+                Este Rancho ainda não tem produtos associados.
               </span>
 
             </div>
 
           </div>
+        `;
 
 
-          <div class="p-4 flex flex-col flex-1">
+    return `
+      <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition flex flex-col overflow-hidden">
 
-            <h3 class="text-xl font-semibold">
+        <div class="h-48 bg-surface-container relative overflow-hidden">
 
-              ${current(kit.name)}
+          <img
+            src="${image}"
+            class="w-full h-full object-cover"
+            alt="${current(kit.name)}"
+            onerror="this.style.display='none'"
+          >
 
-            </h3>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
+          <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
 
-            ${
-              current(kit.description)
-                ? `
+            <span class="bg-white text-on-surface text-xs font-bold px-2 py-1 rounded">
+              ${current(kit.badge) || "Destaque"}
+            </span>
 
-                  <p class="text-sm text-on-surface-variant mt-2">
-
-                    ${current(kit.description)}
-
-                  </p>
-
-                `
-                : ""
-            }
-
-
-            ${productsHtml}
-
-
-            <button
-              data-kit="${kit.id}"
-              class="mt-5 w-full py-2.5 rounded-lg bg-surface-container-highest hover:bg-secondary hover:text-white font-semibold transition"
-            >
-
-              Adicionar ao carrinho
-
-            </button>
+            <span class="text-white font-bold">
+              ${money(kit.price)}
+            </span>
 
           </div>
 
         </div>
 
-      `;
 
-    }).join("");
+        <div class="p-4 flex flex-col flex-1">
+
+          <h3 class="text-xl font-semibold">
+            ${current(kit.name)}
+          </h3>
+
+          ${
+            current(kit.description)
+              ? `
+                <p class="text-sm text-on-surface-variant mt-2">
+                  ${current(kit.description)}
+                </p>
+              `
+              : ""
+          }
+
+          ${productsHtml}
+
+          <button
+            type="button"
+            data-kit="${kit.id}"
+            class="mt-5 w-full py-2.5 rounded-lg bg-surface-container-highest hover:bg-secondary hover:text-white font-semibold transition"
+          >
+            Adicionar ao carrinho
+          </button>
+
+        </div>
+
+      </div>
+    `;
+
+  }).join("");
 
 
   element
@@ -966,17 +766,17 @@ function renderKits() {
               String(button.dataset.kit)
           );
 
-
         if (!kit) return;
 
 
         if (Array.isArray(kit.product_ids)) {
 
           kit.product_ids.forEach(id => {
-
-            add(id);
-
+            add(id, false);
           });
+
+          saveCart();
+          renderCart();
 
         }
 
@@ -988,7 +788,6 @@ function renderKits() {
       };
 
     });
-
 }
 
 
@@ -1003,68 +802,104 @@ function renderFilters() {
 
   if (!select) return;
 
+  const currentValue =
+    select.value || "";
 
   select.innerHTML =
-
-    `<option value="">
-      Todas as categorias
-    </option>`
-
-    +
+    `
+      <option value="">
+        Todas as categorias
+      </option>
+    ` +
 
     state.categories
       .map(category => `
-
         <option value="${category.id}">
-
           ${current(category.name)}
-
         </option>
-
       `)
       .join("");
 
+
+  if (
+    [...select.options].some(
+      option =>
+        option.value === currentValue
+    )
+  ) {
+
+    select.value = currentValue;
+
+  }
 }
 
 
 /* ============================================================
-   TEXTO PESQUISÁVEL DO PRODUTO
+   PESQUISA
 ============================================================ */
 
-function getSearchText(product) {
+function getSearchQuery() {
 
-  const category =
-    state.categories.find(
-      category =>
-        String(category.id) ===
-        String(product.category_id)
+  const input =
+    document.getElementById(
+      "searchInput"
+    );
+
+  if (!input) {
+    return "";
+  }
+
+  return normalizeText(input.value);
+}
+
+
+/*
+   Pesquisa nos seguintes campos:
+
+   - nome
+   - descrição
+   - unidade
+   - tag
+*/
+
+function productMatchesSearch(
+  product,
+  query
+) {
+
+  if (!query) {
+    return true;
+  }
+
+
+  const name =
+    normalizeText(
+      current(product.name)
+    );
+
+  const description =
+    normalizeText(
+      current(product.description)
+    );
+
+  const unit =
+    normalizeText(
+      product.unit
+    );
+
+  const tag =
+    normalizeText(
+      current(product.tag)
     );
 
 
-  return normalizeSearch(
+  const searchableText =
+    `${name} ${description} ${unit} ${tag}`;
 
-    [
 
-      current(product.name),
-
-      current(product.description),
-
-      current(product.tag),
-
-      product.unit,
-
-      category
-        ? current(category.name)
-        : "",
-
-      product.sku,
-
-      product.code
-
-    ].join(" ")
-
+  return searchableText.includes(
+    query
   );
-
 }
 
 
@@ -1075,9 +910,16 @@ function getSearchText(product) {
 function renderProducts() {
 
   const element =
-    $("#productGrid");
+    document.getElementById(
+      "productGrid"
+    );
 
-  if (!element) return;
+  if (!element) {
+    console.error(
+      "productGrid não encontrado."
+    );
+    return;
+  }
 
 
   let products =
@@ -1087,20 +929,19 @@ function renderProducts() {
     );
 
 
-  const searchInput =
-    $("#searchInput");
-
   const categoryFilter =
-    $("#categoryFilter");
+    document.getElementById(
+      "categoryFilter"
+    );
 
   const sortFilter =
-    $("#sortFilter");
+    document.getElementById(
+      "sortFilter"
+    );
 
 
   const query =
-    normalizeSearch(
-      searchInput?.value || ""
-    );
+    getSearchQuery();
 
 
   const category =
@@ -1111,43 +952,44 @@ function renderProducts() {
     sortFilter?.value || "default";
 
 
-  /* ========================================================
+  /*
      PESQUISA
-  ======================================================== */
+  */
 
   if (query) {
 
     products =
-      products.filter(product => {
-
-        return getSearchText(
-          product
-        ).includes(query);
-
-      });
+      products.filter(
+        product =>
+          productMatchesSearch(
+            product,
+            query
+          )
+      );
 
   }
 
 
-  /* ========================================================
+  /*
      CATEGORIA
-  ======================================================== */
+  */
 
   if (category) {
 
     products =
       products.filter(
         product =>
-          String(product.category_id) ===
-          String(category)
+          String(
+            product.category_id
+          ) === String(category)
       );
 
   }
 
 
-  /* ========================================================
+  /*
      ORDENAÇÃO
-  ======================================================== */
+  */
 
   if (sort === "priceAsc") {
 
@@ -1176,51 +1018,92 @@ function renderProducts() {
     products.sort(
       (a, b) =>
         current(a.name).localeCompare(
-          current(b.name)
+          current(b.name),
+          state.lang
         )
     );
 
   }
 
 
-  /* ========================================================
+  /*
      NENHUM RESULTADO
-  ======================================================== */
+  */
 
   if (!products.length) {
 
-    element.innerHTML = `
+    const message =
+      query
+        ? `
+          <div class="col-span-full text-center py-12">
 
-      <div class="col-span-full text-center py-12">
+            <span class="material-symbols-outlined text-5xl text-outline">
+              search_off
+            </span>
 
-        <span
-          class="material-symbols-outlined text-5xl text-outline opacity-50"
-        >
-          search_off
-        </span>
+            <p class="font-semibold mt-3">
+              Nenhum produto encontrado
+            </p>
 
-        <p class="mt-3 text-on-surface-variant">
+            <p class="text-sm text-on-surface-variant mt-1">
+              Não encontramos produtos para
+              "<strong>${query}</strong>".
+            </p>
 
-          ${
-            query
-              ? `Nenhum produto encontrado para "${searchInput?.value || query}".`
-              : "Nenhum produto encontrado."
-          }
+            <button
+              type="button"
+              id="clearSearch"
+              class="mt-4 px-5 py-2 bg-primary text-white rounded-full font-semibold"
+            >
+              Limpar pesquisa
+            </button>
 
-        </p>
+          </div>
+        `
+        : `
+          <div class="col-span-full text-center py-12 text-on-surface-variant">
+            Nenhum produto encontrado.
+          </div>
+        `;
 
-      </div>
 
-    `;
+    element.innerHTML = message;
+
+
+    const clear =
+      document.getElementById(
+        "clearSearch"
+      );
+
+
+    if (clear) {
+
+      clear.onclick = () => {
+
+        const input =
+          document.getElementById(
+            "searchInput"
+          );
+
+        if (input) {
+          input.value = "";
+          input.focus();
+        }
+
+        renderProducts();
+
+      };
+
+    }
+
 
     return;
-
   }
 
 
-  /* ========================================================
-     PRODUTOS
-  ======================================================== */
+  /*
+     DESENHAR PRODUTOS
+  */
 
   element.innerHTML =
     products.map(product => {
@@ -1230,7 +1113,6 @@ function renderProducts() {
 
 
       return `
-
         <article
           class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition overflow-hidden group"
         >
@@ -1244,38 +1126,24 @@ function renderProducts() {
               onerror="this.style.display='none'"
             >
 
-
             <div class="absolute top-2 left-2 flex gap-1">
 
               ${
                 product.tag
                   ? `
-
-                    <span
-                      class="bg-secondary text-white text-[10px] font-bold px-2 py-1 rounded"
-                    >
-
+                    <span class="bg-secondary text-white text-[10px] font-bold px-2 py-1 rounded">
                       ${current(product.tag)}
-
                     </span>
-
                   `
                   : ""
               }
 
-
               ${
                 product.featured
                   ? `
-
-                    <span
-                      class="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded"
-                    >
-
+                    <span class="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded">
                       ★
-
                     </span>
-
                   `
                   : ""
               }
@@ -1288,16 +1156,12 @@ function renderProducts() {
           <div class="p-4">
 
             <h3 class="font-semibold">
-
               ${current(product.name)}
-
             </h3>
 
 
             <p class="text-xs text-on-surface-variant mt-1">
-
               ${current(product.description) || ""}
-
             </p>
 
 
@@ -1306,29 +1170,19 @@ function renderProducts() {
               <div>
 
                 <span class="text-xs text-on-surface-variant">
-
                   ${product.unit || ""}
-
                 </span>
 
-
                 <div class="text-lg font-bold text-primary">
-
                   ${money(product.price)}
-
                 </div>
-
 
                 ${
                   product.old_price
                     ? `
-
                       <del class="text-xs text-outline">
-
                         ${money(product.old_price)}
-
                       </del>
-
                     `
                     : ""
                 }
@@ -1337,15 +1191,14 @@ function renderProducts() {
 
 
               <button
+                type="button"
                 data-add="${product.id}"
                 class="w-10 h-10 rounded-full bg-secondary-container text-white flex items-center justify-center hover:bg-secondary"
-                aria-label="Adicionar ${current(product.name)} ao carrinho"
+                aria-label="Adicionar ${current(product.name)}"
               >
 
                 <span class="material-symbols-outlined">
-
                   add_shopping_cart
-
                 </span>
 
               </button>
@@ -1355,15 +1208,14 @@ function renderProducts() {
           </div>
 
         </article>
-
       `;
 
     }).join("");
 
 
-  /* ========================================================
+  /*
      BOTÕES ADICIONAR
-  ======================================================== */
+  */
 
   element
     .querySelectorAll("[data-add]")
@@ -1379,11 +1231,24 @@ function renderProducts() {
 
     });
 
+
+  /*
+     Resultado da pesquisa no console
+  */
+
+  if (query) {
+
+    console.log(
+      `Pesquisa "${query}": ${products.length} resultado(s)`
+    );
+
+  }
+
 }
 
 
 /* ============================================================
-   CONFIGURAR PESQUISA
+   EVENTOS DA PESQUISA
 ============================================================ */
 
 function setupSearch() {
@@ -1405,12 +1270,9 @@ function setupSearch() {
   }
 
 
-  console.log(
-    "Pesquisa inicializada."
-  );
-
-
-  /* Pesquisa enquanto escreve */
+  /*
+     Pesquisa enquanto escreve
+  */
 
   input.addEventListener(
     "input",
@@ -1422,19 +1284,9 @@ function setupSearch() {
   );
 
 
-  /* Também funciona ao pressionar teclas */
-
-  input.addEventListener(
-    "keyup",
-    () => {
-
-      renderProducts();
-
-    }
-  );
-
-
-  /* Enter leva para os produtos */
+  /*
+     Pesquisa ao pressionar Enter
+  */
 
   input.addEventListener(
     "keydown",
@@ -1446,20 +1298,18 @@ function setupSearch() {
 
         event.preventDefault();
 
-
         renderProducts();
 
-
-        const section =
+        const productsSection =
           document.getElementById(
             "produtos"
           );
 
+        if (productsSection) {
 
-        if (section) {
-
-          section.scrollIntoView({
-            behavior: "smooth"
+          productsSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
           });
 
         }
@@ -1469,14 +1319,42 @@ function setupSearch() {
     }
   );
 
+
+  /*
+     Limpar pesquisa com ESC
+  */
+
+  input.addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key === "Escape"
+      ) {
+
+        input.value = "";
+
+        renderProducts();
+
+        input.focus();
+
+      }
+
+    }
+  );
+
+
+  console.log(
+    "Pesquisa: campo #searchInput ligado com sucesso."
+  );
 }
 
 
 /* ============================================================
-   CARRINHO — ADICIONAR
+   CARRINHO
 ============================================================ */
 
-function add(id) {
+function add(id, showToast = true) {
 
   const product =
     state.products.find(
@@ -1486,7 +1364,13 @@ function add(id) {
     );
 
 
-  if (!product) return;
+  if (!product) {
+    console.warn(
+      "Produto não encontrado:",
+      id
+    );
+    return;
+  }
 
 
   const row =
@@ -1504,31 +1388,27 @@ function add(id) {
   } else {
 
     state.cart.push({
-
       id: product.id,
-
       qty: 1
-
     });
 
   }
 
 
   saveCart();
-
   renderCart();
 
 
-  toast(
-    `${current(product.name)} adicionado ao carrinho`
-  );
+  if (showToast) {
+
+    toast(
+      `${current(product.name)} adicionado ao carrinho`
+    );
+
+  }
 
 }
 
-
-/* ============================================================
-   REMOVER
-============================================================ */
 
 function remove(id) {
 
@@ -1539,22 +1419,12 @@ function remove(id) {
         String(id)
     );
 
-
   saveCart();
-
   renderCart();
-
 }
 
 
-/* ============================================================
-   ALTERAR QUANTIDADE
-============================================================ */
-
-function change(
-  id,
-  difference
-) {
+function change(id, difference) {
 
   const item =
     state.cart.find(
@@ -1580,15 +1450,9 @@ function change(
 
 
   saveCart();
-
   renderCart();
-
 }
 
-
-/* ============================================================
-   GUARDAR CARRINHO
-============================================================ */
 
 function saveCart() {
 
@@ -1609,27 +1473,30 @@ function saveCart() {
 
 
   const cartCount =
-    $("#cartCount");
+    document.getElementById(
+      "cartCount"
+    );
 
 
   if (cartCount) {
-
     cartCount.textContent =
       count;
-
   }
 
 }
 
 
 /* ============================================================
-   RENDERIZAR CARRINHO
+   RENDER CARRINHO
 ============================================================ */
 
 function renderCart() {
 
   const element =
-    $("#cartItems");
+    document.getElementById(
+      "cartItems"
+    );
+
 
   if (!element) return;
 
@@ -1657,7 +1524,6 @@ function renderCart() {
 
 
       return `
-
         <div class="flex gap-3 border-b pb-3">
 
           <img
@@ -1666,52 +1532,43 @@ function renderCart() {
             alt="${current(product.name)}"
           >
 
-
           <div class="flex-1">
 
             <div class="font-semibold text-sm">
-
               ${current(product.name)}
-
             </div>
 
-
             <div class="text-primary font-bold text-sm">
-
               ${money(
                 Number(product.price || 0) *
                 Number(item.qty || 0)
               )}
-
             </div>
-
 
             <div class="flex items-center gap-2 mt-2">
 
               <button
+                type="button"
                 data-minus="${product.id}"
                 class="w-7 h-7 rounded bg-surface-container"
               >
                 −
               </button>
 
-
               <span>
-
                 ${item.qty}
-
               </span>
 
-
               <button
+                type="button"
                 data-plus="${product.id}"
                 class="w-7 h-7 rounded bg-surface-container"
               >
                 +
               </button>
 
-
               <button
+                type="button"
                 data-remove="${product.id}"
                 class="ml-auto text-error text-xs"
               >
@@ -1723,43 +1580,34 @@ function renderCart() {
           </div>
 
         </div>
-
       `;
 
     }).join("");
 
 
   element.innerHTML =
-
     html ||
-
     `
-
       <div class="text-center py-10 text-on-surface-variant">
-
         Carrinho vazio.
-
       </div>
-
     `;
 
 
   const cartTotal =
-    $("#cartTotal");
+    document.getElementById(
+      "cartTotal"
+    );
 
 
   if (cartTotal) {
-
     cartTotal.textContent =
       money(total);
-
   }
 
 
   element
-    .querySelectorAll(
-      "[data-minus]"
-    )
+    .querySelectorAll("[data-minus]")
     .forEach(button => {
 
       button.onclick = () =>
@@ -1772,9 +1620,7 @@ function renderCart() {
 
 
   element
-    .querySelectorAll(
-      "[data-plus]"
-    )
+    .querySelectorAll("[data-plus]")
     .forEach(button => {
 
       button.onclick = () =>
@@ -1787,9 +1633,7 @@ function renderCart() {
 
 
   element
-    .querySelectorAll(
-      "[data-remove]"
-    )
+    .querySelectorAll("[data-remove]")
     .forEach(button => {
 
       button.onclick = () =>
@@ -1801,7 +1645,6 @@ function renderCart() {
 
 
   saveCart();
-
 }
 
 
@@ -1812,7 +1655,10 @@ function renderCart() {
 function renderSteps() {
 
   const element =
-    $("#steps");
+    document.getElementById(
+      "steps"
+    );
+
 
   if (!element) return;
 
@@ -1854,7 +1700,7 @@ function renderSteps() {
       "Landzelela"
     ]
 
-  }[state.lang];
+  }[state.lang] || [];
 
 
   const descriptions = {
@@ -1894,7 +1740,7 @@ function renderSteps() {
       "Ntlawa wu tiyisisa naswona wu landzelela oda."
     ]
 
-  }[state.lang];
+  }[state.lang] || [];
 
 
   element.innerHTML =
@@ -1903,33 +1749,22 @@ function renderSteps() {
 
         <div class="text-center p-5 bg-white/10 rounded-2xl">
 
-          <div
-            class="w-12 h-12 mx-auto rounded-full bg-secondary-container flex items-center justify-center text-white font-bold"
-          >
-
+          <div class="w-12 h-12 mx-auto rounded-full bg-secondary-container flex items-center justify-center text-white font-bold">
             ${index + 1}
-
           </div>
 
-
           <h3 class="font-semibold mt-3">
-
             ${label}
-
           </h3>
 
-
           <p class="text-sm opacity-80 mt-1">
-
-            ${descriptions[index]}
-
+            ${descriptions[index] || ""}
           </p>
 
         </div>
 
       `
     ).join("");
-
 }
 
 
@@ -1940,7 +1775,10 @@ function renderSteps() {
 function renderFaq() {
 
   const element =
-    $("#faq");
+    document.getElementById(
+      "faq"
+    );
+
 
   if (!element) return;
 
@@ -1977,23 +1815,17 @@ function renderFaq() {
         <details class="bg-surface-container-low rounded-xl p-4">
 
           <summary class="font-semibold cursor-pointer">
-
             ${item[0]}
-
           </summary>
 
-
           <p class="text-sm text-on-surface-variant mt-2">
-
             ${item[1]}
-
           </p>
 
         </details>
 
       `
     ).join("");
-
 }
 
 
@@ -2019,124 +1851,129 @@ function renderAll() {
 
 
   const year =
-    $("#year");
+    document.getElementById(
+      "year"
+    );
 
 
   if (year) {
-
     year.textContent =
       new Date().getFullYear();
-
   }
 
 
-  /* ========================================================
-     IMAGEM DO TOPO
-  ======================================================== */
+  /*
+     HERO
+  */
 
   if (
     state.settings?.hero_image
   ) {
 
     const heroImage =
-      $("#heroImage");
+      document.getElementById(
+        "heroImage"
+      );
 
 
     if (heroImage) {
-
       heroImage.src =
         state.settings.hero_image;
-
     }
 
   }
 
 
-  /* ========================================================
+  /*
      CONTACTO
-  ======================================================== */
+  */
 
   if (
-
     state.settings?.contact_email ||
-
     state.settings?.whatsapp
-
   ) {
 
     const footerContact =
-      $("#footerContact");
+      document.getElementById(
+        "footerContact"
+      );
 
 
     if (footerContact) {
 
       footerContact.innerHTML = `
-
         ${state.settings.contact_email || ""}
-
         <br>
-
         ${state.settings.whatsapp || ""}
-
       `;
 
     }
 
   }
-
 }
 
 
 /* ============================================================
-   EVENTOS — CATEGORIA
+   EVENTOS
 ============================================================ */
 
-function setupCategoryFilter() {
+function setupEvents() {
+
+  /*
+     PESQUISA
+  */
+
+  setupSearch();
+
+
+  /*
+     CATEGORIA
+  */
 
   const categoryFilter =
-    $("#categoryFilter");
+    document.getElementById(
+      "categoryFilter"
+    );
 
 
-  if (!categoryFilter) return;
+  if (categoryFilter) {
+
+    categoryFilter.addEventListener(
+      "change",
+      renderProducts
+    );
+
+  }
 
 
-  categoryFilter.addEventListener(
-    "change",
-    renderProducts
-  );
-
-}
-
-
-/* ============================================================
-   EVENTOS — ORDENAÇÃO
-============================================================ */
-
-function setupSortFilter() {
+  /*
+     ORDENAÇÃO
+  */
 
   const sortFilter =
-    $("#sortFilter");
+    document.getElementById(
+      "sortFilter"
+    );
 
 
-  if (!sortFilter) return;
+  if (sortFilter) {
+
+    sortFilter.addEventListener(
+      "change",
+      renderProducts
+    );
+
+  }
 
 
-  sortFilter.addEventListener(
-    "change",
-    renderProducts
-  );
-
-}
-
-
-/* ============================================================
-   CARRINHO — ABRIR
-============================================================ */
-
-function setupCart() {
+  /*
+     CARRINHO ABRIR
+  */
 
   const cartButton =
-    $("#cartBtn");
+    document.getElementById(
+      "cartBtn"
+    );
 
 
   if (cartButton) {
@@ -2144,15 +1981,15 @@ function setupCart() {
     cartButton.onclick = () => {
 
       const drawer =
-        $("#cartDrawer");
+        document.getElementById(
+          "cartDrawer"
+        );
 
 
       if (drawer) {
-
         drawer.classList.remove(
           "hidden"
         );
-
       }
 
     };
@@ -2160,12 +1997,14 @@ function setupCart() {
   }
 
 
-  /* ========================================================
-     FECHAR
-  ======================================================== */
+  /*
+     CARRINHO FECHAR
+  */
 
   const closeCart =
-    $("#closeCart");
+    document.getElementById(
+      "closeCart"
+    );
 
 
   if (closeCart) {
@@ -2173,15 +2012,15 @@ function setupCart() {
     closeCart.onclick = () => {
 
       const drawer =
-        $("#cartDrawer");
+        document.getElementById(
+          "cartDrawer"
+        );
 
 
       if (drawer) {
-
         drawer.classList.add(
           "hidden"
         );
-
       }
 
     };
@@ -2189,12 +2028,14 @@ function setupCart() {
   }
 
 
-  /* ========================================================
+  /*
      OVERLAY
-  ======================================================== */
+  */
 
   const cartOverlay =
-    $("#cartOverlay");
+    document.getElementById(
+      "cartOverlay"
+    );
 
 
   if (cartOverlay) {
@@ -2202,15 +2043,15 @@ function setupCart() {
     cartOverlay.onclick = () => {
 
       const drawer =
-        $("#cartDrawer");
+        document.getElementById(
+          "cartDrawer"
+        );
 
 
       if (drawer) {
-
         drawer.classList.add(
           "hidden"
         );
-
       }
 
     };
@@ -2218,12 +2059,14 @@ function setupCart() {
   }
 
 
-  /* ========================================================
+  /*
      CHECKOUT
-  ======================================================== */
+  */
 
   const checkoutButton =
-    $("#checkoutBtn");
+    document.getElementById(
+      "checkoutBtn"
+    );
 
 
   if (checkoutButton) {
@@ -2248,46 +2091,49 @@ function setupCart() {
 
   }
 
-}
 
-
-/* ============================================================
-   IDIOMA
-============================================================ */
-
-function setupLanguage() {
+  /*
+     IDIOMA
+  */
 
   const languageSelect =
-    $("#languageSelect");
+    document.getElementById(
+      "languageSelect"
+    );
 
 
-  if (!languageSelect) return;
+  if (languageSelect) {
+
+    languageSelect.value =
+      state.lang;
 
 
-  languageSelect.value =
-    state.lang;
+    languageSelect.onchange =
+      event => {
+
+        state.lang =
+          event.target.value;
 
 
-  languageSelect.addEventListener(
-    "change",
-    event => {
-
-      state.lang =
-        event.target.value;
+        localStorage.setItem(
+          "rf_lang",
+          state.lang
+        );
 
 
-      localStorage.setItem(
-        "rf_lang",
-        state.lang
-      );
+        renderAll();
+        applyI18n();
 
+        /*
+           Depois de renderizar novamente,
+           garantimos que a pesquisa continua ligada.
+        */
 
-      renderAll();
+        setupSearch();
 
-      applyI18n();
+      };
 
-    }
-  );
+  }
 
 }
 
@@ -2299,49 +2145,57 @@ function setupLanguage() {
 async function init() {
 
   console.log(
-    "Rancho Flexível — iniciando..."
+    "Rancho Flexível: iniciar..."
   );
 
 
   /*
-     Primeiro carregamos os elementos
-     e configuramos os eventos.
+     Eventos primeiro.
   */
 
-  setupSearch();
-
-  setupCategoryFilter();
-
-  setupSortFilter();
-
-  setupCart();
-
-  setupLanguage();
+  setupEvents();
 
 
   /*
-     Depois carregamos os dados.
+     Depois carregamos Supabase/dados.
   */
 
   await load();
 
 
   /*
-     Atualiza contador do carrinho.
+     Garantir contador do carrinho.
   */
 
   saveCart();
 
 
   console.log(
-    "Rancho Flexível — carregado."
+    "Rancho Flexível: pronto."
   );
-
 }
 
 
-/* ============================================================
-   INICIAR
-============================================================ */
+/*
+   Como este script é module e está no fim
+   do HTML, o DOM já deve existir.
 
-init();
+   Mesmo assim, esta proteção torna o código
+   mais seguro.
+*/
+
+if (
+  document.readyState === "loading"
+) {
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    init,
+    { once: true }
+  );
+
+} else {
+
+  init();
+
+}
