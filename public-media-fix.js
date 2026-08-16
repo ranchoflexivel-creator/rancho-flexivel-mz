@@ -1,78 +1,95 @@
 import { supabase } from "./data.js";
 
-let products = [];
-let settings = {};
-
-const localized = value => {
+const text = value => {
   if (!value) return "";
   if (typeof value === "string") return value;
   return value.pt || value.en || value.fr || value.zh || value.chg || Object.values(value)[0] || "";
 };
 
+const normalize = value => String(value || "")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/\s+/g, " ")
+  .trim()
+  .toLowerCase();
+
 const imageValue = product => product?.image_url || product?.image || product?.photo_url || product?.imageUrl || "";
 
-async function load() {
-  const [{ data: productRows, error: productError }, { data: settingRows }] = await Promise.all([
-    supabase.from("products").select("*").order("sort_order", { ascending: true }),
-    supabase.from("site_settings").select("key,value")
-  ]);
-  if (productError) console.warn("Falha ao carregar imagens dos produtos:", productError);
-  products = productRows || [];
-  settings = Object.fromEntries((settingRows || []).map(row => [row.key, row.value]));
-  applyAll();
+let products = [];
+let lastSignature = "";
+
+async function loadProducts() {
+  const { data, error } = await supabase.from("products").select("id,name,image_url,image,photo_url,imageUrl");
+  if (error) {
+    console.warn("Falha ao carregar imagens dos produtos:", error);
+    return;
+  }
+  products = data || [];
+  renderImages();
 }
 
 function findProduct(card) {
   const id = card.dataset.productId || card.querySelector("[data-product-id]")?.dataset.productId;
-  if (id) return products.find(p => String(p.id) === String(id));
-  const name = localized(card.dataset.productName || card.textContent).trim().toLowerCase();
-  return products.find(p => localized(p.name).trim().toLowerCase() && name.includes(localized(p.name).trim().toLowerCase()));
+  if (id) {
+    const byId = products.find(p => String(p.id) === String(id));
+    if (byId) return byId;
+  }
+  const title = card.querySelector("h3, [data-product-name]");
+  const name = normalize(card.dataset.productName || title?.textContent || "");
+  if (!name) return null;
+  return products.find(p => normalize(text(p.name)) === name) || null;
 }
 
-function applyProductImages() {
+function renderImages() {
   const grid = document.querySelector("#productGrid");
   if (!grid || !products.length) return;
-  [...grid.children].forEach(card => {
+
+  const cards = [...grid.querySelectorAll(":scope > article")];
+  const signature = cards.map(card => `${normalize(card.querySelector("h3")?.textContent)}:${card.querySelector("img")?.src || ""}`).join("|");
+  if (signature === lastSignature) return;
+  lastSignature = signature;
+
+  cards.forEach(card => {
     const product = findProduct(card);
     const url = imageValue(product);
     if (!product || !url) return;
-    let img = card.querySelector("img");
+
+    let host = card.querySelector("[data-product-image], .product-image");
+    if (!host) host = card.firstElementChild;
+    if (!host) return;
+
+    host.classList.add("relative", "overflow-hidden");
+    host.classList.remove("text-xl");
+    host.style.height = "180px";
+    host.style.minHeight = "180px";
+
+    let img = host.querySelector("img");
     if (!img) {
-      const host = card.querySelector("[data-product-image], .product-image") || card.firstElementChild;
-      if (!host) return;
-      host.innerHTML = "";
+      host.replaceChildren();
       img = document.createElement("img");
       host.appendChild(img);
     }
-    img.src = url;
-    img.alt = localized(product.name);
+
+    if (img.src !== url) img.src = url;
+    img.alt = text(product.name);
     img.loading = "lazy";
-    img.className = "w-full h-full object-cover";
-    img.onerror = () => { img.style.display = "none"; };
+    img.decoding = "async";
+    img.className = "absolute inset-0 w-full h-full object-cover";
+    img.style.display = "block";
   });
 }
 
-function applyFooterText() {
-  const footer = document.querySelector("footer");
-  if (!footer) return;
-  const value = settings.footer_text || settings.site_footer_text || "Do seu lar para a sua mesa: qualidade, conveniência e carinho em cada compra. Faça o seu rancho com confiança — nós cuidamos do resto.";
-  let box = footer.querySelector("#rfFooterCreativeText");
-  if (!box) {
-    box = document.createElement("p");
-    box.id = "rfFooterCreativeText";
-    box.className = "max-w-3xl mx-auto mt-5 px-4 text-center text-sm leading-relaxed text-on-surface-variant";
-    const border = footer.querySelector(".border-t");
-    if (border?.parentElement) border.parentElement.insertBefore(box, border);
-    else footer.appendChild(box);
+function watchGrid() {
+  const grid = document.querySelector("#productGrid");
+  if (!grid) {
+    requestAnimationFrame(watchGrid);
+    return;
   }
-  box.textContent = String(value);
+
+  const observer = new MutationObserver(() => requestAnimationFrame(renderImages));
+  observer.observe(grid, { childList: true });
+  renderImages();
 }
 
-function applyAll() {
-  applyProductImages();
-  applyFooterText();
-}
-
-const observer = new MutationObserver(() => applyAll());
-observer.observe(document.body, { childList: true, subtree: true });
-load().catch(error => console.warn("Falha ao aplicar correções públicas:", error));
+loadProducts().catch(error => console.warn("Erro nas imagens públicas:", error));
+watchGrid();
