@@ -1,6 +1,9 @@
 import { supabase } from "./data.js";
 
 let settings = {};
+let lastFaqMarkup = "";
+let lastDeliverySignature = "";
+let lastCheckoutSignature = "";
 
 async function loadSettings() {
   const { data, error } = await supabase.from("site_settings").select("key,value");
@@ -24,15 +27,19 @@ function applyDeliveryCards() {
   if (!section) return;
   const cards = section.querySelectorAll(".delivery-card");
   const values = [
-    setting("delivery_maputo", 400),
-    setting("delivery_zonas", 700),
-    setting("delivery_matola", 1000),
-    setting("delivery_pickup", 0)
+    Number(setting("delivery_maputo", 400)),
+    Number(setting("delivery_zonas", 700)),
+    Number(setting("delivery_matola", 1000)),
+    Number(setting("delivery_pickup", 0))
   ];
+  const signature = values.join("|");
+  if (signature === lastDeliverySignature) return;
+  lastDeliverySignature = signature;
   cards.forEach((card, index) => {
     const price = card.querySelector(".text-2xl");
     if (!price) return;
-    price.textContent = Number(values[index]) === 0 ? "Grátis" : money(values[index]);
+    const next = values[index] === 0 ? "Grátis" : money(values[index]);
+    if (price.textContent !== next) price.textContent = next;
   });
 }
 
@@ -50,7 +57,11 @@ function applyFaq() {
   if (label) label.textContent = setting("faq_label", "Dúvidas frequentes");
   if (title) title.textContent = setting("faq_title", "Perguntas frequentes");
 
-  faq.innerHTML = questions.map(item => `<details class="bg-surface-container-low rounded-xl p-4"><summary class="font-semibold cursor-pointer">${escapeHtml(item.q)}</summary><p class="text-sm text-on-surface-variant mt-2">${escapeHtml(item.a)}</p></details>`).join("");
+  const markup = questions.map(item => `<details class="bg-surface-container-low rounded-xl p-4"><summary class="font-semibold cursor-pointer">${escapeHtml(item.q)}</summary><p class="text-sm text-on-surface-variant mt-2">${escapeHtml(item.a)}</p></details>`).join("");
+  if (markup !== lastFaqMarkup) {
+    lastFaqMarkup = markup;
+    faq.innerHTML = markup;
+  }
 }
 
 function applyCheckoutDelivery() {
@@ -62,6 +73,9 @@ function applyCheckoutDelivery() {
     ["Matola", Number(setting("delivery_matola", 1000))],
     ["Levantamento Gratis", Number(setting("delivery_pickup", 0))]
   ];
+  const signature = values.map(([name, fee]) => `${name}:${fee}`).join("|");
+  if (signature === lastCheckoutSignature) return;
+  lastCheckoutSignature = signature;
   const current = select.value;
   select.innerHTML = `<option value="">Seleccione Forma de entrega *</option>` + values.map(([name, fee]) => `<option value="${name}">${name} — ${fee === 0 ? "Grátis" : money(fee)}</option>`).join("");
   if (values.some(([name]) => name === current)) select.value = current;
