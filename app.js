@@ -1,3 +1,4 @@
+```js
 import {
   getProducts,
   getCategories,
@@ -319,7 +320,7 @@ function toast(message) {
 
 
 /* ============================================================
-   IMAGENS DOS PRODUTOS
+   IMAGENS
 ============================================================ */
 
 function imgForProduct(product) {
@@ -332,10 +333,6 @@ function imgForProduct(product) {
 }
 
 
-/* ============================================================
-   IMAGEM DO RANCHO DO MÊS
-============================================================ */
-
 function imgForKit(kit) {
 
   return (
@@ -345,10 +342,6 @@ function imgForKit(kit) {
   );
 }
 
-
-/* ============================================================
-   IMAGEM DA CATEGORIA
-============================================================ */
 
 function imgForCategory(category, index) {
 
@@ -482,11 +475,9 @@ function renderCategories() {
       const productsSection = $("#produtos");
 
       if (productsSection) {
-
         productsSection.scrollIntoView({
           behavior: "smooth"
         });
-
       }
 
     };
@@ -498,7 +489,6 @@ function renderCategories() {
 
 /* ============================================================
    RANCHO DO MÊS
-   MOSTRA TAMBÉM OS PRODUTOS QUE O COMPÕEM
 ============================================================ */
 
 function renderKits() {
@@ -523,14 +513,6 @@ function renderKits() {
 
     const image = imgForKit(kit);
 
-
-    /*
-       Procura os produtos associados ao Rancho.
-
-       O Rancho deve possuir:
-       product_ids: [id1, id2, id3]
-    */
-
     const kitProducts = Array.isArray(kit.product_ids)
       ? kit.product_ids
           .map(id =>
@@ -541,10 +523,6 @@ function renderKits() {
           .filter(Boolean)
       : [];
 
-
-    /*
-       Composição do Rancho
-    */
 
     const productsHtml = kitProducts.length
 
@@ -563,7 +541,6 @@ function renderKits() {
 
           </div>
 
-
           <div class="space-y-2">
 
             ${kitProducts.map(product => `
@@ -578,7 +555,6 @@ function renderKits() {
                   class="w-11 h-11 rounded-lg object-cover shrink-0"
                   onerror="this.style.display='none'"
                 >
-
 
                 <div class="min-w-0 flex-1">
 
@@ -631,8 +607,6 @@ function renderKits() {
         class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition flex flex-col overflow-hidden"
       >
 
-        <!-- IMAGEM -->
-
         <div class="h-48 bg-surface-container relative overflow-hidden">
 
           <img
@@ -644,7 +618,6 @@ function renderKits() {
 
           <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
-
           <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
 
             <span
@@ -652,7 +625,6 @@ function renderKits() {
             >
               ${current(kit.badge) || "Destaque"}
             </span>
-
 
             <span class="text-white font-bold">
               ${money(kit.price)}
@@ -662,15 +634,11 @@ function renderKits() {
 
         </div>
 
-
-        <!-- CONTEÚDO -->
-
         <div class="p-4 flex flex-col flex-1">
 
           <h3 class="text-xl font-semibold">
             ${current(kit.name)}
           </h3>
-
 
           ${
             current(kit.description)
@@ -682,13 +650,7 @@ function renderKits() {
               : ""
           }
 
-
-          <!-- PRODUTOS QUE COMPÕEM O RANCHO -->
-
           ${productsHtml}
-
-
-          <!-- BOTÃO -->
 
           <button
             data-kit="${kit.id}"
@@ -705,10 +667,6 @@ function renderKits() {
   }).join("");
 
 
-  /*
-     BOTÕES DOS RANCHOS
-  */
-
   element.querySelectorAll("[data-kit]").forEach(button => {
 
     button.onclick = () => {
@@ -719,19 +677,16 @@ function renderKits() {
 
       if (!kit) return;
 
-
-      /*
-         Adiciona todos os produtos do Rancho ao carrinho
-      */
-
       if (Array.isArray(kit.product_ids)) {
 
         kit.product_ids.forEach(id => {
-          add(id);
+          add(id, false);
         });
 
-      }
+        saveCart();
+        renderCart();
 
+      }
 
       toast(`${current(kit.name)} adicionado`);
 
@@ -785,67 +740,159 @@ function renderProducts() {
   const sortFilter = $("#sortFilter");
 
 
-  const query = searchInput?.value?.toLowerCase() || "";
-  const category = categoryFilter?.value || "";
-  const sort = sortFilter?.value || "default";
+  const query =
+    searchInput?.value?.trim().toLowerCase() || "";
 
+  const category =
+    categoryFilter?.value || "";
+
+  const sort =
+    sortFilter?.value || "default";
+
+
+  /* ========================================================
+     PESQUISA
+  ======================================================== */
 
   if (query) {
 
     products = products.filter(product => {
 
-      const name = current(product.name);
-      const description = current(product.description);
+      const name =
+        current(product.name);
 
-      return `${name} ${description}`
-        .toLowerCase()
-        .includes(query);
+      const description =
+        current(product.description);
+
+      const unit =
+        product.unit || "";
+
+      const tag =
+        current(product.tag);
+
+
+      const productCategory =
+        state.categories.find(
+          cat =>
+            String(cat.id) ===
+            String(product.category_id)
+        );
+
+
+      const categoryName =
+        productCategory
+          ? current(productCategory.name)
+          : "";
+
+
+      const searchableText = [
+        name,
+        description,
+        unit,
+        tag,
+        categoryName
+      ]
+        .join(" ")
+        .toLowerCase();
+
+
+      return searchableText.includes(query);
 
     });
 
   }
 
 
+  /* ========================================================
+     FILTRO DE CATEGORIA
+  ======================================================== */
+
   if (category) {
 
     products = products.filter(
       product =>
-        String(product.category_id) === String(category)
+        String(product.category_id) ===
+        String(category)
     );
 
   }
 
 
+  /* ========================================================
+     ORDENAÇÃO
+  ======================================================== */
+
   if (sort === "priceAsc") {
-    products.sort((a, b) => a.price - b.price);
+
+    products.sort(
+      (a, b) =>
+        Number(a.price || 0) -
+        Number(b.price || 0)
+    );
+
   }
 
 
   if (sort === "priceDesc") {
-    products.sort((a, b) => b.price - a.price);
+
+    products.sort(
+      (a, b) =>
+        Number(b.price || 0) -
+        Number(a.price || 0)
+    );
+
   }
 
 
   if (sort === "name") {
 
     products.sort((a, b) =>
-      current(a.name).localeCompare(current(b.name))
+      current(a.name).localeCompare(
+        current(b.name),
+        state.lang
+      )
     );
 
   }
 
 
+  /* ========================================================
+     NENHUM RESULTADO
+  ======================================================== */
+
   if (!products.length) {
 
     element.innerHTML = `
-      <div class="col-span-full text-center py-12 text-on-surface-variant">
-        Nenhum produto encontrado.
+      <div class="col-span-full text-center py-12">
+
+        <span class="material-symbols-outlined text-5xl text-outline">
+          search_off
+        </span>
+
+        <p class="text-on-surface-variant mt-3">
+          Nenhum produto encontrado.
+        </p>
+
+        ${
+          query
+            ? `
+              <p class="text-sm text-outline mt-1">
+                Pesquisa: "${query}"
+              </p>
+            `
+            : ""
+        }
+
       </div>
     `;
 
     return;
   }
 
+
+  /* ========================================================
+     MOSTRAR PRODUTOS
+  ======================================================== */
 
   element.innerHTML = products.map(product => {
 
@@ -865,7 +912,6 @@ function renderProducts() {
             onerror="this.style.display='none'"
           >
 
-
           <div class="absolute top-2 left-2 flex gap-1">
 
             ${
@@ -879,7 +925,6 @@ function renderProducts() {
                 `
                 : ""
             }
-
 
             ${
               product.featured
@@ -918,11 +963,9 @@ function renderProducts() {
                 ${product.unit || ""}
               </span>
 
-
               <div class="text-lg font-bold text-primary">
                 ${money(product.price)}
               </div>
-
 
               ${
                 product.old_price
@@ -940,6 +983,7 @@ function renderProducts() {
             <button
               data-add="${product.id}"
               class="w-10 h-10 rounded-full bg-secondary-container text-white flex items-center justify-center hover:bg-secondary"
+              aria-label="Adicionar ${current(product.name)} ao carrinho"
             >
 
               <span class="material-symbols-outlined">
@@ -958,32 +1002,44 @@ function renderProducts() {
   }).join("");
 
 
-  element.querySelectorAll("[data-add]").forEach(button => {
+  /* ========================================================
+     BOTÕES ADICIONAR
+  ======================================================== */
 
-    button.onclick = () => {
-      add(button.dataset.add);
-    };
+  element
+    .querySelectorAll("[data-add]")
+    .forEach(button => {
 
-  });
+      button.onclick = () => {
+
+        add(button.dataset.add);
+
+      };
+
+    });
 
 }
 
 
 /* ============================================================
-   CARRINHO
+   CARRINHO — ADICIONAR
 ============================================================ */
 
-function add(id) {
+function add(id, showToast = true) {
 
   const product = state.products.find(
-    item => String(item.id) === String(id)
+    item =>
+      String(item.id) ===
+      String(id)
   );
 
   if (!product) return;
 
 
   const row = state.cart.find(
-    item => String(item.id) === String(id)
+    item =>
+      String(item.id) ===
+      String(id)
   );
 
 
@@ -1005,22 +1061,29 @@ function add(id) {
   renderCart();
 
 
-  toast(
-    `${current(product.name)} adicionado ao carrinho`
-  );
+  if (showToast) {
+
+    toast(
+      `${current(product.name)} adicionado ao carrinho`
+    );
+
+  }
 
 }
 
 
 /* ============================================================
-   REMOVER
+   CARRINHO — REMOVER
 ============================================================ */
 
 function remove(id) {
 
-  state.cart = state.cart.filter(
-    item => String(item.id) !== String(id)
-  );
+  state.cart =
+    state.cart.filter(
+      item =>
+        String(item.id) !==
+        String(id)
+    );
 
   saveCart();
   renderCart();
@@ -1028,14 +1091,17 @@ function remove(id) {
 
 
 /* ============================================================
-   ALTERAR QUANTIDADE
+   CARRINHO — ALTERAR QUANTIDADE
 ============================================================ */
 
 function change(id, difference) {
 
-  const item = state.cart.find(
-    x => String(x.id) === String(id)
-  );
+  const item =
+    state.cart.find(
+      x =>
+        String(x.id) ===
+        String(id)
+    );
 
   if (!item) return;
 
@@ -1058,7 +1124,7 @@ function change(id, difference) {
 
 
 /* ============================================================
-   GUARDAR CARRINHO
+   CARRINHO — GUARDAR
 ============================================================ */
 
 function saveCart() {
@@ -1069,28 +1135,35 @@ function saveCart() {
   );
 
 
-  const count = state.cart.reduce(
-    (sum, item) => sum + item.qty,
-    0
-  );
+  const count =
+    state.cart.reduce(
+      (sum, item) =>
+        sum + Number(item.qty || 0),
+      0
+    );
 
 
-  const cartCount = $("#cartCount");
+  const cartCount =
+    $("#cartCount");
 
   if (cartCount) {
-    cartCount.textContent = count;
+
+    cartCount.textContent =
+      count;
+
   }
 
 }
 
 
 /* ============================================================
-   RENDERIZAR CARRINHO
+   CARRINHO — RENDERIZAR
 ============================================================ */
 
 function renderCart() {
 
-  const element = $("#cartItems");
+  const element =
+    $("#cartItems");
 
   if (!element) return;
 
@@ -1098,77 +1171,88 @@ function renderCart() {
   let total = 0;
 
 
-  const html = state.cart.map(item => {
+  const html =
+    state.cart.map(item => {
 
-    const product = state.products.find(
-      p => String(p.id) === String(item.id)
-    );
-
-
-    if (!product) return "";
-
-
-    total += product.price * item.qty;
+      const product =
+        state.products.find(
+          p =>
+            String(p.id) ===
+            String(item.id)
+        );
 
 
-    return `
-      <div class="flex gap-3 border-b pb-3">
-
-        <img
-          src="${imgForProduct(product)}"
-          class="w-16 h-16 rounded-lg object-cover"
-          alt="${current(product.name)}"
-        >
+      if (!product) return "";
 
 
-        <div class="flex-1">
-
-          <div class="font-semibold text-sm">
-            ${current(product.name)}
-          </div>
+      total +=
+        Number(product.price || 0) *
+        Number(item.qty || 0);
 
 
-          <div class="text-primary font-bold text-sm">
-            ${money(product.price * item.qty)}
-          </div>
+      return `
+        <div class="flex gap-3 border-b pb-3">
+
+          <img
+            src="${imgForProduct(product)}"
+            class="w-16 h-16 rounded-lg object-cover"
+            alt="${current(product.name)}"
+          >
 
 
-          <div class="flex items-center gap-2 mt-2">
+          <div class="flex-1">
 
-            <button
-              data-minus="${product.id}"
-              class="w-7 h-7 rounded bg-surface-container"
-            >
-              −
-            </button>
+            <div class="font-semibold text-sm">
+              ${current(product.name)}
+            </div>
 
 
-            <span>${item.qty}</span>
+            <div class="text-primary font-bold text-sm">
+              ${money(
+                Number(product.price || 0) *
+                Number(item.qty || 0)
+              )}
+            </div>
 
 
-            <button
-              data-plus="${product.id}"
-              class="w-7 h-7 rounded bg-surface-container"
-            >
-              +
-            </button>
+            <div class="flex items-center gap-2 mt-2">
+
+              <button
+                data-minus="${product.id}"
+                class="w-7 h-7 rounded bg-surface-container"
+              >
+                −
+              </button>
 
 
-            <button
-              data-remove="${product.id}"
-              class="ml-auto text-error text-xs"
-            >
-              Remover
-            </button>
+              <span>
+                ${item.qty}
+              </span>
+
+
+              <button
+                data-plus="${product.id}"
+                class="w-7 h-7 rounded bg-surface-container"
+              >
+                +
+              </button>
+
+
+              <button
+                data-remove="${product.id}"
+                class="ml-auto text-error text-xs"
+              >
+                Remover
+              </button>
+
+            </div>
 
           </div>
 
         </div>
+      `;
 
-      </div>
-    `;
-
-  }).join("");
+    }).join("");
 
 
   element.innerHTML =
@@ -1180,10 +1264,14 @@ function renderCart() {
     `;
 
 
-  const cartTotal = $("#cartTotal");
+  const cartTotal =
+    $("#cartTotal");
 
   if (cartTotal) {
-    cartTotal.textContent = money(total);
+
+    cartTotal.textContent =
+      money(total);
+
   }
 
 
@@ -1192,7 +1280,10 @@ function renderCart() {
     .forEach(button => {
 
       button.onclick = () =>
-        change(button.dataset.minus, -1);
+        change(
+          button.dataset.minus,
+          -1
+        );
 
     });
 
@@ -1202,7 +1293,10 @@ function renderCart() {
     .forEach(button => {
 
       button.onclick = () =>
-        change(button.dataset.plus, 1);
+        change(
+          button.dataset.plus,
+          1
+        );
 
     });
 
@@ -1212,12 +1306,15 @@ function renderCart() {
     .forEach(button => {
 
       button.onclick = () =>
-        remove(button.dataset.remove);
+        remove(
+          button.dataset.remove
+        );
 
     });
 
 
   saveCart();
+
 }
 
 
@@ -1227,12 +1324,14 @@ function renderCart() {
 
 function renderSteps() {
 
-  const element = $("#steps");
+  const element =
+    $("#steps");
 
   if (!element) return;
 
 
   const labels = {
+
     pt: [
       "Escolha",
       "Monte o carrinho",
@@ -1268,7 +1367,7 @@ function renderSteps() {
       "Landzelela"
     ]
 
-  }[state.lang];
+  }[state.lang] || [];
 
 
   const descriptions = {
@@ -1308,32 +1407,35 @@ function renderSteps() {
       "Ntlawa wu tiyisisa naswona wu landzelela oda."
     ]
 
-  }[state.lang];
+  }[state.lang] || [];
 
 
-  element.innerHTML = labels.map((label, index) => `
+  element.innerHTML =
+    labels.map(
+      (label, index) => `
 
-    <div class="text-center p-5 bg-white/10 rounded-2xl">
+        <div class="text-center p-5 bg-white/10 rounded-2xl">
 
-      <div
-        class="w-12 h-12 mx-auto rounded-full bg-secondary-container flex items-center justify-center text-white font-bold"
-      >
-        ${index + 1}
-      </div>
-
-
-      <h3 class="font-semibold mt-3">
-        ${label}
-      </h3>
+          <div
+            class="w-12 h-12 mx-auto rounded-full bg-secondary-container flex items-center justify-center text-white font-bold"
+          >
+            ${index + 1}
+          </div>
 
 
-      <p class="text-sm opacity-80 mt-1">
-        ${descriptions[index]}
-      </p>
+          <h3 class="font-semibold mt-3">
+            ${label}
+          </h3>
 
-    </div>
 
-  `).join("");
+          <p class="text-sm opacity-80 mt-1">
+            ${descriptions[index] || ""}
+          </p>
+
+        </div>
+
+      `
+    ).join("");
 
 }
 
@@ -1344,7 +1446,8 @@ function renderSteps() {
 
 function renderFaq() {
 
-  const element = $("#faq");
+  const element =
+    $("#faq");
 
   if (!element) return;
 
@@ -1374,22 +1477,25 @@ function renderFaq() {
   ];
 
 
-  element.innerHTML = faq.map(item => `
+  element.innerHTML =
+    faq.map(
+      item => `
 
-    <details class="bg-surface-container-low rounded-xl p-4">
+        <details class="bg-surface-container-low rounded-xl p-4">
 
-      <summary class="font-semibold cursor-pointer">
-        ${item[0]}
-      </summary>
+          <summary class="font-semibold cursor-pointer">
+            ${item[0]}
+          </summary>
 
 
-      <p class="text-sm text-on-surface-variant mt-2">
-        ${item[1]}
-      </p>
+          <p class="text-sm text-on-surface-variant mt-2">
+            ${item[1]}
+          </p>
 
-    </details>
+        </details>
 
-  `).join("");
+      `
+    ).join("");
 
 }
 
@@ -1415,10 +1521,14 @@ function renderAll() {
   renderFaq();
 
 
-  const year = $("#year");
+  const year =
+    $("#year");
 
   if (year) {
-    year.textContent = new Date().getFullYear();
+
+    year.textContent =
+      new Date().getFullYear();
+
   }
 
 
@@ -1428,10 +1538,14 @@ function renderAll() {
 
   if (state.settings?.hero_image) {
 
-    const heroImage = $("#heroImage");
+    const heroImage =
+      $("#heroImage");
 
     if (heroImage) {
-      heroImage.src = state.settings.hero_image;
+
+      heroImage.src =
+        state.settings.hero_image;
+
     }
 
   }
@@ -1446,7 +1560,8 @@ function renderAll() {
     state.settings?.whatsapp
   ) {
 
-    const footerContact = $("#footerContact");
+    const footerContact =
+      $("#footerContact");
 
     if (footerContact) {
 
@@ -1464,35 +1579,105 @@ function renderAll() {
 
 
 /* ============================================================
-   EVENTOS — PESQUISA
+   PESQUISA
 ============================================================ */
 
-const searchInput = $("#searchInput");
+function setupSearch() {
 
-if (searchInput) {
-  searchInput.oninput = renderProducts;
+  const searchInput =
+    $("#searchInput");
+
+
+  if (!searchInput) {
+
+    console.warn(
+      "Campo de pesquisa #searchInput não encontrado."
+    );
+
+    return;
+
+  }
+
+
+  /* Pesquisa enquanto escreve */
+
+  searchInput.addEventListener(
+    "input",
+    () => {
+
+      renderProducts();
+
+    }
+  );
+
+
+  /* Enter */
+
+  searchInput.addEventListener(
+    "keydown",
+    event => {
+
+      if (event.key === "Enter") {
+
+        event.preventDefault();
+
+        renderProducts();
+
+
+        const productsSection =
+          $("#produtos");
+
+        if (productsSection) {
+
+          productsSection.scrollIntoView({
+            behavior: "smooth"
+          });
+
+        }
+
+      }
+
+    }
+  );
+
 }
 
 
 /* ============================================================
-   EVENTOS — CATEGORIA
+   CATEGORIA
 ============================================================ */
 
-const categoryFilter = $("#categoryFilter");
+function setupCategoryFilter() {
 
-if (categoryFilter) {
-  categoryFilter.onchange = renderProducts;
+  const categoryFilter =
+    $("#categoryFilter");
+
+  if (!categoryFilter) return;
+
+  categoryFilter.addEventListener(
+    "change",
+    renderProducts
+  );
+
 }
 
 
 /* ============================================================
-   EVENTOS — ORDENAÇÃO
+   ORDENAÇÃO
 ============================================================ */
 
-const sortFilter = $("#sortFilter");
+function setupSortFilter() {
 
-if (sortFilter) {
-  sortFilter.onchange = renderProducts;
+  const sortFilter =
+    $("#sortFilter");
+
+  if (!sortFilter) return;
+
+  sortFilter.addEventListener(
+    "change",
+    renderProducts
+  );
+
 }
 
 
@@ -1500,86 +1685,113 @@ if (sortFilter) {
    CARRINHO — ABRIR
 ============================================================ */
 
-const cartButton = $("#cartBtn");
+function setupCart() {
 
-if (cartButton) {
+  const cartButton =
+    $("#cartBtn");
 
-  cartButton.onclick = () => {
+  if (cartButton) {
 
-    const drawer = $("#cartDrawer");
+    cartButton.onclick = () => {
 
-    if (drawer) {
-      drawer.classList.remove("hidden");
-    }
+      const drawer =
+        $("#cartDrawer");
 
-  };
+      if (drawer) {
 
-}
+        drawer.classList.remove(
+          "hidden"
+        );
 
+      }
 
-/* ============================================================
-   CARRINHO — FECHAR
-============================================================ */
+    };
 
-const closeCart = $("#closeCart");
-
-if (closeCart) {
-
-  closeCart.onclick = () => {
-
-    const drawer = $("#cartDrawer");
-
-    if (drawer) {
-      drawer.classList.add("hidden");
-    }
-
-  };
-
-}
+  }
 
 
-/* ============================================================
-   CARRINHO — OVERLAY
-============================================================ */
+  /* ========================================================
+     FECHAR
+  ======================================================== */
 
-const cartOverlay = $("#cartOverlay");
+  const closeCart =
+    $("#closeCart");
 
-if (cartOverlay) {
+  if (closeCart) {
 
-  cartOverlay.onclick = () => {
+    closeCart.onclick = () => {
 
-    const drawer = $("#cartDrawer");
+      const drawer =
+        $("#cartDrawer");
 
-    if (drawer) {
-      drawer.classList.add("hidden");
-    }
+      if (drawer) {
 
-  };
+        drawer.classList.add(
+          "hidden"
+        );
 
-}
+      }
 
+    };
 
-/* ============================================================
-   CHECKOUT
-============================================================ */
-
-const checkoutButton = $("#checkoutBtn");
-
-if (checkoutButton) {
-
-  checkoutButton.onclick = () => {
-
-    if (!state.cart.length) {
-
-      toast("Adicione produtos primeiro.");
-
-      return;
-    }
+  }
 
 
-    location.href = "checkout.html";
+  /* ========================================================
+     OVERLAY
+  ======================================================== */
 
-  };
+  const cartOverlay =
+    $("#cartOverlay");
+
+  if (cartOverlay) {
+
+    cartOverlay.onclick = () => {
+
+      const drawer =
+        $("#cartDrawer");
+
+      if (drawer) {
+
+        drawer.classList.add(
+          "hidden"
+        );
+
+      }
+
+    };
+
+  }
+
+
+  /* ========================================================
+     CHECKOUT
+  ======================================================== */
+
+  const checkoutButton =
+    $("#checkoutBtn");
+
+  if (checkoutButton) {
+
+    checkoutButton.onclick = () => {
+
+      if (!state.cart.length) {
+
+        toast(
+          "Adicione produtos primeiro."
+        );
+
+        return;
+
+      }
+
+
+      location.href =
+        "checkout.html";
+
+    };
+
+  }
 
 }
 
@@ -1588,29 +1800,36 @@ if (checkoutButton) {
    IDIOMA
 ============================================================ */
 
-const languageSelect = $("#languageSelect");
+function setupLanguage() {
 
-if (languageSelect) {
+  const languageSelect =
+    $("#languageSelect");
 
-  languageSelect.value = state.lang;
-
-
-  languageSelect.onchange = event => {
-
-    state.lang = event.target.value;
+  if (!languageSelect) return;
 
 
-    localStorage.setItem(
-      "rf_lang",
-      state.lang
-    );
+  languageSelect.value =
+    state.lang;
 
 
-    renderAll();
+  languageSelect.onchange =
+    event => {
 
-    applyI18n();
+      state.lang =
+        event.target.value;
 
-  };
+
+      localStorage.setItem(
+        "rf_lang",
+        state.lang
+      );
+
+
+      renderAll();
+
+      applyI18n();
+
+    };
 
 }
 
@@ -1619,4 +1838,26 @@ if (languageSelect) {
    INICIAR
 ============================================================ */
 
-load();
+function init() {
+
+  setupSearch();
+
+  setupCategoryFilter();
+
+  setupSortFilter();
+
+  setupCart();
+
+  setupLanguage();
+
+  load();
+
+}
+
+
+/* ============================================================
+   EXECUTAR
+============================================================ */
+
+init();
+```
