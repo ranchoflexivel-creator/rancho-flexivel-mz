@@ -77,26 +77,48 @@ function cartTotals() {
 function patchCheckoutForm() {
   const form = document.querySelector("#rfCheckoutModal #rfForm");
   if (!form || form.dataset.rfPatched === "1") return;
-  form.dataset.rfPatched = "1";
   const deliverySelect = form.querySelector('select[name="delivery"]');
   const paymentSelect = form.querySelector('select[name="payment"]');
   if (!deliverySelect) return;
+  form.dataset.rfPatched = "1";
   const deliveryOptions = [["Maputo Cidade", deliveryFee("Maputo Cidade")], ["Zonas Circunvizinhas", deliveryFee("Zonas Circunvizinhas")], ["Matola", deliveryFee("Matola")], ["Levantamento Gratis", deliveryFee("Levantamento Gratis")]];
   deliverySelect.innerHTML = `<option value="">Seleccione Forma de entrega *</option>` + deliveryOptions.map(([name, fee]) => `<option value="${escapeHtml(name)}">${escapeHtml(name)} — ${fee === 0 ? "Grátis" : money(fee)}</option>`).join("");
   const paymentInfo = form.querySelector("#rfPaymentInfo");
   const paymentText = form.querySelector("#rfPaymentText");
   const summary = document.createElement("div");
-  summary.id = "rfManagedSummary";summary.className = "rounded-xl bg-surface-container-low p-4 text-sm space-y-1";
+  summary.id = "rfManagedSummary";
+  summary.className = "rounded-xl bg-surface-container-low p-4 text-sm space-y-1";
   const buttons = form.querySelector("button[type=submit]")?.parentElement;
   if (buttons) buttons.parentElement.insertBefore(summary, buttons);
-  const updateSummary = () => { const totals = cartTotals(); const fee = deliveryFee(deliverySelect.value); summary.innerHTML = `<div class="flex justify-between"><span>Subtotal</span><b>${money(totals.subtotal)}</b></div><div class="flex justify-between"><span>Entrega</span><b>${fee === 0 ? "Grátis" : money(fee)}</b></div><div class="flex justify-between text-base pt-1 border-t"><span>Total</span><b>${money(totals.subtotal + fee)}</b></div>`; };
-  deliverySelect.onchange = updateSummary; updateSummary();
-  if (paymentSelect) paymentSelect.onchange = () => { const method = paymentSelect.value; const details = paymentDetails(method); if (!paymentInfo || !paymentText) return; if (!method || method === "Numerário") { paymentInfo.classList.add("hidden"); return; } paymentInfo.classList.remove("hidden"); paymentText.textContent = details || "Número/dados de pagamento a configurar no painel."; };
+  const updateSummary = () => {
+    const totals = cartTotals();
+    const fee = deliveryFee(deliverySelect.value);
+    summary.innerHTML = `<div class="flex justify-between"><span>Subtotal</span><b>${money(totals.subtotal)}</b></div><div class="flex justify-between"><span>Entrega</span><b>${fee === 0 ? "Grátis" : money(fee)}</b></div><div class="flex justify-between text-base pt-1 border-t"><span>Total</span><b>${money(totals.subtotal + fee)}</b></div>`;
+  };
+  deliverySelect.onchange = updateSummary;
+  updateSummary();
+  if (paymentSelect) paymentSelect.onchange = () => {
+    const method = paymentSelect.value;
+    const details = paymentDetails(method);
+    if (!paymentInfo || !paymentText) return;
+    if (!method || method === "Numerário") { paymentInfo.classList.add("hidden"); return; }
+    paymentInfo.classList.remove("hidden");
+    paymentText.textContent = details || "Número/dados de pagamento a configurar no painel.";
+  };
   form.onsubmit = async event => {
     event.preventDefault();
-    const data = new FormData(form); const { cart, subtotal, saving } = cartTotals(); if (!cart.length) return;
-    const delivery = String(data.get("delivery") || ""); const fee = deliveryFee(delivery); const total = subtotal + fee; const method = String(data.get("payment") || ""); const pay = paymentDetails(method);
-    const orderNumber = `RF-${Date.now().toString().slice(-8)}`; const name = String(data.get("name") || ""); const phone = String(data.get("phone") || ""); const address = String(data.get("address") || "");
+    const data = new FormData(form);
+    const { cart, subtotal, saving } = cartTotals();
+    if (!cart.length) return;
+    const delivery = String(data.get("delivery") || "");
+    const fee = deliveryFee(delivery);
+    const total = subtotal + fee;
+    const method = String(data.get("payment") || "");
+    const pay = paymentDetails(method);
+    const orderNumber = `RF-${Date.now().toString().slice(-8)}`;
+    const name = String(data.get("name") || "");
+    const phone = String(data.get("phone") || "");
+    const address = String(data.get("address") || "");
     try {
       const { data: customer } = await supabase.from("customers").insert({ name, phone, address: address || null }).select("id").single();
       const { data: order } = await supabase.from("orders").insert({ order_number: orderNumber, customer_id: customer?.id || null, customer_name: name, customer_phone: phone, address: address || null, delivery_zone: delivery, delivery_fee: fee, total }).select("id").single();
@@ -105,10 +127,21 @@ function patchCheckoutForm() {
     const lines = ["*O seu pedido — Rancho Flexível*", "", "*Produtos*", ...cart.map(row => { const product = products.find(p => String(p.id) === String(row.id)); const productName = product?.name?.pt || product?.name || "Produto"; return `• ${productName} — ${row.qty} x ${money(product?.price)} = ${money(Number(product?.price || 0) * Number(row.qty || 0))}`; }), "", `Poupança: ${money(saving)}`, `Entrega: ${fee === 0 ? "Grátis" : money(fee)}`, `*Total: ${money(total)}*`, "", "*Dados do cliente*", `Nome: ${name}`, `Telefone: ${phone}`, `Forma de entrega: ${delivery}`, `Endereço: ${address || "—"}`, `Método de pagamento: ${method}`, `Dados de pagamento: ${pay || "—"}`, `Aceita substituições: ${data.get("substitutions") || "—"}`, `Observações: ${data.get("notes") || "—"}`];
     const whatsapp = String(setting("whatsapp", setting("whatsapp_number", "258840000000"))).replace(/\D/g, "") || "258840000000";
     window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
-    localStorage.removeItem("rf_cart"); document.querySelector("#rfCheckoutModal")?.remove();
+    localStorage.removeItem("rf_cart");
+    document.querySelector("#rfCheckoutModal")?.remove();
   };
 }
-function applyPublicSettings(){applyDeliveryCards();applyFaq();patchCheckoutForm();}
-const observer = new MutationObserver(() => applyPublicSettings());
-observer.observe(document.body,{childList:true,subtree:true});
+
+function applyPublicSettings() {
+  applyDeliveryCards();
+  applyFaq();
+  patchCheckoutForm();
+}
+
+let settingsObserverTimer = null;
+const observer = new MutationObserver(() => {
+  clearTimeout(settingsObserverTimer);
+  settingsObserverTimer = setTimeout(applyPublicSettings, 80);
+});
+observer.observe(document.body, { childList: true });
 loadSettings();
