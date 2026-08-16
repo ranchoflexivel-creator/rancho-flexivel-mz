@@ -9,14 +9,6 @@ const localized = value => {
   return value.pt || value.en || value.fr || value.zh || value.chg || Object.values(value)[0] || "";
 };
 
-const normalizeName = value => String(localized(value) || value || "")
-  .normalize("NFD")
-  .replace(/[\u0300-\u036f]/g, "")
-  .replace(/\s+/g, " ")
-  .trim()
-  .toLowerCase();
-
-// Usa exatamente o mesmo campo de imagem que o painel administrativo grava.
 const imageValue = product => product?.image_url || product?.image || product?.photo_url || product?.imageUrl || "";
 
 async function load() {
@@ -31,60 +23,32 @@ async function load() {
 }
 
 function findProduct(card) {
-  if (!card) return null;
-
   const id = card.dataset.productId || card.querySelector("[data-product-id]")?.dataset.productId;
-  if (id) {
-    const byId = products.find(p => String(p.id) === String(id));
-    if (byId) return byId;
-  }
-
-  // O catálogo público identifica o produto pelo nome. Fazemos correspondência
-  // exata e tolerante a acentos, mantendo a imagem que está no painel admin.
-  const title = card.querySelector("h3, [data-product-name]");
-  const cardName = normalizeName(card.dataset.productName || title?.textContent || "");
-  if (!cardName) return null;
-
-  return products.find(p => normalizeName(p.name) === cardName) ||
-    products.find(p => {
-      const productName = normalizeName(p.name);
-      return productName && cardName.includes(productName);
-    }) || null;
+  if (id) return products.find(p => String(p.id) === String(id));
+  const name = localized(card.dataset.productName || card.textContent).trim().toLowerCase();
+  return products.find(p => localized(p.name).trim().toLowerCase() && name.includes(localized(p.name).trim().toLowerCase()));
 }
 
 function applyProductImages() {
   const grid = document.querySelector("#productGrid");
   if (!grid || !products.length) return;
-
   [...grid.children].forEach(card => {
     const product = findProduct(card);
     const url = imageValue(product);
     if (!product || !url) return;
-
-    // O primeiro bloco do cartão é a área visual criada pelo catálogo.
-    // Substituímos apenas o conteúdo visual, sem alterar preço, nome, botões ou restante layout.
-    let host = card.querySelector("[data-product-image], .product-image");
-    if (!host) host = card.firstElementChild;
-    if (!host) return;
-
-    let img = host.querySelector("img");
+    let img = card.querySelector("img");
     if (!img) {
+      const host = card.querySelector("[data-product-image], .product-image") || card.firstElementChild;
+      if (!host) return;
       host.innerHTML = "";
       img = document.createElement("img");
       host.appendChild(img);
     }
-
     img.src = url;
     img.alt = localized(product.name);
     img.loading = "lazy";
-    img.decoding = "async";
-    img.className = "w-full h-full object-cover rounded-xl";
-    host.classList.add("overflow-hidden");
-    host.classList.remove("text-xl");
-    img.onerror = () => {
-      img.removeAttribute("src");
-      img.style.display = "none";
-    };
+    img.className = "w-full h-full object-cover";
+    img.onerror = () => { img.style.display = "none"; };
   });
 }
 
