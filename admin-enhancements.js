@@ -8,38 +8,67 @@ const monthLabel = (key) => { const [y,m]=key.split('-').map(Number); return new
 function isAdminShell(){ return !!document.querySelector('[data-tab="dashboard"]') && !!document.querySelector('main'); }
 
 async function fetchAnalytics(){
-  const [{data: orders, error: oe},{data: items, error: ie},{data: cats, error: ce},{data: products, error: pe}] = await Promise.all([
+  const [ordersResult, catsResult, productsResult] = await Promise.all([
     supabase.from('orders').select('id,order_number,total,status,created_at,customer_name').order('created_at',{ascending:false}),
-    supabase.from('order_items').select('order_id,product_id,product_name,quantity,unit_price'),
     supabase.from('categories').select('id,name'),
     supabase.from('products').select('id,category_id,name')
   ]);
-  if(oe||ie||ce||pe) throw new Error((oe||ie||ce||pe).message);
-  const catMap = Object.fromEntries((cats||[]).map(c=>[String(c.id), typeof c.name==='object' ? (c.name.pt||c.name.en||'Sem categoria') : (c.name||'Sem categoria')]));
-  const prodMap = Object.fromEntries((products||[]).map(p=>[String(p.id),p]));
-  const orderMap = Object.fromEntries((orders||[]).map(o=>[o.id,o]));
-  const completed = (orders||[]).filter(o=>o.status !== 'cancelled');
+  if (ordersResult.error) throw ordersResult.error;
+
+  const orders = ordersResult.data || [];
+  const cats = catsResult.data || [];
+  const products = productsResult.data || [];
+  const catMap = Object.fromEntries(cats.map(c=>[String(c.id), typeof c.name==='object' ? (c.name.pt||c.name.en||'Sem categoria') : (c.name||'Sem categoria')]));
+  const prodMap = Object.fromEntries(products.map(p=>[String(p.id),p]));
+  const orderMap = Object.fromEntries(orders.map(o=>[o.id,o]));
+  const completed = orders.filter(o=>o.status !== 'cancelled');
   const monthly = {};
-  for(const o of completed){ const key=o.created_at.slice(0,7); monthly[key] ||= {orders:0,revenue:0,items:0,categories:{}}; monthly[key].orders++; monthly[key].revenue += Number(o.total||0); }
-  for(const i of (items||[])){
-    const o=orderMap[i.order_id]; if(!o || o.status==='cancelled') continue;
-    const key=o.created_at.slice(0,7); const m=monthly[key] ||= {orders:0,revenue:0,items:0,categories:{}};
-    const qty=Number(i.quantity||0), value=qty*Number(i.unit_price||0); m.items += qty;
-    const p=prodMap[String(i.product_id)]; const cat=catMap[String(p?.category_id)] || 'Sem categoria';
-    m.categories[cat] ||= {qty:0,revenue:0}; m.categories[cat].qty += qty; m.categories[cat].revenue += value;
+
+  for(const o of completed){
+    const key=o.created_at.slice(0,7);
+    monthly[key] ||= {orders:0,revenue:0,items:0,categories:{},itemsAccess:true};
+    monthly[key].orders++;
+    monthly[key].revenue += Number(o.total||0);
   }
-  return {orders:orders||[],monthly,completed};
+
+  let items = [];
+  let itemsAccess = true;
+  const itemsResult = await supabase.from('order_items').select('order_id,product_id,product_name,quantity,unit_price');
+  if(itemsResult.error){
+    itemsAccess = false;
+  } else {
+    items = itemsResult.data || [];
+  }
+
+  if(itemsAccess){
+    for(const i of items){
+      const o=orderMap[i.order_id];
+      if(!o || o.status==='cancelled') continue;
+      const key=o.created_at.slice(0,7);
+      const m=monthly[key] ||= {orders:0,revenue:0,items:0,categories:{},itemsAccess:true};
+      const qty=Number(i.quantity||0), value=qty*Number(i.unit_price||0);
+      m.items += qty;
+      const p=prodMap[String(i.product_id)];
+      const cat=catMap[String(p?.category_id)] || 'Sem categoria';
+      m.categories[cat] ||= {qty:0,revenue:0};
+      m.categories[cat].qty += qty;
+      m.categories[cat].revenue += value;
+    }
+  }
+
+  Object.values(monthly).forEach(m=>{m.itemsAccess=itemsAccess;});
+  return {orders,monthly,completed,itemsAccess};
 }
 
 function renderDashboard(){
   const main=document.querySelector('main'); if(!main)return;
   main.innerHTML=`<div class="flex flex-col md:flex-row md:items-center justify-between gap-4"><div><p class="text-sm text-[#717971]">Controlo comercial</p><h1 class="font-[Montserrat] text-3xl font-bold">Dashboard de saídas mensais</h1><p class="text-sm text-[#717971] mt-1">Vendas organizadas por mês e por categoria.</p></div><button id="refreshAnalytics" class="px-4 py-2 rounded-xl border bg-white">Actualizar</button></div><div id="analytics" class="mt-7"><div class="bg-white rounded-2xl p-6 shadow-sm">A carregar indicadores…</div></div>`;
   $('#refreshAnalytics').onclick=renderDashboard;
-  fetchAnalytics().then(({monthly,completed})=>{
+  fetchAnalytics().then(({monthly,completed,itemsAccess})=>{
     const keys=Object.keys(monthly).sort().reverse();
-    const current=keys[0] ? monthly[keys[0]] : {orders:0,revenue:0,items:0,categories:{}};
+    const current=keys[0] ? monthly[keys[0]] : {orders:0,revenue:0,items:0,categories:{},itemsAccess};
     const total=completed.reduce((s,o)=>s+Number(o.total||0),0);
-    const html=`<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4"><div class="bg-white rounded-2xl p-5 shadow-sm"><p class="text-sm text-[#717971]">Vendas totais</p><b class="text-2xl">${money(total)}</b></div><div class="bg-white rounded-2xl p-5 shadow-sm"><p class="text-sm text-[#717971]">Pedidos válidos</p><b class="text-2xl">${completed.length}</b></div><div class="bg-white rounded-2xl p-5 shadow-sm"><p class="text-sm text-[#717971]">Mês em destaque</p><b class="text-2xl">${keys[0]?monthLabel(keys[0]):'—'}</b></div><div class="bg-white rounded-2xl p-5 shadow-sm"><p class="text-sm text-[#717971]">Vendas do mês</p><b class="text-2xl text-[#00361a]">${money(current.revenue)}</b></div></div><div class="bg-white rounded-2xl shadow-sm mt-6 overflow-hidden"><div class="p-5 border-b"><h2 class="font-bold text-xl">Resumo por mês</h2><p class="text-sm text-[#717971]">Cada mês mostra pedidos, unidades e valor vendido.</p></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-[#f5f7f6]"><tr><th class="text-left p-4">Mês</th><th class="text-right p-4">Pedidos</th><th class="text-right p-4">Unidades</th><th class="text-right p-4">Vendas</th><th class="text-right p-4">Categorias</th></tr></thead><tbody>${keys.map(k=>{const m=monthly[k];return `<tr class="border-t"><td class="p-4 font-semibold capitalize">${esc(monthLabel(k))}</td><td class="p-4 text-right">${m.orders}</td><td class="p-4 text-right">${m.items}</td><td class="p-4 text-right font-bold">${money(m.revenue)}</td><td class="p-4 text-right">${Object.keys(m.categories).length}</td></tr>`}).join('') || '<tr><td colspan="5" class="p-8 text-center text-[#717971]">Ainda não existem vendas.</td></tr>'}</tbody></table></div></div>${keys.map(k=>{const m=monthly[k];const rows=Object.entries(m.categories).sort((a,b)=>b[1].revenue-a[1].revenue);return `<section class="bg-white rounded-2xl shadow-sm mt-6 overflow-hidden"><div class="p-5 border-b flex items-center justify-between gap-3"><div><h2 class="font-bold text-xl capitalize">${esc(monthLabel(k))}</h2><p class="text-sm text-[#717971]">Vendas por categoria</p></div><strong>${money(m.revenue)}</strong></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-[#f5f7f6]"><tr><th class="text-left p-4">Categoria</th><th class="text-right p-4">Unidades</th><th class="text-right p-4">Valor vendido</th><th class="text-right p-4">Peso no mês</th></tr></thead><tbody>${rows.map(([cat,v])=>`<tr class="border-t"><td class="p-4 font-semibold">${esc(cat)}</td><td class="p-4 text-right">${v.qty}</td><td class="p-4 text-right font-bold">${money(v.revenue)}</td><td class="p-4 text-right">${m.revenue?((v.revenue/m.revenue)*100).toFixed(1):'0.0'}%</td></tr>`).join('') || '<tr><td colspan="4" class="p-8 text-center text-[#717971]">Sem itens neste mês.</td></tr>'}</tbody></table></div></section>`}).join('')}`;
+    const html=`<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4"><div class="bg-white rounded-2xl p-5 shadow-sm"><p class="text-sm text-[#717971]">Vendas totais</p><b class="text-2xl">${money(total)}</b></div><div class="bg-white rounded-2xl p-5 shadow-sm"><p class="text-sm text-[#717971]">Pedidos válidos</p><b class="text-2xl">${completed.length}</b></div><div class="bg-white rounded-2xl p-5 shadow-sm"><p class="text-sm text-[#717971]">Mês em destaque</p><b class="text-2xl">${keys[0]?monthLabel(keys[0]):'—'}</b></div><div class="bg-white rounded-2xl p-5 shadow-sm"><p class="text-sm text-[#717971]">Vendas do mês</p><b class="text-2xl text-[#00361a]">${money(current.revenue)}</b></div></div>${!itemsAccess ? '<div class="mt-6 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm"><strong>Indicadores de produtos:</strong> o acesso aos itens dos pedidos ainda não está disponível. O total de pedidos e vendas continua a ser calculado normalmente; quando não houver vendas, os indicadores ficam em 00.</div>' : ''}<div class="bg-white rounded-2xl shadow-sm mt-6 overflow-hidden"><div class="p-5 border-b"><h2 class="font-bold text-xl">Resumo por mês</h2><p class="text-sm text-[#717971]">Cada mês mostra pedidos, unidades e valor vendido.</p></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-[#f5f7f6]"><tr><th class="text-left p-4">Mês</th><th class="text-right p-4">Pedidos</th><th class="text-right p-4">Unidades</th><th class="text-right p-4">Vendas</th><th class="text-right p-4">Categorias</th></tr></thead><tbody>${keys.map(k=>{const m=monthly[k];return `<tr class="border-t"><td class="p-4 font-semibold capitalize">${esc(monthLabel(k))}</td><td class="p-4 text-right">${m.orders}</td><td class="p-4 text-right">${itemsAccess?m.items:0}</td><td class="p-4 text-right font-bold">${money(m.revenue)}</td><td class="p-4 text-right">${itemsAccess?Object.keys(m.categories).length:0}</td></tr>`}).join('') || '<tr><td colspan="5" class="p-8 text-center text-[#717971]">Ainda não existem vendas.</td></tr>'}</tbody></table></div></div>${keys.map(k=>{const m=monthly[k];const rows=Object.entries(m.categories).sort((a,b)=>b[1].revenue-a[1].revenue);return `<section class="bg-white rounded-2xl shadow-sm mt-6 overflow-hidden"><div class="p-5 border-b flex items-center justify-between gap-3"><div><h2 class="font-bold text-xl capitalize">${esc(monthLabel(k))}</h2><p class="text-sm text-[#717971]">Vendas por categoria</p></div><strong>${money(m.revenue)}</strong></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-[#f5f7f6]"><tr><th class="text-left p-4">Categoria</th><th class="text-right p-4">Unidades</th><th class="text-right p-4">Valor vendido</th><th class="text-right p-4">Peso no mês</th></tr></thead><tbody>${rows.map(([cat,v])=>`<tr class="border-t"><td class="p-4 font-semibold">${esc(cat)}</td><td class="p-4 text-right">${v.qty}</td><td class="p-4 text-right font-bold">${money(v.revenue)}</td><td class="p-4 text-right">${m.revenue?((v.revenue/m.revenue)*100).toFixed(1):'0.0'}%</td></tr>`).join('') || `<tr><td colspan="4" class="p-8 text-center text-[#717971]">${itemsAccess?'Sem itens neste mês.':'Detalhamento por categoria indisponível até liberar o acesso aos itens dos pedidos.'}</td></tr>`}</tbody></table></div></section>`}).join('')}`;
     $('#analytics').innerHTML=html;
   }).catch(err=>{$('#analytics').innerHTML=`<div class="bg-white rounded-2xl p-6 shadow-sm text-red-700">Não foi possível carregar os indicadores: ${esc(err.message)}</div>`;});
 }
