@@ -87,97 +87,60 @@ body{
   }
 }
 
-/* =========================================================
-   FALLBACK DE IMAGEM
-========================================================= */
+/* ============================================================
+   PLACEHOLDER DE IMAGEM
+============================================================ */
 
-.image-fallback{
-  display:none;
+.image-placeholder{
   width:100%;
   height:100%;
+  display:flex;
   align-items:center;
   justify-content:center;
   flex-direction:column;
-  gap:12px;
-  background:
-    radial-gradient(circle at 30% 20%,rgba(253,157,39,.18),transparent 35%),
-    linear-gradient(135deg,#eef5f7,#ffffff);
-  color:#00361a;
+  gap:6px;
+  background:#eef5f7;
+  color:#717971;
 }
 
-.image-fallback.show{
-  display:flex;
+.image-placeholder .material-symbols-outlined{
+  font-size:34px;
 }
 
-.image-fallback .brand-icon{
-  width:72px;
-  height:72px;
-  border-radius:24px;
-  background:#00361a;
-  color:white;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 12px 30px rgba(0,54,26,.18);
+.image-placeholder span:last-child{
+  font-size:11px;
+  font-weight:600;
 }
 
-.image-fallback .brand-name{
-  font-family:Montserrat,sans-serif;
-  font-size:1.35rem;
-  font-weight:700;
-}
+/* ============================================================
+   LOGOTIPO FALLBACK
+============================================================ */
 
 .logo-fallback{
   display:none;
   align-items:center;
-  gap:10px;
-  color:#00361a;
-  font-family:Montserrat,sans-serif;
-  font-weight:700;
-  font-size:1.1rem;
-}
-
-.logo-fallback.show{
-  display:flex;
-}
-
-.logo-fallback-icon{
-  width:42px;
-  height:42px;
-  border-radius:12px;
-  background:#00361a;
-  color:white;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.product-image-wrapper{
-  position:relative;
-  overflow:hidden;
-  background:#eef5f7;
-}
-
-.product-image-wrapper img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.product-image-wrapper .fallback-product{
-  display:none;
-  position:absolute;
-  inset:0;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
   gap:8px;
   color:#00361a;
-  background:linear-gradient(135deg,#eef5f7,#ffffff);
 }
 
-.product-image-wrapper .fallback-product.show{
-  display:flex;
+.logo-fallback .material-symbols-outlined{
+  font-size:28px;
+}
+
+.logo-fallback-text{
+  font-family:Montserrat,sans-serif;
+  font-weight:700;
+  line-height:1.05;
+}
+
+.logo-fallback-text small{
+  display:block;
+  font-family:Inter,sans-serif;
+  font-size:9px;
+  font-weight:600;
+  color:#8a5100;
+  letter-spacing:.08em;
+  text-transform:uppercase;
 }
 </style>
 </head>
@@ -192,10 +155,11 @@ body{
 
   <div class="h-20 max-w-[1280px] mx-auto px-4 lg:px-16 flex items-center gap-6">
 
+    <!-- LOGOTIPO -->
+
     <a
       href="index.html"
       class="flex items-center shrink-0"
-      aria-label="Rancho Flexível"
     >
 
       <img
@@ -209,17 +173,20 @@ body{
         id="headerLogoFallback"
         class="logo-fallback"
       >
-        <span class="logo-fallback-icon">
-          <span class="material-symbols-outlined">
-            shopping_basket
-          </span>
+        <span class="material-symbols-outlined">
+          folder
         </span>
 
-        <span>Rancho Flexível</span>
+        <div class="logo-fallback-text">
+          Rancho Flexível
+          <small>Mercado &amp; Rancho</small>
+        </div>
       </div>
 
     </a>
 
+
+    <!-- PESQUISA -->
 
     <div class="flex-1 max-w-xl hidden md:flex items-center bg-surface-container-low rounded-full px-4 py-2">
 
@@ -235,6 +202,8 @@ body{
 
     </div>
 
+
+    <!-- NAVEGAÇÃO -->
 
     <nav class="hidden xl:flex items-center gap-6 ml-auto">
 
@@ -264,6 +233,8 @@ body{
 
     </nav>
 
+
+    <!-- AÇÕES -->
 
     <div class="flex items-center gap-2 ml-auto lg:ml-0">
 
@@ -318,7 +289,7 @@ body{
 
 
 <!-- =========================================================
-     CONTEÚDO PRINCIPAL
+     CONTEÚDO
 ========================================================= -->
 
 <main class="pt-20">
@@ -396,15 +367,11 @@ body{
     </div>
 
 
-    <!-- =====================================================
-         IMAGEM PRINCIPAL
-    ====================================================== -->
+    <!-- IMAGEM PRINCIPAL -->
 
     <div class="flex-1 w-full relative min-h-[360px] lg:min-h-[480px]">
 
-      <div
-        class="absolute inset-0 bg-surface-container-high rounded-[2rem] shadow-xl overflow-hidden rotate-2 hover:rotate-0 transition"
-      >
+      <div class="absolute inset-0 bg-surface-container-high rounded-[2rem] shadow-xl overflow-hidden rotate-2 hover:rotate-0 transition">
 
         <img
           id="heroImage"
@@ -415,24 +382,8 @@ body{
 
         <div
           id="heroImageFallback"
-          class="image-fallback absolute inset-0"
-        >
-
-          <div class="brand-icon">
-            <span class="material-symbols-outlined text-4xl">
-              shopping_basket
-            </span>
-          </div>
-
-          <div class="brand-name">
-            Rancho Flexível
-          </div>
-
-          <div class="text-sm text-on-surface-variant">
-            Compras simples, rápidas e transparentes
-          </div>
-
-        </div>
+          class="absolute inset-0 hidden"
+        ></div>
 
       </div>
 
@@ -611,7 +562,6 @@ body{
         Produtos
       </h2>
 
-
       <p
         class="text-on-surface-variant"
         data-i18n="products.text"
@@ -716,7 +666,6 @@ body{
       Perguntas frequentes
     </h2>
 
-
     <div
       id="faq"
       class="space-y-3"
@@ -751,20 +700,18 @@ body{
         class="h-16 w-auto object-contain"
       >
 
-
       <div
         id="footerLogoFallback"
         class="logo-fallback"
       >
-
-        <span class="logo-fallback-icon">
-          <span class="material-symbols-outlined">
-            shopping_basket
-          </span>
+        <span class="material-symbols-outlined">
+          folder
         </span>
 
-        <span>Rancho Flexível</span>
-
+        <div class="logo-fallback-text">
+          Rancho Flexível
+          <small>Mercado &amp; Rancho</small>
+        </div>
       </div>
 
 
@@ -788,7 +735,6 @@ body{
       >
         Links Úteis
       </h4>
-
 
       <div class="space-y-2 text-sm text-on-surface-variant">
 
@@ -829,7 +775,6 @@ body{
         Contacto
       </h4>
 
-
       <p
         id="footerContact"
         class="text-sm text-on-surface-variant"
@@ -852,7 +797,6 @@ body{
       >
         Siga-nos
       </h4>
-
 
       <div class="flex gap-3">
 
@@ -922,7 +866,6 @@ body{
       <button
         id="closeCart"
         class="p-2 rounded-full hover:bg-surface-container"
-        aria-label="Fechar carrinho"
       >
 
         <span class="material-symbols-outlined">
@@ -978,93 +921,6 @@ body{
   id="toast"
   class="fixed bottom-5 right-5 z-[60] hidden bg-primary text-white px-5 py-3 rounded-xl shadow-xl"
 ></div>
-
-
-<!-- =========================================================
-     TRATAMENTO DE IMAGENS
-========================================================= -->
-
-<script>
-document.addEventListener("DOMContentLoaded", function(){
-
-  /* ---------------------------------------------------------
-     LOGO DO CABEÇALHO
-  --------------------------------------------------------- */
-
-  const headerLogo = document.getElementById("headerLogo");
-  const headerLogoFallback = document.getElementById("headerLogoFallback");
-
-  if(headerLogo){
-
-    headerLogo.addEventListener("error", function(){
-
-      headerLogo.style.display = "none";
-
-      if(headerLogoFallback){
-        headerLogoFallback.classList.add("show");
-      }
-
-    });
-
-  }
-
-
-  /* ---------------------------------------------------------
-     LOGO DO RODAPÉ
-  --------------------------------------------------------- */
-
-  const footerImage = document.getElementById("footerImage");
-  const footerLogoFallback = document.getElementById("footerLogoFallback");
-
-  if(footerImage){
-
-    footerImage.addEventListener("error", function(){
-
-      footerImage.style.display = "none";
-
-      if(footerLogoFallback){
-        footerLogoFallback.classList.add("show");
-      }
-
-    });
-
-  }
-
-
-  /* ---------------------------------------------------------
-     IMAGEM PRINCIPAL DO HERO
-  --------------------------------------------------------- */
-
-  const heroImage = document.getElementById("heroImage");
-  const heroImageFallback = document.getElementById("heroImageFallback");
-
-  if(heroImage){
-
-    heroImage.addEventListener("error", function(){
-
-      heroImage.style.display = "none";
-
-      if(heroImageFallback){
-        heroImageFallback.classList.add("show");
-      }
-
-    });
-
-  }
-
-
-  /* ---------------------------------------------------------
-     ANO AUTOMÁTICO
-  --------------------------------------------------------- */
-
-  const year = document.getElementById("year");
-
-  if(year){
-    year.textContent = new Date().getFullYear();
-  }
-
-});
-</script>
 
 
 <!-- =========================================================
