@@ -1,0 +1,88 @@
+(() => {
+  const style = document.createElement('style');
+  style.textContent = `
+    body { background: #f7fbf7; }
+    header { border-bottom: 1px solid rgba(0,54,26,.08); }
+    .hero-section::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:34px; background:linear-gradient(180deg,rgba(247,251,247,0),#f7fbf7); pointer-events:none; }
+    .category-scroll { cursor: grab; scroll-behavior:smooth; padding-top:4px; }
+    .category-scroll.rf-dragging { cursor: grabbing; scroll-behavior:auto; }
+    .category-scroll > * { flex:0 0 auto; min-width:132px; transition:transform .18s ease, box-shadow .18s ease; }
+    .category-scroll > *:hover { transform:translateY(-3px); box-shadow:0 8px 22px rgba(0,54,26,.10); }
+    .rf-category-sticker { width:48px; height:48px; border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 8px; background:linear-gradient(135deg,#e9f8ed,#fff1d8); color:#00361a; box-shadow:inset 0 0 0 1px rgba(0,54,26,.06); }
+    .rf-category-sticker .material-symbols-outlined { font-size:28px; }
+    #productGrid > * { border-radius:18px; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
+    #productGrid > *:hover { transform:translateY(-3px); box-shadow:0 10px 26px rgba(0,54,26,.10); }
+    #kitsGrid > * { border-radius:20px; overflow:hidden; }
+    .rf-food-badge { display:inline-flex; align-items:center; gap:7px; margin-bottom:14px; padding:8px 12px; border-radius:999px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.24); color:#fff; font-size:12px; font-weight:700; letter-spacing:.03em; backdrop-filter:blur(8px); }
+    .rf-food-badge .material-symbols-outlined { font-size:18px; }
+    @media (max-width:640px){ .category-scroll > * { min-width:118px; } }
+  `;
+  document.head.appendChild(style);
+
+  const iconFor = (label) => {
+    const n = String(label || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if (/arroz|cereal/.test(n)) return 'rice_bowl';
+    if (/massa|pasta/.test(n)) return 'ramen_dining';
+    if (/farinha|flour/.test(n)) return 'bakery_dining';
+    if (/oleo|azeite|tempero|season/.test(n)) return 'oil_barrel';
+    if (/leite|latic|breakfast|cafe|cha/.test(n)) return 'emoji_food_beverage';
+    if (/conserv|sardinha|atum/.test(n)) return 'inventory_2';
+    if (/molho|sauce/.test(n)) return 'soup_kitchen';
+    if (/bebida|drink|agua|sumo|refriger/.test(n)) return 'local_drink';
+    if (/higiene|limpeza|clean/.test(n)) return 'cleaning_services';
+    if (/carne|meat/.test(n)) return 'set_meal';
+    if (/frut|veget/.test(n)) return 'nutrition';
+    return 'shopping_basket';
+  };
+
+  function enhanceCategories() {
+    const box = document.querySelector('#categories');
+    if (!box) return;
+    [...box.children].forEach(card => {
+      if (card.dataset.rfIconized === '1') return;
+      const label = card.textContent.trim();
+      if (!label) return;
+      const icon = document.createElement('span');
+      icon.className = 'rf-category-sticker';
+      icon.setAttribute('aria-hidden','true');
+      icon.innerHTML = `<span class="material-symbols-outlined">${iconFor(label)}</span>`;
+      card.prepend(icon);
+      card.dataset.rfIconized = '1';
+    });
+  }
+
+  function makeDraggable() {
+    const el = document.querySelector('#categories');
+    if (!el || el.dataset.rfDragReady === '1') return;
+    el.dataset.rfDragReady = '1';
+    let down=false, startX=0, startScroll=0, moved=false;
+    el.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      down=true; moved=false; startX=e.clientX; startScroll=el.scrollLeft;
+      el.classList.add('rf-dragging');
+      el.setPointerCapture?.(e.pointerId);
+    });
+    el.addEventListener('pointermove', e => {
+      if (!down) return;
+      const dx=e.clientX-startX;
+      if (Math.abs(dx)>5) moved=true;
+      el.scrollLeft=startScroll-dx;
+    });
+    const stop = e => { if (!down) return; down=false; el.classList.remove('rf-dragging'); try{el.releasePointerCapture?.(e.pointerId)}catch(_){} };
+    el.addEventListener('pointerup', stop); el.addEventListener('pointercancel', stop); el.addEventListener('mouseleave', e => { if(down) stop(e); });
+    el.addEventListener('click', e => { if (moved) { e.preventDefault(); e.stopPropagation(); moved=false; } }, true);
+  }
+
+  function addFoodBadge() {
+    const hero = document.querySelector('.hero-section .max-w-\\[1280px\\] .max-w-2xl');
+    if (!hero || hero.querySelector('.rf-food-badge')) return;
+    const badge = document.createElement('div');
+    badge.className='rf-food-badge';
+    badge.innerHTML='<span class="material-symbols-outlined">shopping_basket</span><span>MERCEARIA ONLINE · PRODUTOS PARA O SEU DIA A DIA</span>';
+    hero.insertBefore(badge, hero.firstElementChild);
+  }
+
+  const run = () => { enhanceCategories(); makeDraggable(); addFoodBadge(); };
+  run();
+  new MutationObserver(run).observe(document.body, {childList:true,subtree:true});
+})();
