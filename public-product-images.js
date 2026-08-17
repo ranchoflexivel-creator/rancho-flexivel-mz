@@ -1,6 +1,4 @@
-// Public-page lightweight enhancement layer.
-// Keep the main app as the primary renderer; this layer only adds the requested
-// product-image hydration, full Combo names, and instant Supabase synchronization.
+// Public-page synchronization layer. The admin panel remains untouched.
 import "./public-performance-fix.js?v=20260817";
 import "./public-cart-ui-fix.js";
 import "./public-checkout-fix.js";
@@ -21,14 +19,12 @@ import { supabase } from "./data.js";
       const src = imageUrl(product);
       if (!src) return;
       let media = card.querySelector(".rf-product-media");
-      if (!media) {
-        media = card.firstElementChild;
-        if (!media) return;
-        media.classList.add("rf-product-media");
-      }
+      if (!media) { media = card.firstElementChild; if (!media) return; media.classList.add("rf-product-media"); }
       if (media.tagName === "IMG") return;
       media.className = "rf-product-media h-44 rounded-xl overflow-hidden bg-surface-container-low flex items-center justify-center";
-      media.innerHTML = `<img src="${src.replace(/&/g,"&amp;").replace(/\"/g,"&quot;")}" alt="${text(product.name).replace(/\"/g,"&quot;")}" class="w-full h-full object-cover" loading="lazy" decoding="async">`;
+      const img = document.createElement("img");
+      img.src = src; img.alt = text(product.name); img.className = "w-full h-full object-cover"; img.loading = "lazy"; img.decoding = "async";
+      media.replaceChildren(img);
     });
   }
 
@@ -44,39 +40,32 @@ import { supabase } from "./data.js";
       if (!title) return;
       title.textContent = text(kit.name);
       title.classList.remove("truncate");
-      title.classList.add("whitespace-normal","break-words");
-      title.style.overflow = "visible";
-      title.style.textOverflow = "clip";
-      title.style.whiteSpace = "normal";
-    });
-    document.querySelectorAll("#kitsGrid [data-kit]").forEach(button => {
-      const kit = byId.get(String(button.dataset.kit));
-      const card = button.closest("article");
-      if (!kit || !card) return;
-      const title = card.querySelector("h3");
-      if (title) title.setAttribute("title", text(kit.name));
+      title.classList.add("whitespace-normal", "break-words");
+      title.style.cssText += ";overflow:visible;text-overflow:clip;white-space:normal";
+      title.title = text(kit.name);
     });
   }
 
   function hydrate() {
     hydrateProductImages();
     hydrateComboNames();
-    document.querySelectorAll("#productGrid img, #kitsGrid img").forEach(img => {
-      img.loading = "lazy";
-      img.decoding = "async";
-    });
   }
 
+  let reloadTimer = null;
   function reloadPublicData() {
-    // The public renderer already reads Supabase on boot. A full reload keeps
-    // every existing feature intact while making every admin edit visible at once.
-    window.location.reload();
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => {
+      // Settings are deliberately invalidated before reload so an admin edit is
+      // reflected immediately instead of being hidden by the 10-minute cache.
+      try { localStorage.removeItem("rf_public_settings_v2"); } catch {}
+      window.location.reload();
+    }, 250);
   }
 
   function subscribeToAdminChanges() {
     if (!supabase?.channel) return;
     supabase
-      .channel("rf-public-live-sync")
+      .channel("rf-public-live-sync-v6")
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, reloadPublicData)
       .on("postgres_changes", { event: "*", schema: "public", table: "bundles" }, reloadPublicData)
       .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, reloadPublicData)
@@ -88,14 +77,9 @@ import { supabase } from "./data.js";
     hydrate();
     subscribeToAdminChanges();
     const observer = new MutationObserver(() => requestAnimationFrame(hydrate));
-    const grid = document.querySelector("#productGrid");
-    const kits = document.querySelector("#kitsGrid");
-    if (grid) observer.observe(grid, { childList: true, subtree: true });
-    if (kits) observer.observe(kits, { childList: true, subtree: true });
+    ["#productGrid", "#kitsGrid"].forEach(selector => { const node = document.querySelector(selector); if (node) observer.observe(node, { childList: true, subtree: true }); });
     setTimeout(hydrate, 300);
     setTimeout(hydrate, 1200);
   };
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
-  else boot();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();
 })();
