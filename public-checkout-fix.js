@@ -17,15 +17,34 @@ async function patch() {
   form.dataset.rfSubmitPatched = "1";
   const cart = (() => { try { return JSON.parse(localStorage.getItem("rf_cart") || "[]"); } catch { return []; } })();
   if (!cart.length) return;
-  const ids = cart.map(row => String(row.id));
-  const { data: products } = await supabase.from("products").select("id,name,price,old_price").in("id", ids);
-  const byId = new Map((products || []).map(p => [String(p.id), p]));
 
+  // Attach submit immediately. Do not wait for Supabase, otherwise a slow/blocked
+  // products query could leave the checkout button completely inactive.
   form.onsubmit = async event => {
     event.preventDefault();
+    const submit = form.querySelector('button[type="submit"]');
+    if (submit) { submit.disabled = true; submit.dataset.rfOldText = submit.textContent; submit.textContent = "A preparar pedido…"; }
     const data = new FormData(form);
+    let products = [];
+    try {
+      const ids = cart.map(row => String(row.id));
+      const result = await Promise.race([
+        supabase.from("products").select("id,name,price,old_price").in("id", ids),
+        new Promise(resolve => setTimeout(() => resolve({ data: [] }), 2500))
+      ]);
+      products = result?.data || [];
+    } catch (_) {}
+
+    const byId = new Map(products.map(p => [String(p.id), p]));
     let subtotal = 0, saving = 0;
-    cart.forEach(row => { const p = byId.get(String(row.id)); const qty = Number(row.qty || 0); subtotal += Number(p?.price || 0) * qty; if (Number(p?.old_price) > Number(p?.price)) saving += (Number(p.old_price) - Number(p.price)) * qty; });
+    cart.forEach(row => {
+      const p = byId.get(String(row.id)) || row;
+      const qty = Number(row.qty || 0);
+      const price = Number(p?.price ?? row.price ?? 0);
+      const oldPrice = Number(p?.old_price ?? row.old_price ?? 0);
+      subtotal += price * qty;
+      if (oldPrice > price) saving += (oldPrice - price) * qty;
+    });
     const delivery = String(data.get("delivery") || "");
     const deliveryFee = fee(delivery);
     const total = subtotal + deliveryFee;
@@ -39,11 +58,22 @@ async function patch() {
     try {
       const { data: customer } = await supabase.from("customers").insert({ name, phone, address: address || null }).select("id").single();
       const { data: order } = await supabase.from("orders").insert({ order_number: orderNumber, customer_id: customer?.id || null, customer_name: name, customer_phone: phone, address: address || null, delivery_zone: delivery, delivery_fee: deliveryFee, total }).select("id").single();
-      if (order?.id) await supabase.from("order_items").insert(cart.map(row => { const p = byId.get(String(row.id)); return { order_id: order.id, product_id: p?.id || null, product_name: p?.name?.pt || p?.name || "Produto", quantity: Number(row.qty || 0), unit_price: Number(p?.price || 0) }; }));
+      if (order?.id) {
+        await supabase.from("order_items").insert(cart.map(row => {
+          const p = byId.get(String(row.id)) || row;
+          return { order_id: order.id, product_id: p?.id || row.id || null, product_name: p?.name?.pt || p?.name || row?.name?.pt || row?.name || "Produto", quantity: Number(row.qty || 0), unit_price: Number(p?.price ?? row.price ?? 0) };
+        }));
+      }
     } catch (error) { console.warn("Não foi possível guardar o pedido no painel:", error); }
 
     const whatsapp = String(setting("whatsapp", "+258840000000")).replace(/\D/g, "") || "258840000000";
-    const lines = ["*O seu pedido — Rancho Flexível*", "", "*Produtos*", ...cart.map(row => { const p = byId.get(String(row.id)); return `• ${p?.name?.pt || p?.name || "Produto"} — ${row.qty} x ${money(p?.price)} = ${money(Number(p?.price || 0) * Number(row.qty || 0))}`; }), "", `Poupança: ${money(saving)}`, `Entrega: ${deliveryFee === 0 ? "Grátis" : money(deliveryFee)}`, `*Total: ${money(total)}*`, "", "*Dados do cliente*", `Nome: ${name}`, `Telefone: ${phone}`, `Forma de entrega: ${delivery}`, `Endereço: ${address || "—"}`, `Método de pagamento: ${method}`, `Dados de pagamento: ${payment || "—"}`, `Aceita substituições: ${data.get("substitutions") || "—"}`, `Observações: ${data.get("notes") || "—"}`];
+    const lines = ["*O seu pedido — Rancho Flexível*", "", "*Produtos*", ...cart.map(row => {
+      const p = byId.get(String(row.id)) || row;
+      const price = Number(p?.price ?? row.price ?? 0);
+      const pname = p?.name?.pt || p?.name || row?.name?.pt || row?.name || "Produto";
+      return `• ${pname} — ${row.qty} x ${money(price)} = ${money(price * Number(row.qty || 0))}`;
+    }), "", `Poupança: ${money(saving)}`, `Entrega: ${deliveryFee === 0 ? "Grátis" : money(deliveryFee)}`, `*Total: ${money(total)}*`, "", "*Dados do cliente*", `Nome: ${name}`, `Telefone: ${phone}`, `Forma de entrega: ${delivery}`, `Endereço: ${address || "—"}`, `Método de pagamento: ${method}`, `Dados de pagamento: ${payment || "—"}`, `Aceita substituições: ${data.get("substitutions") || "—"}`, `Observações: ${data.get("notes") || "—"}`];
+
     window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
     localStorage.removeItem("rf_cart");
     document.querySelector("#rfCheckoutModal")?.remove();
