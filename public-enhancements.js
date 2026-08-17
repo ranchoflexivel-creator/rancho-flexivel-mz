@@ -11,3 +11,4 @@
 })();
 
 import('./public-catalog-v2.js').catch(error => console.warn('Falha ao carregar correção do catálogo:', error));
+import('./public-performance-fix.js?v=20260817-2').catch(error => console.warn('Falha ao carregar recuperação do catálogo:', error));
