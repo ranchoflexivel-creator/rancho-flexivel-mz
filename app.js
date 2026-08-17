@@ -41,13 +41,35 @@ const norm = (v) =>
     .trim();
 
 const productById = (id) =>
-  state.products.find((p) => String(p.id) === String(id));
+  state.products.find(
+    (p) => String(p.id) === String(id)
+  );
 
 const categoryById = (id) =>
-  state.categories.find((c) => String(c.id) === String(id));
+  state.categories.find(
+    (c) => String(c.id) === String(id)
+  );
 
 const isAvailable = (p) =>
-  !!p && p.active !== false && Number(p.stock ?? 1) > 0;
+  !!p &&
+  p.active !== false &&
+  Number(p.stock ?? 1) > 0;
+
+const safeNumber = (value, fallback = 0) => {
+  const number = Number(value);
+
+  return Number.isFinite(number)
+    ? number
+    : fallback;
+};
+
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
 /* =========================================================
    TRADUÇÕES
@@ -528,7 +550,7 @@ const I18N = {
     step1Desc: "Lavisisa u tlhela u hlawula leswi u swi lavaka.",
     step2: "Endla karhi",
     step2Desc: "Cinca nhlayo u vona ntsengo.",
-    step3: "Rhumela oda",
+    step3: "Vumela oda",
     step3Desc: "Nghenisa vuxokoxoko u rhumela hi WhatsApp.",
     step4: "Landzelela",
     step4Desc: "Ntlawa wu tiyisisa swilo ni ku yisa."
@@ -541,7 +563,7 @@ const t = (key) =>
   key;
 
 /* =========================================================
-   CATEGORIAS PEDIDAS
+   CATEGORIAS
 ========================================================= */
 
 const CATEGORY_ORDER = [
@@ -635,6 +657,7 @@ const COMBO_TYPES = [
 
 function toast(message) {
   const e = $("#toast");
+
   if (!e) return;
 
   e.textContent = message;
@@ -648,15 +671,29 @@ function toast(message) {
 }
 
 function saveCart() {
-  localStorage.setItem("rf_cart", JSON.stringify(state.cart));
+  try {
+    localStorage.setItem(
+      "rf_cart",
+      JSON.stringify(state.cart)
+    );
+  } catch (error) {
+    console.warn(
+      "Não foi possível guardar o carrinho:",
+      error
+    );
+  }
 
   const count = state.cart.reduce(
-    (sum, item) => sum + Number(item.qty || 0),
+    (sum, item) =>
+      sum + safeNumber(item.qty),
     0
   );
 
   const e = $("#cartCount");
-  if (e) e.textContent = count;
+
+  if (e) {
+    e.textContent = count;
+  }
 
   updateFloatingCart();
 }
@@ -677,17 +714,60 @@ function setting(...keys) {
   return "";
 }
 
+function getDeliveryFee(zone) {
+  if (zone === "Maputo Cidade") {
+    return safeNumber(
+      setting(
+        "delivery_maputo",
+        "delivery_fee_maputo",
+        "maputo_delivery_fee"
+      ),
+      400
+    );
+  }
+
+  if (zone === "Zonas Circunvizinhas") {
+    return safeNumber(
+      setting(
+        "delivery_surroundings",
+        "delivery_fee_surroundings",
+        "surroundings_delivery_fee"
+      ),
+      700
+    );
+  }
+
+  if (zone === "Matola") {
+    return safeNumber(
+      setting(
+        "delivery_matola",
+        "delivery_fee_matola",
+        "matola_delivery_fee"
+      ),
+      1000
+    );
+  }
+
+  return 0;
+}
+
+function resetDelivery() {
+  state.deliveryFee = 0;
+  state.deliveryZone = "";
+}
+
 /* =========================================================
    CARREGAMENTO
 ========================================================= */
 
 async function loadData() {
-  const results = await Promise.allSettled([
-    getProducts(),
-    getCategories(),
-    getKits(),
-    getSettings()
-  ]);
+  const results =
+    await Promise.allSettled([
+      getProducts(),
+      getCategories(),
+      getKits(),
+      getSettings()
+    ]);
 
   state.products =
     results[0].status === "fulfilled" &&
@@ -709,7 +789,8 @@ async function loadData() {
 
   state.settings =
     results[3].status === "fulfilled" &&
-    results[3].value
+    results[3].value &&
+    typeof results[3].value === "object"
       ? results[3].value
       : {};
 
@@ -724,12 +805,14 @@ function findCategoryByName(name) {
   const target = norm(name);
 
   return state.categories.find(
-    (category) => norm(text(category.name)) === target
+    (category) =>
+      norm(text(category.name)) === target
   );
 }
 
 function renderCategories() {
   const e = $("#categories");
+
   if (!e) return;
 
   const ordered = [];
@@ -740,16 +823,21 @@ function renderCategories() {
         id: "",
         name: "Todos"
       });
+
       continue;
     }
 
-    const found = findCategoryByName(wanted);
+    const found =
+      findCategoryByName(wanted);
 
     if (found) {
       ordered.push(found);
     } else {
       ordered.push({
-        id: `virtual-${norm(wanted).replace(/\s+/g, "-")}`,
+        id: `virtual-${norm(wanted).replace(
+          /\s+/g,
+          "-"
+        )}`,
         name: wanted,
         virtual: true
       });
@@ -761,8 +849,12 @@ function renderCategories() {
       (category, index) => `
         <button
           type="button"
-          data-cat="${category.id}"
-          data-cat-name="${category.virtual ? category.name : ""}"
+          data-cat="${escapeHtml(category.id)}"
+          data-cat-name="${
+            category.virtual
+              ? escapeHtml(category.name)
+              : ""
+          }"
           class="
             rf-cat shrink-0
             px-4 py-2.5
@@ -776,34 +868,54 @@ function renderCategories() {
           "
         >
           ${categoryEmoji(category.name)}
-          ${category.virtual ? category.name : text(category.name)}
+          ${
+            category.virtual
+              ? escapeHtml(category.name)
+              : escapeHtml(text(category.name))
+          }
         </button>
       `
     )
     .join("");
 
-  e.querySelectorAll("[data-cat]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const categoryId = button.dataset.cat;
-      const categoryName = button.dataset.catName;
+  e.querySelectorAll("[data-cat]").forEach(
+    (button) => {
+      button.addEventListener(
+        "click",
+        () => {
+          const categoryId =
+            button.dataset.cat || "";
 
-      const filter = $("#categoryFilter");
+          const categoryName =
+            button.dataset.catName || "";
 
-      if (filter) {
-        if (!categoryId.startsWith("virtual-")) {
-          filter.value = categoryId;
-        } else {
-          filter.value = "";
+          const filter =
+            $("#categoryFilter");
+
+          if (filter) {
+            if (
+              !categoryId.startsWith(
+                "virtual-"
+              )
+            ) {
+              filter.value =
+                categoryId;
+            } else {
+              filter.value = "";
+            }
+          }
+
+          if (categoryName) {
+            renderProducts(
+              categoryName
+            );
+          } else {
+            renderProducts();
+          }
         }
-      }
-
-      if (categoryName) {
-        renderProducts(categoryName);
-      } else {
-        renderProducts();
-      }
-    });
-  });
+      );
+    }
+  );
 }
 
 /* =========================================================
@@ -812,6 +924,7 @@ function renderCategories() {
 
 function renderFilters() {
   const e = $("#categoryFilter");
+
   if (!e) return;
 
   e.innerHTML =
@@ -819,7 +932,13 @@ function renderFilters() {
     state.categories
       .map(
         (category) =>
-          `<option value="${category.id}">${text(category.name)}</option>`
+          `<option value="${escapeHtml(
+            category.id
+          )}">
+            ${escapeHtml(
+              text(category.name)
+            )}
+          </option>`
       )
       .join("");
 }
@@ -830,25 +949,36 @@ function renderFilters() {
 
 function productImage(product) {
   return (
-    product.image_url ||
-    product.image ||
-    product.photo ||
-    product.imageUrl ||
+    product?.image_url ||
+    product?.image ||
+    product?.photo ||
+    product?.imageUrl ||
     ""
   );
 }
 
-function renderProducts(forcedCategoryName = "") {
+function renderProducts(
+  forcedCategoryName = ""
+) {
   const e = $("#productGrid");
+
   if (!e) return;
 
   let list = state.products.filter(
-    (product) => product.active !== false
+    (product) =>
+      product.active !== false
   );
 
-  const q = norm($("#searchInput")?.value || "");
-  const cat = $("#categoryFilter")?.value || "";
-  const sort = $("#sortFilter")?.value || "default";
+  const q = norm(
+    $("#searchInput")?.value || ""
+  );
+
+  const cat =
+    $("#categoryFilter")?.value || "";
+
+  const sort =
+    $("#sortFilter")?.value ||
+    "default";
 
   if (q) {
     list = list.filter((product) =>
@@ -863,7 +993,11 @@ function renderProducts(forcedCategoryName = "") {
 
   if (forcedCategoryName) {
     list = list.filter((product) => {
-      const category = categoryById(product.category_id);
+      const category =
+        categoryById(
+          product.category_id
+        );
+
       return (
         norm(text(category?.name)) ===
         norm(forcedCategoryName)
@@ -872,19 +1006,25 @@ function renderProducts(forcedCategoryName = "") {
   } else if (cat) {
     list = list.filter(
       (product) =>
-        String(product.category_id) === String(cat)
+        String(
+          product.category_id
+        ) === String(cat)
     );
   }
 
   if (sort === "priceAsc") {
     list.sort(
-      (a, b) => Number(a.price) - Number(b.price)
+      (a, b) =>
+        safeNumber(a.price) -
+        safeNumber(b.price)
     );
   }
 
   if (sort === "priceDesc") {
     list.sort(
-      (a, b) => Number(b.price) - Number(a.price)
+      (a, b) =>
+        safeNumber(b.price) -
+        safeNumber(a.price)
     );
   }
 
@@ -899,63 +1039,107 @@ function renderProducts(forcedCategoryName = "") {
 
   if (!list.length) {
     e.innerHTML = `
-      <div class="col-span-full text-center py-12 text-on-surface-variant">
+      <div
+        class="
+          col-span-full text-center
+          py-12 text-on-surface-variant
+        "
+      >
         ${t("none")}
       </div>
     `;
+
     return;
   }
 
   e.innerHTML = list
     .map((product) => {
-      const available = isAvailable(product);
+      const available =
+        isAvailable(product);
+
       const promo =
-        Number(product.old_price) >
-        Number(product.price);
+        safeNumber(product.old_price) >
+        safeNumber(product.price);
 
-      const categoryName = text(
-        categoryById(product.category_id)?.name
-      );
+      const categoryName =
+        text(
+          categoryById(
+            product.category_id
+          )?.name
+        );
 
-      const image = productImage(product);
+      const image =
+        productImage(product);
+
+      const productName =
+        escapeHtml(
+          text(product.name)
+        );
+
+      const description =
+        escapeHtml(
+          text(product.description) ||
+            ""
+        );
+
+      const unit =
+        escapeHtml(product.unit || "");
+
+      const tag =
+        escapeHtml(text(product.tag));
+
+      const imageHtml = image
+        ? `
+          <div
+            class="
+              h-40 overflow-hidden
+              bg-surface-container-low
+            "
+          >
+            <img
+              src="${escapeHtml(image)}"
+              alt="${productName}"
+              class="w-full h-full object-cover"
+              loading="lazy"
+              data-fallback-image="true"
+            >
+          </div>
+        `
+        : `
+          <div
+            class="
+              h-40 bg-surface-container-low
+              flex items-center
+              justify-center text-4xl
+            "
+          >
+            ${categoryEmoji(categoryName)}
+          </div>
+        `;
 
       return `
         <article
           class="
             bg-white rounded-2xl shadow-sm
-            hover:shadow-md transition overflow-hidden
-            flex flex-col
+            hover:shadow-md transition
+            overflow-hidden flex flex-col
           "
         >
-          ${
-            image
-              ? `
-                <div class="h-40 overflow-hidden bg-surface-container-low">
-                  <img
-                    src="${image}"
-                    alt="${text(product.name)}"
-                    class="w-full h-full object-cover"
-                    loading="lazy"
-                    onerror="this.parentElement.innerHTML='<div class=&quot;w-full h-full flex items-center justify-center text-4xl&quot;>${categoryEmoji(
-                      categoryName
-                    )}</div>'"
-                  >
-                </div>
-              `
-              : `
-                <div class="h-40 bg-surface-container-low flex items-center justify-center text-4xl">
-                  ${categoryEmoji(categoryName)}
-                </div>
-              `
-          }
+          ${imageHtml}
 
           <div class="p-4 flex flex-col flex-1">
             <div class="flex gap-2 flex-wrap">
               ${
-                product.tag && text(product.tag)
+                tag
                   ? `
-                    <span class="bg-secondary text-white text-[10px] font-bold px-2 py-1 rounded">
-                      ${text(product.tag)}
+                    <span
+                      class="
+                        bg-secondary text-white
+                        text-[10px] font-bold
+                        px-2 py-1 rounded
+                      "
+                    >
+                      ${tag}
                     </span>
                   `
                   : ""
@@ -964,7 +1148,13 @@ function renderProducts(forcedCategoryName = "") {
               ${
                 promo
                   ? `
-                    <span class="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded">
+                    <span
+                      class="
+                        bg-primary text-white
+                        text-[10px] font-bold
+                        px-2 py-1 rounded
+                      "
+                    >
                       PROMOÇÃO
                     </span>
                   `
@@ -973,28 +1163,53 @@ function renderProducts(forcedCategoryName = "") {
             </div>
 
             <h3 class="font-semibold mt-2">
-              ${text(product.name)}
+              ${productName}
             </h3>
 
-            <p class="text-xs text-on-surface-variant mt-1">
-              ${text(product.description) || ""}
+            <p
+              class="
+                text-xs text-on-surface-variant
+                mt-1
+              "
+            >
+              ${description}
             </p>
 
-            <div class="flex items-end justify-between gap-3 mt-4">
+            <div
+              class="
+                flex items-end justify-between
+                gap-3 mt-4
+              "
+            >
               <div>
-                <span class="text-xs text-on-surface-variant">
-                  ${product.unit || ""}
+                <span
+                  class="
+                    text-xs text-on-surface-variant
+                  "
+                >
+                  ${unit}
                 </span>
 
-                <div class="text-lg font-bold text-primary">
+                <div
+                  class="
+                    text-lg font-bold
+                    text-primary
+                  "
+                >
                   ${money(product.price)}
                 </div>
 
                 ${
                   promo
                     ? `
-                      <del class="text-xs text-outline">
-                        ${money(product.old_price)}
+                      <del
+                        class="
+                          text-xs text-outline
+                        "
+                      >
+                        ${money(
+                          product.old_price
+                        )}
                       </del>
                     `
                     : ""
@@ -1003,10 +1218,17 @@ function renderProducts(forcedCategoryName = "") {
 
               <button
                 type="button"
-                data-add="${product.id}"
-                ${available ? "" : "disabled"}
+                data-add="${escapeHtml(
+                  product.id
+                )}"
+                ${
+                  available
+                    ? ""
+                    : "disabled"
+                }
                 class="
-                  px-4 py-2.5 rounded-xl font-semibold
+                  px-4 py-2.5 rounded-xl
+                  font-semibold
                   ${
                     available
                       ? "bg-secondary-container text-white hover:bg-secondary"
@@ -1014,7 +1236,11 @@ function renderProducts(forcedCategoryName = "") {
                   }
                 "
               >
-                ${available ? t("add") : t("unavailable")}
+                ${
+                  available
+                    ? t("add")
+                    : t("unavailable")
+                }
               </button>
             </div>
           </div>
@@ -1023,10 +1249,43 @@ function renderProducts(forcedCategoryName = "") {
     })
     .join("");
 
+  e.querySelectorAll(
+    "[data-fallback-image]"
+  ).forEach((imageElement) => {
+    imageElement.addEventListener(
+      "error",
+      () => {
+        const parent =
+          imageElement.parentElement;
+
+        if (!parent) return;
+
+        parent.innerHTML = `
+          <div
+            class="
+              w-full h-full
+              flex items-center
+              justify-center text-4xl
+            "
+          >
+            ${categoryEmoji(
+              imageElement.alt
+            )}
+          </div>
+        `;
+      },
+      { once: true }
+    );
+  });
+
   e.querySelectorAll("[data-add]").forEach(
     (button) => {
-      button.addEventListener("click", () =>
-        addToCart(button.dataset.add)
+      button.addEventListener(
+        "click",
+        () =>
+          addToCart(
+            button.dataset.add
+          )
       );
     }
   );
@@ -1038,14 +1297,21 @@ function renderProducts(forcedCategoryName = "") {
 
 function renderKits() {
   const e = $("#kitsGrid");
+
   if (!e) return;
 
   if (!state.kits.length) {
     e.innerHTML = `
-      <div class="col-span-full text-center py-10 text-on-surface-variant">
+      <div
+        class="
+          col-span-full text-center py-10
+          text-on-surface-variant
+        "
+      >
         ${t("comboNone")}
       </div>
     `;
+
     return;
   }
 
@@ -1055,11 +1321,14 @@ function renderKits() {
       const type =
         COMBO_TYPES[index] || {
           name: text(kit.name),
-          description: text(kit.description)
+          description:
+            text(kit.description)
         };
 
       const products = (
-        Array.isArray(kit.product_ids)
+        Array.isArray(
+          kit.product_ids
+        )
           ? kit.product_ids
           : []
       )
@@ -1074,12 +1343,18 @@ function renderKits() {
             flex flex-col min-w-0
           "
         >
-          <div class="flex items-start justify-between gap-3">
+          <div
+            class="
+              flex items-start
+              justify-between gap-3
+            "
+          >
             <div class="min-w-0">
               <span
                 class="
-                  text-[10px] font-bold uppercase
-                  tracking-wider text-secondary
+                  text-[10px] font-bold
+                  uppercase tracking-wider
+                  text-secondary
                 "
               >
                 ${t("combo")}
@@ -1087,18 +1362,20 @@ function renderKits() {
 
               <h3
                 class="
-                  text-base sm:text-lg font-bold mt-1
+                  text-base sm:text-lg
+                  font-bold mt-1
                   break-words leading-tight
                 "
               >
-                ${type.name}
+                ${escapeHtml(type.name)}
               </h3>
             </div>
 
             <span
               class="
-                bg-primary text-white px-2 py-1
-                rounded-full text-xs font-bold
+                bg-primary text-white
+                px-2 py-1 rounded-full
+                text-xs font-bold
                 whitespace-nowrap
               "
             >
@@ -1112,10 +1389,16 @@ function renderKits() {
               mt-2 leading-relaxed
             "
           >
-            ${type.description}
+            ${escapeHtml(
+              type.description
+            )}
           </p>
 
-          <div class="mt-3 space-y-1 flex-1">
+          <div
+            class="
+              mt-3 space-y-1 flex-1
+            "
+          >
             ${
               products.length
                 ? products
@@ -1124,13 +1407,23 @@ function renderKits() {
                         <div
                           class="
                             flex items-center
-                            justify-between gap-2
-                            py-1.5 border-b
+                            justify-between
+                            gap-2 py-1.5
+                            border-b
                             border-outline-variant
                           "
                         >
-                          <span class="text-xs break-words">
-                            ${text(product.name)}
+                          <span
+                            class="
+                              text-xs
+                              break-words
+                            "
+                          >
+                            ${escapeHtml(
+                              text(
+                                product.name
+                              )
+                            )}
                           </span>
 
                           <span
@@ -1139,14 +1432,21 @@ function renderKits() {
                               whitespace-nowrap
                             "
                           >
-                            ${money(product.price)}
+                            ${money(
+                              product.price
+                            )}
                           </span>
                         </div>
                       `
                     )
                     .join("")
                 : `
-                  <div class="text-xs text-on-surface-variant">
+                  <div
+                    class="
+                      text-xs
+                      text-on-surface-variant
+                    "
+                  >
                     Produtos do combo a definir.
                   </div>
                 `
@@ -1155,11 +1455,15 @@ function renderKits() {
 
           <button
             type="button"
-            data-kit="${kit.id}"
+            data-kit="${escapeHtml(
+              kit.id
+            )}"
             class="
-              mt-3 w-full py-2 rounded-xl
-              bg-secondary-container text-white
-              text-sm font-semibold
+              mt-3 w-full py-2
+              rounded-xl
+              bg-secondary-container
+              text-white text-sm
+              font-semibold
               hover:bg-secondary
             "
           >
@@ -1172,27 +1476,47 @@ function renderKits() {
 
   e.querySelectorAll("[data-kit]").forEach(
     (button) => {
-      button.addEventListener("click", () => {
-        const kit = state.kits.find(
-          (item) =>
-            String(item.id) ===
-            String(button.dataset.kit)
-        );
+      button.addEventListener(
+        "click",
+        () => {
+          const kit =
+            state.kits.find(
+              (item) =>
+                String(item.id) ===
+                String(
+                  button.dataset.kit
+                )
+            );
 
-        if (!kit) return;
+          if (!kit) return;
 
-        (
-          Array.isArray(kit.product_ids)
-            ? kit.product_ids
-            : []
-        ).forEach((id) => {
-          if (isAvailable(productById(id))) {
-            addToCart(id, false);
+          let addedCount = 0;
+
+          (
+            Array.isArray(
+              kit.product_ids
+            )
+              ? kit.product_ids
+              : []
+          ).forEach((id) => {
+            const product =
+              productById(id);
+
+            if (
+              isAvailable(product)
+            ) {
+              addToCart(id, false);
+              addedCount++;
+            }
+          });
+
+          if (addedCount > 0) {
+            toast(t("comboAdded"));
+          } else {
+            toast(t("unavailable"));
           }
-        });
-
-        toast(t("comboAdded"));
-      });
+        }
+      );
     }
   );
 }
@@ -1203,6 +1527,7 @@ function renderKits() {
 
 function renderSteps() {
   const e = $("#steps");
+
   if (!e) return;
 
   const steps = [
@@ -1223,9 +1548,11 @@ function renderSteps() {
         >
           <div
             class="
-              w-10 h-10 mx-auto rounded-full
+              w-10 h-10 mx-auto
+              rounded-full
               bg-secondary-container
-              flex items-center justify-center
+              flex items-center
+              justify-center
               text-white font-bold
             "
           >
@@ -1233,11 +1560,11 @@ function renderSteps() {
           </div>
 
           <h3 class="font-semibold mt-2">
-            ${title}
+            ${escapeHtml(title)}
           </h3>
 
           <p class="text-xs opacity-80 mt-1">
-            ${description}
+            ${escapeHtml(description)}
           </p>
         </div>
       `
@@ -1251,6 +1578,7 @@ function renderSteps() {
 
 function renderFaq() {
   const e = $("#faq");
+
   if (!e) return;
 
   const questions = {
@@ -1307,18 +1635,23 @@ function renderFaq() {
           "
         >
           <summary
-            class="font-semibold cursor-pointer"
+            class="
+              font-semibold cursor-pointer
+            "
           >
-            ${question}
+            ${escapeHtml(question)}
           </summary>
 
           <p
             class="
-              text-sm text-on-surface-variant
+              text-sm
+              text-on-surface-variant
               mt-2
             "
           >
-            ${answers[index]}
+            ${escapeHtml(
+              answers[index]
+            )}
           </p>
         </details>
       `
@@ -1335,32 +1668,41 @@ function totals() {
   let saving = 0;
 
   state.cart.forEach((item) => {
-    const product = productById(item.id);
+    const product =
+      productById(item.id);
+
     if (!product) return;
 
-    const qty = Number(item.qty || 0);
+    const qty = Math.max(
+      0,
+      safeNumber(item.qty)
+    );
 
-    subtotal +=
-      Number(product.price || 0) * qty;
+    const price =
+      safeNumber(product.price);
 
-    if (
-      Number(product.old_price) >
-      Number(product.price)
-    ) {
+    const oldPrice =
+      safeNumber(product.old_price);
+
+    subtotal += price * qty;
+
+    if (oldPrice > price) {
       saving +=
-        (Number(product.old_price) -
-          Number(product.price)) *
-        qty;
+        (oldPrice - price) * qty;
     }
   });
+
+  const deliveryFee = Math.max(
+    0,
+    safeNumber(state.deliveryFee)
+  );
 
   return {
     subtotal,
     saving,
-    deliveryFee: Number(state.deliveryFee || 0),
+    deliveryFee,
     total:
-      subtotal +
-      Number(state.deliveryFee || 0)
+      subtotal + deliveryFee
   };
 }
 
@@ -1372,6 +1714,7 @@ function renderCart() {
   saveCart();
 
   const e = $("#cartItems");
+
   if (!e) return;
 
   const values = totals();
@@ -1379,18 +1722,32 @@ function renderCart() {
   e.innerHTML =
     state.cart
       .map((item) => {
-        const product = productById(item.id);
+        const product =
+          productById(item.id);
+
         if (!product) return "";
+
+        const qty = Math.max(
+          1,
+          safeNumber(item.qty, 1)
+        );
 
         return `
           <div class="border-b pb-3">
             <div
               class="
-                flex justify-between gap-3
+                flex justify-between
+                gap-3
               "
             >
-              <div class="font-semibold text-sm">
-                ${text(product.name)}
+              <div
+                class="
+                  font-semibold text-sm
+                "
+              >
+                ${escapeHtml(
+                  text(product.name)
+                )}
               </div>
 
               <div
@@ -1400,46 +1757,68 @@ function renderCart() {
                 "
               >
                 ${money(
-                  Number(product.price) *
-                    Number(item.qty)
+                  safeNumber(
+                    product.price
+                  ) * qty
                 )}
               </div>
             </div>
 
             <div
               class="
-                text-xs text-on-surface-variant
+                text-xs
+                text-on-surface-variant
                 mt-1
               "
             >
-              ${product.unit || ""} ·
-              ${item.qty} un.
+              ${escapeHtml(
+                product.unit || ""
+              )} · ${qty} un.
             </div>
 
             <div
               class="
-                flex items-center gap-2 mt-2
+                flex items-center
+                gap-2 mt-2
               "
             >
               <button
-                data-minus="${product.id}"
-                class="w-7 h-7 rounded bg-surface-container"
+                type="button"
+                data-minus="${escapeHtml(
+                  product.id
+                )}"
+                class="
+                  w-7 h-7 rounded
+                  bg-surface-container
+                "
               >
                 −
               </button>
 
-              <span>${item.qty}</span>
+              <span>${qty}</span>
 
               <button
-                data-plus="${product.id}"
-                class="w-7 h-7 rounded bg-surface-container"
+                type="button"
+                data-plus="${escapeHtml(
+                  product.id
+                )}"
+                class="
+                  w-7 h-7 rounded
+                  bg-surface-container
+                "
               >
                 +
               </button>
 
               <button
-                data-remove="${product.id}"
-                class="ml-auto text-red-600 text-xs"
+                type="button"
+                data-remove="${escapeHtml(
+                  product.id
+                )}"
+                class="
+                  ml-auto
+                  text-red-600 text-xs
+                "
               >
                 Remover
               </button>
@@ -1459,58 +1838,100 @@ function renderCart() {
       </div>
     `;
 
-  if ($("#cartSubtotal"))
+  if ($("#cartSubtotal")) {
     $("#cartSubtotal").textContent =
       money(values.subtotal);
+  }
 
-  if ($("#cartSaving"))
+  if ($("#cartSaving")) {
     $("#cartSaving").textContent =
       money(values.saving);
+  }
 
-  if ($("#cartServiceFee"))
+  if ($("#cartServiceFee")) {
     $("#cartServiceFee").textContent =
       state.deliveryZone
         ? money(state.deliveryFee)
         : "A definir";
+  }
 
-  if ($("#cartTotal"))
+  if ($("#cartTotal")) {
     $("#cartTotal").textContent =
       money(values.total);
+  }
 
   e.querySelectorAll("[data-minus]").forEach(
-    (button) =>
-      (button.onclick = () =>
-        changeQty(button.dataset.minus, -1))
+    (button) => {
+      button.onclick = () =>
+        changeQty(
+          button.dataset.minus,
+          -1
+        );
+    }
   );
 
   e.querySelectorAll("[data-plus]").forEach(
-    (button) =>
-      (button.onclick = () =>
-        changeQty(button.dataset.plus, 1))
+    (button) => {
+      button.onclick = () =>
+        changeQty(
+          button.dataset.plus,
+          1
+        );
+    }
   );
 
   e.querySelectorAll("[data-remove]").forEach(
-    (button) =>
-      (button.onclick = () =>
-        removeFromCart(button.dataset.remove))
+    (button) => {
+      button.onclick = () =>
+        removeFromCart(
+          button.dataset.remove
+        );
+    }
   );
 }
 
-function addToCart(id, showToast = true) {
-  const product = productById(id);
+function addToCart(
+  id,
+  showToast = true
+) {
+  const product =
+    productById(id);
 
   if (!isAvailable(product)) {
     toast(t("unavailable"));
-    return;
+    return false;
   }
 
-  const row = state.cart.find(
-    (item) =>
-      String(item.id) === String(id)
-  );
+  const stock =
+    safeNumber(product.stock, 1);
+
+  const row =
+    state.cart.find(
+      (item) =>
+        String(item.id) ===
+        String(id)
+    );
 
   if (row) {
-    row.qty = Number(row.qty || 0) + 1;
+    const currentQty =
+      Math.max(
+        0,
+        safeNumber(row.qty)
+      );
+
+    if (
+      stock > 0 &&
+      currentQty >= stock
+    ) {
+      toast(
+        `Stock disponível: ${stock}`
+      );
+
+      return false;
+    }
+
+    row.qty =
+      currentQty + 1;
   } else {
     state.cart.push({
       id: product.id,
@@ -1522,37 +1943,80 @@ function addToCart(id, showToast = true) {
 
   if (showToast) {
     toast(
-      `${text(product.name)} ${t("added")}`
+      `${text(product.name)} ${t(
+        "added"
+      )}`
     );
   }
+
+  return true;
 }
 
 function removeFromCart(id) {
-  state.cart = state.cart.filter(
-    (item) =>
-      String(item.id) !== String(id)
-  );
+  state.cart =
+    state.cart.filter(
+      (item) =>
+        String(item.id) !==
+        String(id)
+    );
 
   renderCart();
   toast(t("removed"));
 }
 
-function changeQty(id, difference) {
-  const row = state.cart.find(
-    (item) =>
-      String(item.id) === String(id)
-  );
+function changeQty(
+  id,
+  difference
+) {
+  const row =
+    state.cart.find(
+      (item) =>
+        String(item.id) ===
+        String(id)
+    );
 
   if (!row) return;
 
-  row.qty =
-    Number(row.qty) + Number(difference);
+  const product =
+    productById(id);
 
-  if (row.qty <= 0) {
+  if (!product) {
     removeFromCart(id);
-  } else {
-    renderCart();
+    return;
   }
+
+  const currentQty =
+    Math.max(
+      0,
+      safeNumber(row.qty)
+    );
+
+  let newQty =
+    currentQty +
+    safeNumber(difference);
+
+  if (newQty <= 0) {
+    removeFromCart(id);
+    return;
+  }
+
+  const stock =
+    safeNumber(product.stock, 1);
+
+  if (
+    stock > 0 &&
+    newQty > stock
+  ) {
+    newQty = stock;
+
+    toast(
+      `Stock disponível: ${stock}`
+    );
+  }
+
+  row.qty = newQty;
+
+  renderCart();
 }
 
 /* =========================================================
@@ -1562,9 +2026,11 @@ function changeQty(id, difference) {
 function createFloatingCart() {
   if ($("#rfFloatingCart")) return;
 
-  const bar = document.createElement("div");
+  const bar =
+    document.createElement("div");
 
-  bar.id = "rfFloatingCart";
+  bar.id =
+    "rfFloatingCart";
 
   bar.innerHTML = `
     <div
@@ -1601,13 +2067,16 @@ function createFloatingCart() {
     color: "#fff",
     borderRadius: "14px",
     padding: "9px 12px",
-    boxShadow: "0 8px 30px rgba(0,0,0,.22)",
+    boxShadow:
+      "0 8px 30px rgba(0,0,0,.22)",
     fontSize: "12px",
     fontWeight: "700"
   });
 
   const button =
-    bar.querySelector("#rfFloatingView");
+    bar.querySelector(
+      "#rfFloatingView"
+    );
 
   Object.assign(button.style, {
     border: "0",
@@ -1632,23 +2101,31 @@ function createFloatingCart() {
 }
 
 function updateFloatingCart() {
-  const bar = $("#rfFloatingCart");
+  const bar =
+    $("#rfFloatingCart");
+
   const textElement =
     $("#rfFloatingText");
 
-  if (!bar || !textElement) return;
+  if (!bar || !textElement) {
+    return;
+  }
 
-  const count = state.cart.reduce(
-    (sum, item) =>
-      sum + Number(item.qty || 0),
-    0
-  );
+  const count =
+    state.cart.reduce(
+      (sum, item) =>
+        sum +
+        safeNumber(item.qty),
+      0
+    );
 
   textElement.textContent =
     `${count} ${t("selected")}`;
 
   bar.style.display =
-    count > 0 ? "block" : "none";
+    count > 0
+      ? "block"
+      : "none";
 }
 
 /* =========================================================
@@ -1699,15 +2176,28 @@ function openCheckout() {
     return;
   }
 
-  $("#cartDrawer")?.classList.add("hidden");
+  $("#cartDrawer")?.classList.add(
+    "hidden"
+  );
 
-  const old = $("#rfCheckoutModal");
-  if (old) old.remove();
+  const old =
+    $("#rfCheckoutModal");
+
+  if (old) {
+    old.remove();
+  }
+
+  /*
+   * A taxa deve começar limpa quando
+   * o checkout é aberto novamente.
+   */
+  resetDelivery();
 
   const modal =
     document.createElement("div");
 
-  modal.id = "rfCheckoutModal";
+  modal.id =
+    "rfCheckoutModal";
 
   modal.className =
     "fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4";
@@ -1729,13 +2219,25 @@ function openCheckout() {
           sticky top-0 bg-white z-10
         "
       >
-        <h2 class="hero-title text-2xl font-bold">
+        <h2
+          class="
+            hero-title text-2xl
+            font-bold
+          "
+        >
           ${t("order")}
         </h2>
 
         <button
+          type="button"
           id="rfClose"
-          class="p-2 rounded-full hover:bg-surface-container"
+          class="
+            p-2 rounded-full
+            hover:bg-surface-container
+          "
+          aria-label="${escapeHtml(
+            t("back")
+          )}"
         >
           ✕
         </button>
@@ -1756,9 +2258,22 @@ function openCheckout() {
           ${state.cart
             .map((item) => {
               const product =
-                productById(item.id);
+                productById(
+                  item.id
+                );
 
-              if (!product) return "";
+              if (!product) {
+                return "";
+              }
+
+              const qty =
+                Math.max(
+                  1,
+                  safeNumber(
+                    item.qty,
+                    1
+                  )
+                );
 
               return `
                 <div
@@ -1768,14 +2283,19 @@ function openCheckout() {
                   "
                 >
                   <span>
-                    ${text(product.name)}
-                    × ${item.qty}
+                    ${escapeHtml(
+                      text(
+                        product.name
+                      )
+                    )}
+                    × ${qty}
                   </span>
 
                   <strong>
                     ${money(
-                      Number(product.price) *
-                        Number(item.qty)
+                      safeNumber(
+                        product.price
+                      ) * qty
                     )}
                   </strong>
                 </div>
@@ -1784,19 +2304,53 @@ function openCheckout() {
             .join("")}
         </div>
 
-        <div class="border-t mt-3 pt-3 space-y-1 text-sm">
-          <div class="flex justify-between">
-            <span>${t("subtotal")}</span>
-            <strong>${money(values.subtotal)}</strong>
+        <div
+          class="
+            border-t mt-3 pt-3
+            space-y-1 text-sm
+          "
+        >
+          <div
+            class="
+              flex justify-between
+            "
+          >
+            <span>
+              ${t("subtotal")}
+            </span>
+
+            <strong>
+              ${money(
+                values.subtotal
+              )}
+            </strong>
           </div>
 
-          <div class="flex justify-between">
-            <span>${t("saving")}</span>
-            <strong>${money(values.saving)}</strong>
+          <div
+            class="
+              flex justify-between
+            "
+          >
+            <span>
+              ${t("saving")}
+            </span>
+
+            <strong>
+              ${money(
+                values.saving
+              )}
+            </strong>
           </div>
 
-          <div class="flex justify-between">
-            <span>${t("service")}</span>
+          <div
+            class="
+              flex justify-between
+            "
+          >
+            <span>
+              ${t("service")}
+            </span>
+
             <strong id="rfCheckoutFee">
               A definir
             </strong>
@@ -1808,9 +2362,16 @@ function openCheckout() {
               text-lg font-bold pt-1
             "
           >
-            <span>${t("total")}</span>
-            <strong id="rfCheckoutTotal">
-              ${money(values.subtotal)}
+            <span>
+              ${t("total")}
+            </span>
+
+            <strong
+              id="rfCheckoutTotal"
+            >
+              ${money(
+                values.subtotal
+              )}
             </strong>
           </div>
         </div>
@@ -1820,15 +2381,27 @@ function openCheckout() {
         id="rfForm"
         class="p-5 space-y-4"
       >
-        <h3 class="font-bold text-lg">
+        <h3
+          class="
+            font-bold text-lg
+          "
+        >
           ${t("customer")}
         </h3>
 
-        <div class="grid sm:grid-cols-2 gap-3">
+        <div
+          class="
+            grid sm:grid-cols-2
+            gap-3
+          "
+        >
           <input
             required
             name="name"
-            placeholder="${t("fullName")}"
+            autocomplete="name"
+            placeholder="${escapeHtml(
+              t("fullName")
+            )}"
             class="
               w-full border
               border-outline-variant
@@ -1839,7 +2412,11 @@ function openCheckout() {
           <input
             required
             name="phone"
-            placeholder="${t("phone")}"
+            type="tel"
+            autocomplete="tel"
+            placeholder="${escapeHtml(
+              t("phone")
+            )}"
             class="
               w-full border
               border-outline-variant
@@ -1882,7 +2459,10 @@ function openCheckout() {
 
         <input
           name="address"
-          placeholder="${t("address")}"
+          autocomplete="street-address"
+          placeholder="${escapeHtml(
+            t("address")
+          )}"
           class="
             w-full border
             border-outline-variant
@@ -1901,7 +2481,8 @@ function openCheckout() {
           "
         >
           <option value="">
-            ${t("select")} ${t("payment")}
+            ${t("select")}
+            ${t("payment")}
           </option>
 
           <option value="Numerário">
@@ -1916,7 +2497,9 @@ function openCheckout() {
             ${t("emola")}
           </option>
 
-          <option value="Transferencia Bancaria">
+          <option
+            value="Transferencia Bancaria"
+          >
             ${t("bank")}
           </option>
         </select>
@@ -1925,13 +2508,15 @@ function openCheckout() {
           id="rfPaymentInfo"
           class="
             hidden rounded-xl
-            bg-surface-container-low p-4
+            bg-surface-container-low
+            p-4
           "
         >
           <div
             class="
-              text-xs font-bold uppercase
-              tracking-wider text-secondary
+              text-xs font-bold
+              uppercase tracking-wider
+              text-secondary
             "
           >
             ${t("paymentInfo")}
@@ -1947,7 +2532,11 @@ function openCheckout() {
         </div>
 
         <div>
-          <h3 class="font-bold mb-2">
+          <h3
+            class="
+              font-bold mb-2
+            "
+          >
             ${t("substitution")}
           </h3>
 
@@ -1961,9 +2550,12 @@ function openCheckout() {
               <input
                 type="radio"
                 name="substitutions"
-                value="${t("contact")}"
+                value="${escapeHtml(
+                  t("contact")
+                )}"
                 checked
               >
+
               ${t("contact")}
             </label>
 
@@ -1976,8 +2568,11 @@ function openCheckout() {
               <input
                 type="radio"
                 name="substitutions"
-                value="${t("equivalent")}"
+                value="${escapeHtml(
+                  t("equivalent")
+                )}"
               >
+
               ${t("equivalent")}
             </label>
 
@@ -1990,8 +2585,11 @@ function openCheckout() {
               <input
                 type="radio"
                 name="substitutions"
-                value="${t("noReplace")}"
+                value="${escapeHtml(
+                  t("noReplace")
+                )}"
               >
+
               ${t("noReplace")}
             </label>
           </div>
@@ -2000,7 +2598,9 @@ function openCheckout() {
         <textarea
           name="notes"
           rows="3"
-          placeholder="${t("notes")}"
+          placeholder="${escapeHtml(
+            t("notes")
+          )}"
           class="
             w-full border
             border-outline-variant
@@ -2008,13 +2608,18 @@ function openCheckout() {
           "
         ></textarea>
 
-        <div class="flex gap-3">
+        <div
+          class="
+            flex gap-3
+          "
+        >
           <button
             type="button"
             id="rfBack"
             class="
               flex-1 py-3 rounded-xl
-              border border-outline-variant
+              border
+              border-outline-variant
               font-semibold
             "
           >
@@ -2038,238 +2643,469 @@ function openCheckout() {
 
   document.body.appendChild(modal);
 
-  $("#rfClose").onclick = () =>
+  const closeCheckout = () => {
+    resetDelivery();
+    renderCart();
     modal.remove();
+  };
 
-  $("#rfBack").onclick = () =>
-    modal.remove();
+  $("#rfClose").onclick =
+    closeCheckout;
+
+  $("#rfBack").onclick =
+    closeCheckout;
 
   /* TAXA DE ENTREGA */
-  $("#rfDelivery").onchange = (event) => {
-    const value = event.target.value;
 
-    state.deliveryZone = value;
+  $("#rfDelivery").onchange =
+    (event) => {
+      const value =
+        event.target.value;
 
-    if (value === "Maputo Cidade") {
-      state.deliveryFee = 400;
-    } else if (
-      value === "Zonas Circunvizinhas"
-    ) {
-      state.deliveryFee = 700;
-    } else if (value === "Matola") {
-      state.deliveryFee = 1000;
-    } else {
-      state.deliveryFee = 0;
-    }
+      state.deliveryZone =
+        value;
 
-    const currentTotals = totals();
+      state.deliveryFee =
+        getDeliveryFee(value);
 
-    const feeElement =
-      $("#rfCheckoutFee");
+      const currentTotals =
+        totals();
 
-    const totalElement =
-      $("#rfCheckoutTotal");
+      const feeElement =
+        $("#rfCheckoutFee");
 
-    if (feeElement) {
-      feeElement.textContent =
-        value
-          ? money(state.deliveryFee)
-          : "A definir";
-    }
+      const totalElement =
+        $("#rfCheckoutTotal");
 
-    if (totalElement) {
-      totalElement.textContent =
-        money(currentTotals.total);
-    }
+      if (feeElement) {
+        feeElement.textContent =
+          value
+            ? money(
+                state.deliveryFee
+              )
+            : "A definir";
+      }
 
-    renderCart();
-  };
-
-  /* PAGAMENTO */
-  $("#rfPayment").onchange = (event) => {
-    const method = event.target.value;
-    const info =
-      paymentDetails(method);
-
-    const box = $("#rfPaymentInfo");
-    const textElement =
-      $("#rfPaymentText");
-
-    if (
-      !method ||
-      method === "Numerário"
-    ) {
-      box.classList.add("hidden");
-      return;
-    }
-
-    box.classList.remove("hidden");
-
-    textElement.textContent =
-      info || t("accountPending");
-  };
-
-  /* ENVIO */
-  $("#rfForm").onsubmit = async (event) => {
-    event.preventDefault();
-
-    const form =
-      new FormData(event.target);
-
-    const currentTotals = totals();
-
-    const method =
-      form.get("payment");
-
-    const pay =
-      paymentDetails(method);
-
-    const orderNumber =
-      `RF-${Date.now()
-        .toString()
-        .slice(-8)}`;
-
-    const lines = [
-      "*O seu pedido — Rancho Flexível*",
-      "",
-      "*Produtos*",
-      ...state.cart.map((item) => {
-        const product =
-          productById(item.id);
-
-        return `• ${text(product.name)} — ${
-          item.qty
-        } x ${money(product.price)} = ${money(
-          Number(product.price) *
-            Number(item.qty)
-        )}`;
-      }),
-      "",
-      `Poupança: ${money(
-        currentTotals.saving
-      )}`,
-      `Taxa de serviço: ${
-        state.deliveryFee
-          ? money(state.deliveryFee)
-          : "A definir"
-      }`,
-      `*Total: ${money(
-        currentTotals.total
-      )}*`,
-      "",
-      "*Dados do cliente*",
-      `Nome: ${form.get("name")}`,
-      `Telefone: ${form.get("phone")}`,
-      `Forma de entrega: ${form.get("delivery")}`,
-      `Endereço: ${
-        form.get("address") || "—"
-      }`,
-      `Método de pagamento: ${method}`,
-      `Dados de pagamento: ${
-        pay || "—"
-      }`,
-      `Aceita substituições: ${
-        form.get("substitutions")
-      }`,
-      `Observações: ${
-        form.get("notes") || "—"
-      }`
-    ];
-
-    /* Guardar no Supabase */
-    try {
-      const {
-        data: customer
-      } = await supabase
-        .from("customers")
-        .insert({
-          name: form.get("name"),
-          phone: form.get("phone"),
-          address:
-            form.get("address") || null
-        })
-        .select("id")
-        .single();
-
-      const {
-        data: order
-      } = await supabase
-        .from("orders")
-        .insert({
-          order_number: orderNumber,
-          customer_id:
-            customer?.id || null,
-          customer_name:
-            form.get("name"),
-          customer_phone:
-            form.get("phone"),
-          address:
-            form.get("address") || null,
-          delivery_zone:
-            form.get("delivery"),
-          delivery_fee:
-            Number(state.deliveryFee || 0),
-          total:
-            Number(currentTotals.total)
-        })
-        .select("id")
-        .single();
-
-      if (order?.id) {
-        await supabase
-          .from("order_items")
-          .insert(
-            state.cart.map((item) => {
-              const product =
-                productById(item.id);
-
-              return {
-                order_id: order.id,
-                product_id: product.id,
-                product_name:
-                  text(product.name),
-                quantity: item.qty,
-                unit_price:
-                  product.price
-              };
-            })
+      if (totalElement) {
+        totalElement.textContent =
+          money(
+            currentTotals.total
           );
       }
-    } catch (error) {
-      console.warn(
-        "Não foi possível guardar o pedido no painel:",
-        error
+
+      renderCart();
+    };
+
+  /* PAGAMENTO */
+
+  $("#rfPayment").onchange =
+    (event) => {
+      const method =
+        event.target.value;
+
+      const info =
+        paymentDetails(method);
+
+      const box =
+        $("#rfPaymentInfo");
+
+      const textElement =
+        $("#rfPaymentText");
+
+      if (!box || !textElement) {
+        return;
+      }
+
+      if (
+        !method ||
+        method === "Numerário"
+      ) {
+        box.classList.add(
+          "hidden"
+        );
+
+        return;
+      }
+
+      box.classList.remove(
+        "hidden"
       );
-    }
 
-    const phone = String(
-      setting(
-        "whatsapp",
-        "whatsapp_number",
-        "whatsapp_phone"
-      ) || "258840000000"
-    ).replace(/\D/g, "");
+      textElement.textContent =
+        info ||
+        t("accountPending");
+    };
 
-    const whatsapp =
-      phone || "258840000000";
+  /* ENVIO */
 
-    window.open(
-      `https://wa.me/${whatsapp}?text=${encodeURIComponent(
-        lines.join("\n")
-      )}`,
-      "_blank"
-    );
+  $("#rfForm").onsubmit =
+    async (event) => {
+      event.preventDefault();
 
-    toast(t("saved"));
+      const submitButton =
+        event.target.querySelector(
+          'button[type="submit"]'
+        );
 
-    state.cart = [];
-    state.deliveryFee = 0;
-    state.deliveryZone = "";
+      if (submitButton) {
+        submitButton.disabled =
+          true;
 
-    saveCart();
+        submitButton.classList.add(
+          "opacity-60",
+          "cursor-not-allowed"
+        );
+      }
 
-    modal.remove();
-  };
+      try {
+        const form =
+          new FormData(
+            event.target
+          );
+
+        const currentTotals =
+          totals();
+
+        const method =
+          String(
+            form.get("payment") ||
+              ""
+          );
+
+        const delivery =
+          String(
+            form.get("delivery") ||
+              ""
+          );
+
+        const name =
+          String(
+            form.get("name") ||
+              ""
+          ).trim();
+
+        const phoneValue =
+          String(
+            form.get("phone") ||
+              ""
+          ).trim();
+
+        if (!name || !phoneValue) {
+          toast(
+            t("fullName")
+          );
+
+          return;
+        }
+
+        if (!delivery) {
+          toast(
+            t("deliveryMethod")
+          );
+
+          return;
+        }
+
+        if (!method) {
+          toast(
+            t("paymentChoose")
+          );
+
+          return;
+        }
+
+        const pay =
+          paymentDetails(
+            method
+          );
+
+        const orderNumber =
+          `RF-${Date.now()
+            .toString()
+            .slice(-8)}`;
+
+        const validCart =
+          state.cart
+            .map((item) => ({
+              item,
+              product:
+                productById(
+                  item.id
+                )
+            }))
+            .filter(
+              ({ product }) =>
+                !!product
+            );
+
+        if (!validCart.length) {
+          toast(
+            t("emptyFirst")
+          );
+
+          return;
+        }
+
+        const lines = [
+          "*O seu pedido — Rancho Flexível*",
+          "",
+          "*Produtos*",
+          ...validCart.map(
+            ({
+              item,
+              product
+            }) => {
+              const qty =
+                Math.max(
+                  1,
+                  safeNumber(
+                    item.qty,
+                    1
+                  )
+                );
+
+              const price =
+                safeNumber(
+                  product.price
+                );
+
+              return `• ${text(
+                product.name
+              )} — ${qty} x ${money(
+                price
+              )} = ${money(
+                price * qty
+              )}`;
+            }
+          ),
+          "",
+          `Poupança: ${money(
+            currentTotals.saving
+          )}`,
+          `Taxa de serviço: ${
+            state.deliveryFee
+              ? money(
+                  state.deliveryFee
+                )
+              : "A definir"
+          }`,
+          `*Total: ${money(
+            currentTotals.total
+          )}*`,
+          "",
+          "*Dados do cliente*",
+          `Nome: ${name}`,
+          `Telefone: ${phoneValue}`,
+          `Forma de entrega: ${delivery}`,
+          `Endereço: ${
+            form.get("address") ||
+            "—"
+          }`,
+          `Método de pagamento: ${method}`,
+          `Dados de pagamento: ${
+            pay || "—"
+          }`,
+          `Aceita substituições: ${
+            form.get(
+              "substitutions"
+            ) || "—"
+          }`,
+          `Observações: ${
+            form.get("notes") ||
+            "—"
+          }`
+        ];
+
+        /* =====================================================
+           GUARDAR NO SUPABASE
+        ===================================================== */
+
+        try {
+          const {
+            data: customer,
+            error:
+              customerError
+          } =
+            await supabase
+              .from("customers")
+              .insert({
+                name,
+                phone:
+                  phoneValue,
+                address:
+                  form.get(
+                    "address"
+                  ) || null
+              })
+              .select("id")
+              .single();
+
+          if (customerError) {
+            throw customerError;
+          }
+
+          const {
+            data: order,
+            error:
+              orderError
+          } =
+            await supabase
+              .from("orders")
+              .insert({
+                order_number:
+                  orderNumber,
+                customer_id:
+                  customer?.id ||
+                  null,
+                customer_name:
+                  name,
+                customer_phone:
+                  phoneValue,
+                address:
+                  form.get(
+                    "address"
+                  ) || null,
+                delivery_zone:
+                  delivery,
+                delivery_fee:
+                  safeNumber(
+                    state.deliveryFee
+                  ),
+                total:
+                  safeNumber(
+                    currentTotals.total
+                  )
+              })
+              .select("id")
+              .single();
+
+          if (orderError) {
+            throw orderError;
+          }
+
+          if (order?.id) {
+            const items =
+              validCart.map(
+                ({
+                  item,
+                  product
+                }) => ({
+                  order_id:
+                    order.id,
+                  product_id:
+                    product.id,
+                  product_name:
+                    text(
+                      product.name
+                    ),
+                  quantity:
+                    Math.max(
+                      1,
+                      safeNumber(
+                        item.qty,
+                        1
+                      )
+                    ),
+                  unit_price:
+                    safeNumber(
+                      product.price
+                    )
+                })
+              );
+
+            const {
+              error:
+                itemsError
+            } =
+              await supabase
+                .from(
+                  "order_items"
+                )
+                .insert(items);
+
+            if (itemsError) {
+              console.warn(
+                "Pedido criado, mas os itens não puderam ser guardados:",
+                itemsError
+              );
+            }
+          }
+        } catch (error) {
+          console.warn(
+            "Não foi possível guardar o pedido no painel:",
+            error
+          );
+        }
+
+        /* =====================================================
+           WHATSAPP
+        ===================================================== */
+
+        const configuredPhone =
+          setting(
+            "whatsapp",
+            "whatsapp_number",
+            "whatsapp_phone"
+          );
+
+        const phone =
+          String(
+            configuredPhone ||
+              "258840000000"
+          ).replace(
+            /\D/g,
+            ""
+          );
+
+        const whatsapp =
+          phone ||
+          "258840000000";
+
+        const whatsappUrl =
+          `https://wa.me/${whatsapp}?text=${encodeURIComponent(
+            lines.join("\n")
+          )}`;
+
+        window.open(
+          whatsappUrl,
+          "_blank"
+        );
+
+        toast(t("saved"));
+
+        state.cart = [];
+
+        resetDelivery();
+
+        saveCart();
+
+        modal.remove();
+      } catch (error) {
+        console.error(
+          "Erro ao finalizar pedido:",
+          error
+        );
+
+        toast(
+          "Não foi possível finalizar o pedido."
+        );
+      } finally {
+        if (
+          submitButton &&
+          document.body.contains(
+            submitButton
+          )
+        ) {
+          submitButton.disabled =
+            false;
+
+          submitButton.classList.remove(
+            "opacity-60",
+            "cursor-not-allowed"
+          );
+        }
+      }
+    };
 }
 
 /* =========================================================
@@ -2292,40 +3128,48 @@ function applyStaticText() {
       t("search");
   }
 
-  const heroTitle =
-    document.querySelector(
-      ".hero-title"
-    );
-
   /* HERO */
+
   const heroSection =
-    document.querySelector(".hero");
+    document.querySelector(
+      ".hero"
+    );
 
   if (heroSection) {
     const title =
-      heroSection.querySelector("h1");
+      heroSection.querySelector(
+        "h1"
+      );
 
     const paragraph =
-      heroSection.querySelector("p");
+      heroSection.querySelector(
+        "p"
+      );
 
     const buttons =
-      heroSection.querySelectorAll("a");
+      heroSection.querySelectorAll(
+        "a"
+      );
 
-    if (title)
+    if (title) {
       title.textContent =
         t("heroTitle");
+    }
 
-    if (paragraph)
+    if (paragraph) {
       paragraph.textContent =
         t("heroText");
+    }
 
-    if (buttons[0])
+    if (buttons[0]) {
       buttons[0].textContent =
         t("start");
+    }
 
-    if (buttons[1])
+    if (buttons[1]) {
       buttons[1].textContent =
         t("how");
+    }
 
     const badge =
       heroSection.querySelector(
@@ -2334,13 +3178,20 @@ function applyStaticText() {
 
     if (badge) {
       badge.innerHTML = `
-        <span class="text-secondary-container">●</span>
-        ${t("new")}
+        <span
+          class="
+            text-secondary-container
+          "
+        >
+          ●
+        </span>
+        ${escapeHtml(t("new"))}
       `;
     }
   }
 
   /* COMO FUNCIONA */
+
   const how =
     $("#como-funciona");
 
@@ -2351,20 +3202,26 @@ function applyStaticText() {
       );
 
     const title =
-      how.querySelector("h2");
+      how.querySelector(
+        "h2"
+      );
 
-    if (label)
+    if (label) {
       label.textContent =
         t("simple");
+    }
 
-    if (title)
+    if (title) {
       title.textContent =
         t("how");
+    }
   }
 
   /* CATEGORIAS */
+
   const categoriesSection =
-    $("#categories")?.parentElement;
+    $("#categories")
+      ?.parentElement;
 
   if (categoriesSection) {
     const label =
@@ -2377,16 +3234,19 @@ function applyStaticText() {
         "h2"
       );
 
-    if (label)
+    if (label) {
       label.textContent =
         t("categories");
+    }
 
-    if (title)
+    if (title) {
       title.textContent =
         t("find");
+    }
   }
 
   /* CATÁLOGO */
+
   const products =
     $("#produtos");
 
@@ -2396,25 +3256,30 @@ function applyStaticText() {
         ".text-xs"
       );
 
-    if (labels[0])
+    if (labels[0]) {
       labels[0].textContent =
         t("catalog");
+    }
 
     const title =
-      products.querySelector("h2");
+      products.querySelector(
+        "h2"
+      );
 
-    if (title)
+    if (title) {
       title.textContent =
         t("featured");
+    }
 
     const paragraph =
       products.querySelector(
         "h2 + p"
       );
 
-    if (paragraph)
+    if (paragraph) {
       paragraph.textContent =
         t("prices");
+    }
 
     const sort =
       $("#sortFilter");
@@ -2425,25 +3290,30 @@ function applyStaticText() {
           "option"
         );
 
-      if (options[0])
+      if (options[0]) {
         options[0].textContent =
           t("sort");
+      }
 
-      if (options[1])
+      if (options[1]) {
         options[1].textContent =
           t("low");
+      }
 
-      if (options[2])
+      if (options[2]) {
         options[2].textContent =
           t("high");
+      }
 
-      if (options[3])
+      if (options[3]) {
         options[3].textContent =
           t("name");
+      }
     }
   }
 
   /* COMBOS */
+
   const kits =
     $("#kits");
 
@@ -2454,25 +3324,33 @@ function applyStaticText() {
       );
 
     const title =
-      kits.querySelector("h2");
+      kits.querySelector(
+        "h2"
+      );
 
     const paragraph =
-      kits.querySelector("h2 + p");
+      kits.querySelector(
+        "h2 + p"
+      );
 
-    if (label)
+    if (label) {
       label.textContent =
         t("highlights");
+    }
 
-    if (title)
+    if (title) {
       title.textContent =
         t("combo");
+    }
 
-    if (paragraph)
+    if (paragraph) {
       paragraph.textContent =
         t("comboText");
+    }
   }
 
   /* ENTREGAS */
+
   const delivery =
     $("#entregas");
 
@@ -2483,56 +3361,86 @@ function applyStaticText() {
       );
 
     const title =
-      delivery.querySelector("h2");
+      delivery.querySelector(
+        "h2"
+      );
 
     const paragraph =
       delivery.querySelector(
         "h2 + p"
       );
 
-    if (labels[0])
+    if (labels[0]) {
       labels[0].textContent =
         t("delivery");
+    }
 
-    if (title)
+    if (title) {
       title.textContent =
         t("near");
+    }
 
-    if (paragraph)
+    if (paragraph) {
       paragraph.textContent =
         t("deliveryText");
+    }
 
     const cards =
       delivery.querySelectorAll(
         ".delivery-card"
       );
 
-    if (cards[0])
-      cards[0].querySelector(
-        "div"
-      ).textContent =
-        t("maputo");
+    if (cards[0]) {
+      const element =
+        cards[0].querySelector(
+          "div"
+        );
 
-    if (cards[1])
-      cards[1].querySelector(
-        "div"
-      ).textContent =
-        t("surroundings");
+      if (element) {
+        element.textContent =
+          t("maputo");
+      }
+    }
 
-    if (cards[2])
-      cards[2].querySelector(
-        "div"
-      ).textContent =
-        t("matola");
+    if (cards[1]) {
+      const element =
+        cards[1].querySelector(
+          "div"
+        );
 
-    if (cards[3])
-      cards[3].querySelector(
-        "div"
-      ).textContent =
-        t("pickupName");
+      if (element) {
+        element.textContent =
+          t("surroundings");
+      }
+    }
+
+    if (cards[2]) {
+      const element =
+        cards[2].querySelector(
+          "div"
+        );
+
+      if (element) {
+        element.textContent =
+          t("matola");
+      }
+    }
+
+    if (cards[3]) {
+      const element =
+        cards[3].querySelector(
+          "div"
+        );
+
+      if (element) {
+        element.textContent =
+          t("pickupName");
+      }
+    }
   }
 
   /* FAQ */
+
   const faq =
     $("#faqSection");
 
@@ -2543,21 +3451,27 @@ function applyStaticText() {
       );
 
     const title =
-      faq.querySelector("h2");
+      faq.querySelector(
+        "h2"
+      );
 
-    if (labels[0])
+    if (labels[0]) {
       labels[0].textContent =
         t("faqLabel");
+    }
 
-    if (title)
+    if (title) {
       title.textContent =
         t("faqTitle");
+    }
   }
 
   /* FOOTER */
+
   renderFooter();
 
   /* BOTÃO CARRINHO */
+
   const cartButton =
     $("#cartBtn");
 
@@ -2573,16 +3487,18 @@ function applyStaticText() {
       "#cartDrawer h2"
     );
 
-  if (cartTitle)
+  if (cartTitle) {
     cartTitle.textContent =
       t("order");
+  }
 
   const checkoutButton =
     $("#checkoutBtn");
 
-  if (checkoutButton)
+  if (checkoutButton) {
     checkoutButton.textContent =
       t("continue");
+  }
 }
 
 /* =========================================================
@@ -2591,7 +3507,9 @@ function applyStaticText() {
 
 function renderFooter() {
   const footer =
-    document.querySelector("footer");
+    document.querySelector(
+      "footer"
+    );
 
   if (!footer) return;
 
@@ -2613,8 +3531,10 @@ function renderFooter() {
         <div>
           <div
             class="
-              font-headline font-bold
-              text-primary text-xl
+              font-headline
+              font-bold
+              text-primary
+              text-xl
             "
           >
             Rancho Flexível
@@ -2622,11 +3542,14 @@ function renderFooter() {
 
           <div
             class="
-              text-sm text-on-surface-variant
+              text-sm
+              text-on-surface-variant
               mt-1
             "
           >
-            ${t("footerDescription")}
+            ${escapeHtml(
+              t("footerDescription")
+            )}
           </div>
         </div>
 
@@ -2642,15 +3565,19 @@ function renderFooter() {
 
           <div
             class="
-              text-sm text-on-surface-variant
+              text-sm
+              text-on-surface-variant
               mt-1
             "
           >
-            ${setting(
-              "whatsapp",
-              "whatsapp_number",
-              "whatsapp_phone"
-            ) || "Número do WhatsApp"}
+            ${escapeHtml(
+              setting(
+                "whatsapp",
+                "whatsapp_number",
+                "whatsapp_phone"
+              ) ||
+                "Número do WhatsApp"
+            )}
           </div>
         </div>
 
@@ -2661,16 +3588,21 @@ function renderFooter() {
               text-sm
             "
           >
-            ${t("delivery")}
+            ${escapeHtml(
+              t("delivery")
+            )}
           </div>
 
           <div
             class="
-              text-sm text-on-surface-variant
+              text-sm
+              text-on-surface-variant
               mt-1
             "
           >
-            ${t("footerDelivery")}
+            ${escapeHtml(
+              t("footerDelivery")
+            )}
           </div>
         </div>
       </div>
@@ -2678,12 +3610,16 @@ function renderFooter() {
       <div
         class="
           mt-7 pt-5
-          border-t border-outline-variant
+          border-t
+          border-outline-variant
           text-center
-          text-sm text-on-surface-variant
+          text-sm
+          text-on-surface-variant
         "
       >
-        ${t("footerCreative")}
+        ${escapeHtml(
+          t("footerCreative")
+        )}
       </div>
 
       <div
@@ -2739,7 +3675,9 @@ function renderSettings() {
 ========================================================= */
 
 function createLanguageSelector() {
-  if ($("#languageSelect")) return;
+  if ($("#languageSelect")) {
+    return;
+  }
 
   const header =
     document.querySelector(
@@ -2749,7 +3687,9 @@ function createLanguageSelector() {
   if (!header) return;
 
   const select =
-    document.createElement("select");
+    document.createElement(
+      "select"
+    );
 
   select.id =
     "languageSelect";
@@ -2758,15 +3698,39 @@ function createLanguageSelector() {
     "border border-outline-variant rounded-full px-3 py-2 text-xs bg-white font-semibold";
 
   select.innerHTML = `
-    <option value="pt">Português</option>
-    <option value="en">English</option>
-    <option value="zh">中文</option>
-    <option value="fr">Français</option>
-    <option value="chg">Changana</option>
+    <option value="pt">
+      Português
+    </option>
+
+    <option value="en">
+      English
+    </option>
+
+    <option value="zh">
+      中文
+    </option>
+
+    <option value="fr">
+      Français
+    </option>
+
+    <option value="chg">
+      Changana
+    </option>
   `;
 
-  select.value =
-    state.lang;
+  if (
+    I18N[state.lang]
+  ) {
+    select.value =
+      state.lang;
+  } else {
+    state.lang =
+      "pt";
+
+    select.value =
+      "pt";
+  }
 
   select.addEventListener(
     "change",
@@ -2798,58 +3762,120 @@ function startAdminSync() {
   );
 
   refreshTimer =
-    setInterval(async () => {
-      try {
-        const [
-          products,
-          categories,
-          kits,
-          settings
-        ] = await Promise.all([
-          getProducts(),
-          getCategories(),
-          getKits(),
-          getSettings()
-        ]);
+    setInterval(
+      async () => {
+        try {
+          const [
+            products,
+            categories,
+            kits,
+            settings
+          ] =
+            await Promise.all([
+              getProducts(),
+              getCategories(),
+              getKits(),
+              getSettings()
+            ]);
 
-        const changed =
-          JSON.stringify(products) !==
-            JSON.stringify(state.products) ||
-          JSON.stringify(categories) !==
-            JSON.stringify(state.categories) ||
-          JSON.stringify(kits) !==
-            JSON.stringify(state.kits) ||
-          JSON.stringify(settings) !==
-            JSON.stringify(state.settings);
-
-        if (changed) {
-          state.products =
-            Array.isArray(products)
+          const normalizedProducts =
+            Array.isArray(
+              products
+            )
               ? products
               : [];
 
-          state.categories =
-            Array.isArray(categories)
+          const normalizedCategories =
+            Array.isArray(
+              categories
+            )
               ? categories
               : [];
 
-          state.kits =
-            Array.isArray(kits)
+          const normalizedKits =
+            Array.isArray(
+              kits
+            )
               ? kits
               : [];
 
-          state.settings =
-            settings || {};
+          const normalizedSettings =
+            settings &&
+            typeof settings ===
+              "object"
+              ? settings
+              : {};
 
-          renderAll();
+          const changed =
+            JSON.stringify(
+              normalizedProducts
+            ) !==
+              JSON.stringify(
+                state.products
+              ) ||
+            JSON.stringify(
+              normalizedCategories
+            ) !==
+              JSON.stringify(
+                state.categories
+              ) ||
+            JSON.stringify(
+              normalizedKits
+            ) !==
+              JSON.stringify(
+                state.kits
+              ) ||
+            JSON.stringify(
+              normalizedSettings
+            ) !==
+              JSON.stringify(
+                state.settings
+              );
+
+          if (changed) {
+            state.products =
+              normalizedProducts;
+
+            state.categories =
+              normalizedCategories;
+
+            state.kits =
+              normalizedKits;
+
+            state.settings =
+              normalizedSettings;
+
+            /*
+             * Remove do carrinho produtos
+             * que foram desativados.
+             */
+            state.cart =
+              state.cart.filter(
+                (item) => {
+                  const product =
+                    productById(
+                      item.id
+                    );
+
+                  return (
+                    !!product &&
+                    product.active !==
+                      false
+                  );
+                }
+              );
+
+            renderAll();
+          }
+        } catch (error) {
+          console.warn(
+            "Sincronização com o painel:",
+            error
+          );
         }
-      } catch (error) {
-        console.warn(
-          "Sincronização com o painel:",
-          error
-        );
-      }
-    }, 10000);
+      },
+      10000
+    );
 }
 
 /* =========================================================
@@ -2859,17 +3885,20 @@ function startAdminSync() {
 function bindEvents() {
   $("#searchInput")?.addEventListener(
     "input",
-    () => renderProducts()
+    () =>
+      renderProducts()
   );
 
   $("#categoryFilter")?.addEventListener(
     "change",
-    () => renderProducts()
+    () =>
+      renderProducts()
   );
 
   $("#sortFilter")?.addEventListener(
     "change",
-    () => renderProducts()
+    () =>
+      renderProducts()
   );
 
   $("#cartBtn")?.addEventListener(
@@ -2908,6 +3937,7 @@ function bindEvents() {
 
 function renderAll() {
   createLanguageSelector();
+
   renderCategories();
   renderFilters();
   renderProducts();
@@ -2917,6 +3947,7 @@ function renderAll() {
   renderCart();
   renderSettings();
   applyStaticText();
+
   createFloatingCart();
   updateFloatingCart();
 }
@@ -2926,22 +3957,73 @@ function renderAll() {
 ========================================================= */
 
 async function init() {
+  /*
+   * Normaliza o carrinho recuperado
+   * do localStorage.
+   */
+  if (!Array.isArray(state.cart)) {
+    state.cart = [];
+  }
+
+  state.cart =
+    state.cart
+      .filter(
+        (item) =>
+          item &&
+          item.id !== undefined &&
+          item.id !== null
+      )
+      .map((item) => ({
+        id: item.id,
+        qty: Math.max(
+          1,
+          safeNumber(
+            item.qty,
+            1
+          )
+        )
+      }));
+
+  if (!I18N[state.lang]) {
+    state.lang =
+      "pt";
+
+    localStorage.setItem(
+      "rf_lang",
+      "pt"
+    );
+  }
+
   bindEvents();
 
   await loadData();
 
   startAdminSync();
 
-  /* Atualiza se outra aba alterar o idioma/carrinho */
+  /*
+   * Atualiza se outra aba alterar
+   * o idioma ou o carrinho.
+   */
   window.addEventListener(
     "storage",
     (event) => {
-      if (event.key === "rf_cart") {
+      if (
+        event.key ===
+        "rf_cart"
+      ) {
         try {
-          state.cart =
+          const parsed =
             JSON.parse(
-              event.newValue || "[]"
+              event.newValue ||
+                "[]"
             );
+
+          state.cart =
+            Array.isArray(
+              parsed
+            )
+              ? parsed
+              : [];
         } catch {
           state.cart = [];
         }
@@ -2949,9 +4031,18 @@ async function init() {
         renderCart();
       }
 
-      if (event.key === "rf_lang") {
+      if (
+        event.key ===
+        "rf_lang"
+      ) {
+        const lang =
+          event.newValue ||
+          "pt";
+
         state.lang =
-          event.newValue || "pt";
+          I18N[lang]
+            ? lang
+            : "pt";
 
         renderAll();
       }
@@ -2965,7 +4056,8 @@ if (
 ) {
   document.addEventListener(
     "DOMContentLoaded",
-    init
+    init,
+    { once: true }
   );
 } else {
   init();
