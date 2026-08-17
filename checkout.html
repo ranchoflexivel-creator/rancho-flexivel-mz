@@ -4,7 +4,442 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Finalize o seu pedido no Rancho Flexível.">
+  <title>O seu pedido —```html
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Finalize o seu pedido no Rancho Flexível.">
   <title>O seu pedido — Rancho Flexível</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      background: #f4fafd;
+      color: #161d1f;
+      font-family: Inter, sans-serif;
+    }
+
+    .headline {
+      font-family: Montserrat, sans-serif;
+    }
+
+    .field {
+      width: 100%;
+      border: 1px solid #c1c9bf;
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: #fff;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      box-sizing: border-box;
+    }
+
+    .field:focus {
+      border-color: #00361a;
+      box-shadow: 0 0 0 3px rgba(0, 54, 26, .08);
+    }
+
+    .summary-item {
+      border-bottom: 1px solid #e5e9e6;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="h-16 sm:h-20 bg-white border-b border-[#c1c9bf] flex items-center">
+  <div class="max-w-5xl mx-auto px-4 w-full flex items-center justify-between gap-4">
+
+    <a
+      href="index.html"
+      class="headline text-lg sm:text-xl font-bold text-[#00361a] shrink-0"
+    >
+      Rancho Flexível
+    </a>
+
+    <a
+      href="index.html"
+      class="text-sm text-[#414942] hover:text-[#00361a] font-medium"
+    >
+      ← Voltar às compras
+    </a>
+
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-6 sm:py-10">
+
+  <div class="mb-6">
+    <h1 class="headline text-2xl sm:text-3xl font-bold text-[#00361a]">
+      O seu pedido
+    </h1>
+
+    <p class="text-sm text-[#414942] mt-1">
+      Confira os produtos e complete os seus dados para finalizar.
+    </p>
+  </div>
+
+  <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-6">
+
+    <section class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm">
+
+      <h2 class="headline text-xl font-bold">
+        Dados do cliente
+      </h2>
+
+      <form id="checkoutForm" class="mt-6 space-y-5">
+
+        <label class="block text-sm font-semibold">
+          Nome completo *
+
+          <input
+            id="name"
+            name="name"
+            type="text"
+            class="field mt-2"
+            placeholder="Nome completo"
+            autocomplete="name"
+            required
+          >
+        </label>
+
+        <label class="block text-sm font-semibold">
+          Telefone *
+
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            class="field mt-2"
+            placeholder="Número de telefone"
+            autocomplete="tel"
+            required
+          >
+        </label>
+
+        <label class="block text-sm font-semibold">
+          Forma de entrega *
+
+          <select
+            id="zone"
+            name="zone"
+            class="field mt-2"
+            required
+          >
+            <option value="">Seleccione</option>
+            <option value="Maputo Cidade">
+              Maputo Cidade — 400 MT
+            </option>
+            <option value="Zonas circunvizinhas">
+              Zonas circunvizinhas — 700 MT
+            </option>
+            <option value="Matola">
+              Matola — 1.000 MT
+            </option>
+            <option value="Levantamento">
+              Levantamento — grátis
+            </option>
+          </select>
+        </label>
+
+        <label class="block text-sm font-semibold">
+          Endereço / ponto de referência
+
+          <textarea
+            id="address"
+            name="address"
+            class="field mt-2 min-h-28 resize-y"
+            placeholder="Indique a morada ou um ponto de referência"
+            autocomplete="street-address"
+          ></textarea>
+        </label>
+
+        <label class="block text-sm font-semibold">
+          Pagamento *
+
+          <select
+            id="payment"
+            name="payment"
+            class="field mt-2"
+            required
+          >
+            <option value="">
+              Seleccione
+            </option>
+
+            <option value="Numerário">
+              Numerário
+            </option>
+
+            <option value="M-Pesa">
+              M-Pesa
+            </option>
+
+            <option value="E-Mola">
+              e-Mola
+            </option>
+
+            <option value="Transferência">
+              Transferência
+            </option>
+          </select>
+        </label>
+
+        <div
+          id="paymentInfo"
+          class="hidden rounded-xl bg-[#eef5f7] border border-[#c1c9bf] p-4"
+        >
+          <div class="text-xs font-bold uppercase tracking-wider text-[#8a5100]">
+            Dados para pagamento
+          </div>
+
+          <div
+            id="paymentNumber"
+            class="text-sm sm:text-base font-bold text-[#00361a] mt-2 break-words"
+          ></div>
+        </div>
+
+        <fieldset class="border border-[#c1c9bf] rounded-2xl p-4">
+
+          <legend class="px-2 text-sm font-bold text-[#00361a]">
+            Aceita substituições?
+          </legend>
+
+          <div class="space-y-2 mt-2">
+
+            <label class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:bg-[#f4fafd]">
+              <input
+                type="radio"
+                name="substitution"
+                value="contact"
+                checked
+                class="mt-1 accent-[#00361a]"
+              >
+
+              <span class="text-sm">
+                <b>Contactar antes</b>
+
+                <small class="block text-gray-500 font-normal mt-0.5">
+                  Contactar antes de substituir.
+                </small>
+              </span>
+            </label>
+
+            <label class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:bg-[#f4fafd]">
+              <input
+                type="radio"
+                name="substitution"
+                value="equivalent"
+                class="mt-1 accent-[#00361a]"
+              >
+
+              <span class="text-sm">
+                <b>Sim, por produto equivalente</b>
+
+                <small class="block text-gray-500 font-normal mt-0.5">
+                  Aceitar produto equivalente quando o original não estiver disponível.
+                </small>
+              </span>
+            </label>
+
+            <label class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:bg-[#f4fafd]">
+              <input
+                type="radio"
+                name="substitution"
+                value="none"
+                class="mt-1 accent-[#00361a]"
+              >
+
+              <span class="text-sm">
+                <b>Não substituir</b>
+
+                <small class="block text-gray-500 font-normal mt-0.5">
+                  Não substituir produtos indisponíveis.
+                </small>
+              </span>
+            </label>
+
+          </div>
+
+        </fieldset>
+
+        <label class="block text-sm font-semibold">
+          Observações
+
+          <textarea
+            id="notes"
+            name="notes"
+            class="field mt-2 min-h-24 resize-y"
+            placeholder="Alguma indicação para o seu pedido?"
+          ></textarea>
+        </label>
+
+        <div
+          id="msg"
+          class="hidden rounded-xl px-4 py-3 text-sm"
+        ></div>
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+
+          <a
+            href="index.html"
+            class="flex-1 py-3 rounded-xl border border-[#c1c9bf] text-center font-bold text-[#414942] hover:bg-[#f4fafd]"
+          >
+            Voltar
+          </a>
+
+          <button
+            id="send"
+            type="button"
+            class="flex-[2] py-3 rounded-xl bg-[#00361a] text-white font-bold hover:bg-[#005326] transition"
+          >
+            Finalizar pelo WhatsApp
+          </button>
+
+        </div>
+
+      </form>
+
+    </section>
+
+    <section class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm h-fit lg:sticky lg:top-6">
+
+      <h2 class="headline text-xl font-bold">
+        O seu pedido
+      </h2>
+
+      <div
+        id="summary"
+        class="mt-5"
+      ></div>
+
+      <div class="border-t border-[#c1c9bf] mt-5 pt-4 space-y-3 text-sm">
+
+        <div class="flex justify-between gap-4">
+          <span>Produtos</span>
+
+          <strong id="subtotal">
+            0 MZN
+          </strong>
+        </div>
+
+        <div class="flex justify-between gap-4">
+          <span>Poupança</span>
+
+          <strong
+            id="saving"
+            class="text-[#00361a]"
+          >
+            0 MZN
+          </strong>
+        </div>
+
+        <div class="flex justify-between gap-4">
+          <span>Taxa de serviço</span>
+
+          <strong id="deliveryFee">
+            A definir
+          </strong>
+        </div>
+
+        <div class="flex justify-between gap-4 text-lg font-bold pt-3 border-t border-[#c1c9bf]">
+
+          <span>Total</span>
+
+          <span
+            id="total"
+            class="text-[#00361a]"
+          >
+            0 MZN
+          </span>
+
+        </div>
+
+      </div>
+
+      <div class="mt-5 rounded-xl bg-[#eef5f7] p-4 text-xs text-[#414942]">
+        A taxa de entrega é calculada automaticamente conforme a área seleccionada.
+      </div>
+
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="bg-[#00361a] text-white border-t border-[#00361a] mt-8">
+
+  <div class="max-w-5xl mx-auto px-4 py-8">
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
+
+      <div class="sm:col-span-1">
+        <strong class="text-white text-lg font-bold">
+          Rancho Flexível
+        </strong>
+
+        <p class="text-white/80 text-sm mt-2">
+          A sua mercearia simples e próxima.
+        </p>
+      </div>
+
+      <div>
+        <strong class="text-white text-sm font-bold">
+          WhatsApp
+        </strong>
+
+        <p class="text-white/80 text-sm mt-2">
+          Número do WhatsApp
+        </p>
+      </div>
+
+      <div>
+        <strong class="text-white text-sm font-bold">
+          Entregas
+        </strong>
+
+        <p class="text-white/80 text-sm mt-2">
+          Maputo • Arredores • Matola
+        </p>
+      </div>
+
+    </div>
+
+    <div class="border-t border-white/20 mt-7 pt-5 text-sm text-white/70">
+      Do nosso mercado para a sua mesa — escolha, peça e receba com simplicidade.
+    </div>
+
+    <div class="mt-4 text-xs text-white/50">
+      © <span id="year"></span> Rancho Flexível. Todos os direitos reservados.
+    </div>
+
+  </div>
+
+</footer>
+
+<script>
+  document.getElementById("year").textContent =
+    new Date().getFullYear();
+</script>
+
+<script
+  type="module"
+  src="checkout.js?v=20260817-checkout-fix"
+></script>
+
+</body>
+</html>
+```
+ Rancho Flexível</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
 
