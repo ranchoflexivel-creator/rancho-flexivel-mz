@@ -1,4 +1,4 @@
-const CACHE = 'rf-public-v4';
+const CACHE = 'rf-public-v5';
 const CORE = [
   './', './index.html', './app.js', './data.js',
   './public-enhancements.js', './public-product-images.js',
@@ -26,8 +26,6 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
 
-  // HTML and JavaScript must prefer the network so GitHub Pages updates are
-  // visible immediately. Fall back to cache only when the network is down.
   const isCode = /\.(html|js|css)$/i.test(new URL(req.url).pathname) || req.mode === 'navigate';
   if (isCode) {
     event.respondWith(
@@ -41,7 +39,6 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Other same-origin assets: cache first, then network.
   event.respondWith(
     caches.match(req).then(cached => cached || fetch(req).then(res => {
       if (res.ok) caches.open(CACHE).then(c => c.put(req, res.clone()));
