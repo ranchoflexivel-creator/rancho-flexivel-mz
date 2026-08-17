@@ -1,4 +1,4 @@
-const CACHE = 'rf-public-v1';
+const CACHE = 'rf-public-v2';
 const CORE = [
   './', './index.html', './app.js', './data.js',
   './public-enhancements.js', './public-product-images.js',
