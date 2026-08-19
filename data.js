@@ -18,6 +18,7 @@ const OFFICIAL_CATEGORIES = [
   { id: "rf-cat-10", name: { pt: "Higiene e limpeza", en: "Hygiene & cleaning", zh: "卫生和清洁", fr: "Hygiène et nettoyage", chg: "Ku basisa ni ku basisa" }, icon: "cleaning_services", sort_order: 10 }
 ];
 
+const demoCategories = OFFICIAL_CATEGORIES;
 const demoProducts = [];
 const demoKits = [];
 const demoSettings = {
