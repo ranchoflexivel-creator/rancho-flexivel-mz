@@ -1,19 +1,39 @@
 import { supabase } from "./data.js";
 
-const LANGS = ["pt", "en", "zh", "fr", "chg"];
 const CHECKOUT_MAP = {
   "body > header a:nth-of-type(2)": "checkout_back",
-  "main h1": "checkout_title",
+  "main > div.mb-6 h1": "checkout_title",
   "main > div.mb-6 p": "checkout_intro",
-  "section h2": "checkout_customer",
-  "label:nth-of-type(1)": "checkout_full_name",
-  "label:nth-of-type(2)": "checkout_phone",
-  "label:nth-of-type(3)": "checkout_delivery",
-  "label:nth-of-type(4)": "checkout_address",
-  "label:nth-of-type(5)": "checkout_payment",
+  "main > .grid > section:nth-child(1) h2": "checkout_customer",
+  "#checkoutForm label:nth-of-type(1)": "checkout_full_name",
+  "#checkoutForm label:nth-of-type(2)": "checkout_phone",
+  "#checkoutForm label:nth-of-type(3)": "checkout_delivery",
+  "#checkoutForm label:nth-of-type(4)": "checkout_address",
+  "#checkoutForm label:nth-of-type(5)": "checkout_payment",
   "#paymentInfo > div:first-child": "checkout_payment_info",
-  "legend": "checkout_substitution",
-  "button[type=submit]": "checkout_finish"
+  "#checkoutForm legend": "checkout_substitution",
+  "#checkoutForm fieldset label:nth-of-type(1) b": "contact",
+  "#checkoutForm fieldset label:nth-of-type(1) small": "checkout_contact_help",
+  "#checkoutForm fieldset label:nth-of-type(2) b": "equivalent",
+  "#checkoutForm fieldset label:nth-of-type(2) small": "checkout_equivalent_help",
+  "#checkoutForm fieldset label:nth-of-type(3) b": "noReplace",
+  "#checkoutForm fieldset label:nth-of-type(3) small": "checkout_none_help",
+  "#checkoutForm label:nth-of-type(6)": "notes",
+  "#checkoutForm > div.flex a": "back",
+  "#send": "finish",
+  "main > .grid > section:nth-child(2) h2": "order",
+  "main > .grid > section:nth-child(2) .border-t.mt-5.pt-4 span:nth-of-type(1)": "products",
+  "main > .grid > section:nth-child(2) .border-t.mt-5.pt-4 span:nth-of-type(2)": "saving",
+  "main > .grid > section:nth-child(2) .border-t.mt-5.pt-4 span:nth-of-type(3)": "service",
+  "main > .grid > section:nth-child(2) .border-t.mt-5.pt-4 span:nth-of-type(4)": "total",
+  "main > .grid > section:nth-child(2) .mt-5.rounded-xl": "checkout_delivery_note",
+  "footer strong.text-white.text-lg": "footer_title",
+  "footer > div > div.grid > div:nth-child(1) p": "footer_tagline",
+  "footer > div > div.grid > div:nth-child(2) strong": "footer_whatsapp_label",
+  "footer > div > div.grid > div:nth-child(2) p": "checkout_footer_whatsapp",
+  "footer > div > div.grid > div:nth-child(3) strong": "footer_delivery_label",
+  "footer > div > div.grid > div:nth-child(3) p": "footer_delivery",
+  "footer > div > div.border-t": "footer_text"
 };
 
 const STATIC_MAP = {
@@ -34,15 +54,6 @@ function parse(value) {
   try { return JSON.parse(value); } catch { return {}; }
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 function getText(key, lang, fallback = "") {
   const value = content?.[lang]?.[key];
   return value == null || value === "" ? fallback : String(value);
@@ -53,11 +64,15 @@ function applyElement(el, key, lang) {
   const fallback = el.dataset.rfDefaultText || el.textContent.trim();
   if (!el.dataset.rfDefaultText) el.dataset.rfDefaultText = fallback;
   const value = getText(key, lang, fallback);
-  if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
-    el.placeholder = value;
-  } else {
-    el.textContent = value;
-  }
+  el.textContent = value;
+}
+
+function applyPlaceholder(selector, key, lang) {
+  const el = document.querySelector(selector);
+  if (!el) return;
+  const fallback = el.dataset.rfDefaultPlaceholder || el.placeholder || "";
+  if (!el.dataset.rfDefaultPlaceholder) el.dataset.rfDefaultPlaceholder = fallback;
+  el.placeholder = getText(key, lang, fallback);
 }
 
 function applyContent() {
@@ -71,20 +86,14 @@ function applyContent() {
     document.querySelectorAll(selector).forEach((el) => applyElement(el, key, lang));
   });
 
-  if (location.pathname.endsWith("/checkout.html") || location.pathname.endsWith("checkout.html")) {
+  if (/checkout(?:\.html)?$/.test(location.pathname)) {
     Object.entries(CHECKOUT_MAP).forEach(([selector, key]) => {
       document.querySelectorAll(selector).forEach((el) => applyElement(el, key, lang));
     });
-
-    const placeholders = {
-      "#name": "checkout_name_placeholder",
-      "#phone": "checkout_phone_placeholder",
-      "#address": "checkout_address_placeholder"
-    };
-    Object.entries(placeholders).forEach(([selector, key]) => {
-      const el = document.querySelector(selector);
-      if (el) el.placeholder = getText(key, lang, el.placeholder);
-    });
+    applyPlaceholder("#name", "checkout_name_placeholder", lang);
+    applyPlaceholder("#phone", "checkout_phone_placeholder", lang);
+    applyPlaceholder("#address", "checkout_address_placeholder", lang);
+    applyPlaceholder("#notes", "checkout_notes_placeholder", lang);
   }
 
   document.documentElement.lang = lang === "chg" ? "pt" : lang;
@@ -97,30 +106,25 @@ async function loadContent() {
       .select("key,value")
       .eq("key", "public_i18n")
       .maybeSingle();
-
     if (error) throw error;
     content = parse(data?.value);
   } catch (error) {
     console.warn("Conteúdo editável do site indisponível; mantendo traduções padrão:", error);
     content = {};
   }
-
   loaded = true;
   applyContent();
 }
 
-let observer;
-function start() {
-  if (observer) observer.disconnect();
-  observer = new MutationObserver(() => {
-    if (loaded) applyContent();
-  });
+const observer = new MutationObserver(() => {
+  if (loaded) applyContent();
+});
+
+loadContent().finally(() => {
   observer.observe(document.body, { childList: true, subtree: true });
   window.addEventListener("storage", (event) => {
     if (event.key === "rf_lang") applyContent();
   });
-}
-
-loadContent().finally(start);
+});
 
 export { applyContent, loadContent };
