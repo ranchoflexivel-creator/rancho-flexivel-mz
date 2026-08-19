@@ -1,12 +1,6 @@
 import { supabase } from "./data.js";
 
-const LANGS = [
-  ["pt", "Português"],
-  ["en", "English"],
-  ["zh", "中文"],
-  ["fr", "Français"],
-  ["chg", "Changana"]
-];
+const LANGS = [["pt", "Português"]];
 
 const KEYS = [
   ["search", "Pesquisa"], ["cart", "Carrinho"], ["new", "Etiqueta do topo"],
@@ -27,7 +21,7 @@ const KEYS = [
   ["back", "Voltar"], ["cash", "Numerário"], ["mpesa", "M-Pesa"], ["emola", "E-Mola"], ["bank", "Transferência"], ["paymentInfo", "Dados pagamento"],
   ["accountPending", "Pagamento pendente"], ["saved", "Pedido preparado"], ["emptyFirst", "Carrinho vazio"], ["removed", "Produto removido"], ["added", "Produto adicionado"],
   ["comboAdded", "Combo adicionado"], ["viewOrder", "Ver pedido"], ["selected", "Produtos selecionados"], ["noAccount", "FAQ sem conta"],
-  ["confirm", "FAQ confirmação",], ["fee", "FAQ taxa detalhada"], ["pickup", "FAQ levantamento detalhado"],
+  ["confirm", "FAQ confirmação"], ["fee", "FAQ taxa detalhada"], ["pickup", "FAQ levantamento detalhado"],
   ["footerDescription", "Descrição rodapé"], ["footerDelivery", "Entregas rodapé"], ["footerCreative", "Mensagem rodapé"],
   ["maputo", "Maputo Cidade"], ["surroundings", "Zonas circunvizinhas"], ["matola", "Matola"], ["pickupName", "Levantamento"],
   ["paymentChoose", "Escolha pagamento"], ["step1", "Passo 1"], ["step1Desc", "Descrição passo 1"], ["step2", "Passo 2"], ["step2Desc", "Descrição passo 2"],
@@ -36,7 +30,7 @@ const KEYS = [
   ["checkout_back", "Checkout: voltar"], ["checkout_title", "Checkout: título"], ["checkout_intro", "Checkout: introdução"], ["checkout_customer", "Checkout: cliente"],
   ["checkout_full_name", "Checkout: nome"], ["checkout_phone", "Checkout: telefone"], ["checkout_delivery", "Checkout: entrega"], ["checkout_address", "Checkout: endereço"],
   ["checkout_payment", "Checkout: pagamento"], ["checkout_payment_info", "Checkout: dados pagamento"], ["checkout_substitution", "Checkout: substituições"], ["checkout_finish", "Checkout: finalizar"],
-  ["checkout_name_placeholder", "Checkout: placeholder nome"], ["checkout_phone_placeholder", "Checkout: placeholder telefone"], ["checkout_address_placeholder", "Checkout: placeholder endereço"],
+  ["checkout_name_placeholder", "Checkout: placeholder nome"], ["checkout_phone_placeholder", "Checkout: placeholder telefone"], ["checkout_address_placeholder", "Checkout: placeholder endereço"], ["checkout_notes_placeholder", "Checkout: placeholder observações"],
   ["footer_title", "Rodapé: título"], ["footer_tagline", "Rodapé: frase"], ["footer_whatsapp_label", "Rodapé: WhatsApp"], ["footer_delivery_label", "Rodapé: entregas"], ["footer_delivery", "Rodapé: zonas"], ["footer_text", "Rodapé: mensagem"], ["footer_bottom_tagline", "Rodapé: frase final"]
 ];
 
@@ -50,7 +44,7 @@ const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":
 const parse = (v) => { if (v && typeof v === "object") return v; try { return JSON.parse(v || "{}"); } catch { return {}; } };
 const read = async () => { const { data, error } = await supabase.from("site_settings").select("key,value"); if (error) throw error; return Object.fromEntries((data || []).map((r) => [r.key, parse(r.value)])); };
 const save = async (value) => { const { error } = await supabase.from("site_settings").upsert([{ key: "public_i18n", value: JSON.stringify(value), updated_at: new Date().toISOString() }], { onConflict: "key" }); if (error) throw error; };
-const get = (content, lang, key) => content?.[lang]?.[key] ?? defaults?.[lang]?.[key] ?? defaults.pt?.[key] ?? "";
+const get = (content, key) => content?.pt?.[key] ?? defaults.pt?.[key] ?? "";
 
 async function mount() {
   if (document.querySelector("#rf-public-editor")) return;
@@ -61,30 +55,26 @@ async function mount() {
   try { settings = await read(); } catch { return; }
   const content = settings.public_i18n || {};
 
-  const rows = KEYS.map(([key, label]) => {
-    const cells = LANGS.map(([lang, name]) => `<div><div class="text-xs font-bold text-[#717971] mb-1">${esc(name)}</div><textarea data-rf-lang="${lang}" data-rf-key="${esc(key)}" rows="2" class="w-full border rounded-xl p-2 text-sm">${esc(get(content, lang, key))}</textarea></div>`).join("");
-    return `<div class="border rounded-2xl p-4 bg-[#fafcfb]"><div class="font-bold mb-3">${esc(label)} <span class="text-xs text-[#717971]">(${esc(key)})</span></div><div class="grid md:grid-cols-2 xl:grid-cols-5 gap-3">${cells}</div></div>`;
-  }).join("");
+  const rows = KEYS.map(([key, label]) => `<div class="border rounded-2xl p-4 bg-[#fafcfb]"><div class="font-bold mb-3">${esc(label)} <span class="text-xs text-[#717971]">(${esc(key)})</span></div><textarea data-rf-key="${esc(key)}" rows="2" class="w-full border rounded-xl p-3 text-sm">${esc(get(content, key))}</textarea></div>`).join("");
 
   const root = document.createElement("section");
   root.id = "rf-public-editor";
   root.className = "bg-white rounded-2xl p-6 shadow-sm mt-6 max-w-7xl";
-  root.innerHTML = `<h2 class="font-[Montserrat] text-xl font-bold">Conteúdo completo do site público</h2><p class="text-sm text-[#717971] mt-1">Edite os textos por idioma. Os campos já vêm com o texto atual/default. Produtos, categorias e Rancho do Mês continuam nas áreas próprias.</p><div class="space-y-4 mt-5">${rows}</div><div class="mt-6 flex items-center justify-between gap-3"><span id="rfpe_status" class="text-sm text-[#717971]"></span><button id="rfpe_save" class="px-5 py-3 bg-[#00361a] text-white rounded-xl font-bold">Guardar todo o conteúdo</button></div>`;
+  root.innerHTML = `<h2 class="font-[Montserrat] text-xl font-bold">Conteúdo do site público</h2><p class="text-sm text-[#717971] mt-1">Edite aqui, uma única vez em português, todo o texto fixo do site público. A tradução das outras línguas é automática e não precisa ser repetida no painel.</p><div class="space-y-4 mt-5">${rows}</div><div class="mt-6 flex items-center justify-between gap-3"><span id="rfpe_status" class="text-sm text-[#717971]"></span><button id="rfpe_save" class="px-5 py-3 bg-[#00361a] text-white rounded-xl font-bold">Guardar conteúdo</button></div>`;
   host.insertAdjacentElement("afterend", root);
 
   document.querySelector("#rfpe_save").onclick = async () => {
-    const out = {};
-    LANGS.forEach(([lang]) => { out[lang] = {}; });
-    document.querySelectorAll("[data-rf-lang][data-rf-key]").forEach((el) => { out[el.dataset.rfLang][el.dataset.rfKey] = el.value.trim(); });
+    const out = { pt: {} };
+    document.querySelectorAll("[data-rf-key]").forEach((el) => { out.pt[el.dataset.rfKey] = el.value.trim(); });
     const button = document.querySelector("#rfpe_save");
     const status = document.querySelector("#rfpe_status");
     button.disabled = true;
     status.textContent = "A guardar…";
     try {
       await save(out);
-      status.textContent = "Guardado. O site público usará estas alterações automaticamente.";
+      status.textContent = "Guardado. O site público atualizará automaticamente.";
       button.textContent = "Guardado ✓";
-      setTimeout(() => { button.textContent = "Guardar todo o conteúdo"; status.textContent = ""; }, 2500);
+      setTimeout(() => { button.textContent = "Guardar conteúdo"; status.textContent = ""; }, 2500);
     } catch (error) {
       console.error(error);
       status.textContent = "Não foi possível guardar as alterações.";
