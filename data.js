@@ -127,3 +127,10 @@ export async function getPublicContent() {
 }
 
 export { demoProducts, demoCategories, demoKits, demoSettings, OFFICIAL_CATEGORIES };
+
+/* O conteúdo editável é aplicado apenas no site público. */
+if (typeof window !== "undefined" && !/\/admin(?:\.html)?$/.test(window.location.pathname)) {
+  import("./public-content-runtime.js").catch((error) => {
+    console.warn("Editor público não carregado:", error);
+  });
+}
