@@ -31,6 +31,7 @@
     ensureStyle();
     loadScript('public-language-complete.js?v=20260820-2','rf-complete-language');
     loadScript('public-language-reverse-fix.js?v=20260820-1','rf-reverse-language');
+    loadScript('public-language-global-fix.js?v=20260820-3','rf-global-language');
     const container = document.querySelector('#languageContainer');
     if (container) {
       container.classList.remove('hidden');
