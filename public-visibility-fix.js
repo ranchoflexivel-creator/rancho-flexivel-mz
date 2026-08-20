@@ -18,18 +18,19 @@
     document.head.appendChild(style);
   }
 
-  function loadCompleteLanguage() {
-    if (document.querySelector('script[data-rf-complete-language]')) return;
+  function loadScript(src, attr) {
+    if (document.querySelector(`script[data-${attr}]`)) return;
     const script = document.createElement('script');
     script.type = 'module';
-    script.src = 'public-language-complete.js?v=20260820-1';
-    script.dataset.rfCompleteLanguage = '1';
+    script.src = src;
+    script.dataset[attr] = '1';
     document.body.appendChild(script);
   }
 
   function sync() {
     ensureStyle();
-    loadCompleteLanguage();
+    loadScript('public-language-complete.js?v=20260820-2','rf-complete-language');
+    loadScript('public-language-reverse-fix.js?v=20260820-1','rf-reverse-language');
     const container = document.querySelector('#languageContainer');
     if (container) {
       container.classList.remove('hidden');
