@@ -7,12 +7,17 @@
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
-      /* Keep a single visible language selector. The legacy public scripts
-         use #rfLanguage, while index.html contains #languageSelect. */
+      /* Keep the language selector visible on the public site.
+         index.html provides #languageContainer/#languageSelect, while
+         older scripts may use #rfLanguage. */
       #languageContainer {
-        display: none !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        flex-shrink: 0 !important;
       }
 
+      #languageSelect,
       #rfLanguage {
         display: inline-block !important;
         visibility: visible !important;
@@ -25,6 +30,20 @@
         font-size: 12px !important;
         font-weight: 700 !important;
         outline: none !important;
+        cursor: pointer !important;
+      }
+
+      @media (max-width: 700px) {
+        #languageContainer {
+          display: flex !important;
+        }
+
+        #languageSelect,
+        #rfLanguage {
+          padding: 7px 9px !important;
+          font-size: 11px !important;
+          max-width: 96px !important;
+        }
       }
 
       /* Footer: keep a dark, high-contrast surface even when an admin
@@ -65,8 +84,17 @@
   function sync() {
     ensureStyle();
 
-    const language = document.querySelector("#rfLanguage");
+    const languageContainer = document.querySelector("#languageContainer");
+    if (languageContainer) {
+      languageContainer.classList.remove("hidden");
+      languageContainer.style.setProperty("display", "flex", "important");
+      languageContainer.style.setProperty("visibility", "visible", "important");
+      languageContainer.style.setProperty("opacity", "1", "important");
+    }
+
+    const language = document.querySelector("#languageSelect") || document.querySelector("#rfLanguage");
     if (language) {
+      language.classList.remove("hidden");
       language.value = localStorage.getItem("rf_lang") || "pt";
 
       if (!language.dataset.rfVisibilityBound) {
